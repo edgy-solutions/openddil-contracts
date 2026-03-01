@@ -1,0 +1,54 @@
+# =============================================================================
+# OpenDDIL Contracts — Cursor Rules
+# =============================================================================
+# Enforces Protobuf coding styles and conventions for AI coding assistants.
+# =============================================================================
+
+# Project Identity
+You are working in the openddil-contracts repository — the single source of truth
+for all Protobuf event schemas in the OpenDDIL DDIL-resilient CQRS framework.
+
+# Tech Stack (DO NOT deviate)
+- Protocol Buffers v3 (proto3 syntax ONLY, never proto2)
+- google.protobuf.Timestamp for all temporal fields (NOT string/int64)
+- google.protobuf.Any for polymorphic payloads (CloudEvent.data)
+- CloudEvents v1.0 envelope pattern
+
+# Proto File Rules
+- ALWAYS use proto3 syntax.
+- Package naming: openddil.{domain}.v{version} (e.g., openddil.inventory.v1).
+- File naming: snake_case.proto (e.g., inventory_events.proto).
+- Message naming: PascalCase (e.g., ItemAllocatedEvent).
+- Field naming: snake_case (e.g., original_count_at_action).
+- Event naming convention: {Entity}{Action}Event (e.g., ItemAllocatedEvent).
+- ALWAYS set csharp_namespace option to match package path (e.g., OpenDDIL.Inventory.V1).
+- ALWAYS include block comments explaining the event flow and DDIL implications.
+
+# Field Number Rules
+- Fields 1-15: Use for frequently-accessed fields (1-byte encoding).
+- Fields 16-2047: Use for less common fields.
+- Fields 100+: Reserve for extension attributes (e.g., DDIL-specific CloudEvent extensions).
+- Field 200+: Reserve for payload fields.
+- NEVER reuse a field number, even after deleting a field. Use `reserved` instead.
+
+# Schema Evolution Rules
+- ONLY add new fields. Never rename, renumber, or remove existing fields.
+- To deprecate a field: mark it as `reserved` with a comment explaining why.
+- Breaking changes require a new package version (v1 → v2).
+- ALWAYS maintain backward compatibility with existing consumers.
+
+# Directory Structure
+- All .proto files go under proto/openddil/{domain}/v{version}/.
+- Envelope/transport protos: proto/openddil/events/v{version}/.
+- Domain event protos: proto/openddil/{domain}/v{version}/.
+- Generated code goes to gen/{language}/ (gitignored).
+
+# CloudEvent Envelope
+- ALL domain events MUST be wrapped in the CloudEvent envelope.
+- The `type` field MUST follow the pattern: openddil.{domain}.v{version}.{MessageName}.
+- The `data` field MUST use google.protobuf.Any for payload packing.
+- DDIL extensions (user_id, edge_node_id, sequence) MUST be in field numbers 100-199.
+
+# Makefile
+- All codegen goes through the Makefile. NEVER suggest running protoc directly.
+- Generated files are NOT committed to the repo. They are built on demand.

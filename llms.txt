@@ -1,0 +1,46 @@
+# OpenDDIL Contracts — llms.txt
+# https://llmstxt.org/
+# This file helps AI coding assistants understand the project.
+
+> OpenDDIL Contracts is the language-agnostic Protobuf schema repository for the OpenDDIL framework.
+> It defines all event shapes used across Edge SDKs and HQ processors.
+> It is the single source of truth — no event types are defined outside this repo.
+
+## Project Purpose
+Defines Protobuf v3 contracts for the OpenDDIL CQRS event-driven architecture.
+Events are serialized with Protobufs for bandwidth efficiency in DDIL environments.
+
+## Architecture
+- Every domain event is wrapped in a CloudEvents v1.0 envelope (cloud_event.proto).
+- The envelope uses google.protobuf.Any for the payload, making it type-agnostic.
+- DDIL-specific extensions: user_id, edge_node_id, sequence (outbox ordering).
+- Domain events are organized by bounded context (e.g., openddil.inventory.v1).
+
+## Key Files
+- proto/openddil/events/v1/cloud_event.proto: CloudEvents envelope message.
+- proto/openddil/inventory/v1/inventory_events.proto: ItemAllocatedEvent.
+- Makefile: Compiles .proto → Python (_pb2.py) and C# (.cs).
+- gen/python/: Generated Python classes (gitignored, compile via make python).
+- gen/csharp/: Generated C# classes (gitignored, compile via make csharp).
+
+## Domain Events
+- ItemAllocatedEvent: Edge operator allocates inventory. Fields: event_id, item_id, quantity, original_count_at_action, timestamp, user_id.
+
+## Schema Evolution Rules
+- ADDITIVE ONLY: New fields get new field numbers. Never reuse or renumber.
+- NEVER REMOVE: Mark fields as reserved instead of deleting.
+- VERSION VIA PACKAGES: Breaking changes → new package version (v1 → v2).
+- BACKWARD COMPATIBLE: Old consumers must deserialize new messages (unknown fields ignored).
+
+## Tech Stack
+- Protocol Buffers v3 (proto3 syntax)
+- protoc compiler
+- google.protobuf.Timestamp and google.protobuf.Any well-known types
+- CloudEvents v1.0 specification
+- Make (GNU Make)
+
+## Polyrepo Context
+- openddil-stack: Docker Compose, Atlas schemas, server infra.
+- openddil-contracts (this repo): Language-agnostic Protobuf schemas.
+- openddil-edge-dotnet / openddil-edge-python: Edge SDKs consuming these contracts.
+- openddil-hq-dotnet / openddil-hq-python: HQ SDKs consuming these contracts.

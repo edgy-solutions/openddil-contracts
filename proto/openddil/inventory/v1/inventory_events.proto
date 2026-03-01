@@ -1,0 +1,53 @@
+// =============================================================================
+// OpenDDIL Contracts — Inventory Domain Events
+// =============================================================================
+// Domain event payloads for the Inventory bounded context.
+// These are packed into the CloudEvent.data (Any) field for transport.
+//
+// Naming convention: {Entity}{Action}Event
+// Versioning: Package path includes version (v1). Breaking changes → v2 package.
+// =============================================================================
+
+syntax = "proto3";
+
+package openddil.inventory.v1;
+
+option csharp_namespace = "OpenDDIL.Inventory.V1";
+
+import "google/protobuf/timestamp.proto";
+
+// ItemAllocatedEvent is emitted when an Edge operator allocates inventory.
+//
+// Flow: Edge Outbox → Redpanda → Restate handler → Postgres
+//   1. Edge SDK creates this event and spools it to the local SQLite Outbox.
+//   2. Relay flushes it (wrapped in a CloudEvent) to Redpanda when connected.
+//   3. Restate handler consumes and applies the allocation to Postgres.
+//   4. ElectricSQL syncs the updated inventory_items row back to all Edge nodes.
+//
+// Idempotency: The event_id (in the CloudEvent envelope) ensures exactly-once
+// processing by Restate, even if the same event is flushed multiple times
+// after intermittent connectivity.
+message ItemAllocatedEvent {
+  // Unique identifier for this specific event (UUID v4).
+  // Used for idempotency checks at the HQ processor.
+  string event_id = 1;
+
+  // The inventory item being allocated (references inventory_items.id).
+  string item_id = 2;
+
+  // Number of units allocated in this action. Always positive.
+  int32 quantity = 3;
+
+  // Snapshot of available_count at the Edge when this action was taken.
+  // Enables conflict detection: if HQ's current count differs, the Edge
+  // was working with stale data (expected in DDIL environments).
+  int32 original_count_at_action = 4;
+
+  // When this allocation was performed at the Edge.
+  // May differ significantly from CloudEvent.time if the event was queued
+  // in the Outbox during a connectivity blackout.
+  google.protobuf.Timestamp timestamp = 5;
+
+  // The operator who performed the allocation at the Edge.
+  string user_id = 6;
+}

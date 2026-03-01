@@ -1,0 +1,70 @@
+// =============================================================================
+// OpenDDIL Contracts — CloudEvents Envelope
+// =============================================================================
+// A standard CloudEvents v1.0 envelope for all OpenDDIL domain events.
+// This separates transport metadata from the domain-specific payload,
+// ensuring interoperability across Edge SDKs and HQ processors.
+//
+// Reference: https://github.com/cloudevents/spec/blob/v1.0.2/cloudevents/spec.md
+// =============================================================================
+
+syntax = "proto3";
+
+package openddil.events.v1;
+
+option csharp_namespace = "OpenDDIL.Events.V1";
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/any.proto";
+
+// CloudEvent is the standard envelope wrapping every OpenDDIL domain event.
+// Edge SDKs produce these into the local Outbox; HQ Restate handlers consume them.
+//
+// The `data` field uses google.protobuf.Any so the envelope is payload-agnostic —
+// each domain event (e.g., ItemAllocatedEvent) is packed/unpacked by type_url.
+message CloudEvent {
+  // --- Required CloudEvents Attributes ---
+
+  // Unique identifier for this event instance (UUID v4 recommended).
+  string id = 1;
+
+  // URI identifying the event source (e.g., "openddil://edge/{node_id}").
+  string source = 2;
+
+  // CloudEvents spec version (always "1.0").
+  string spec_version = 3;
+
+  // Event type URI (e.g., "openddil.inventory.v1.ItemAllocatedEvent").
+  string type = 4;
+
+  // --- Optional CloudEvents Attributes ---
+
+  // Timestamp when the event was produced at the Edge.
+  google.protobuf.Timestamp time = 5;
+
+  // Content type of the data field (always "application/protobuf" for us).
+  string data_content_type = 6;
+
+  // Schema URI for the data payload (e.g., proto file path or registry URL).
+  string data_schema = 7;
+
+  // Subject of the event (e.g., the entity ID this event is about).
+  string subject = 8;
+
+  // --- Extension Attributes (DDIL-specific) ---
+
+  // The identity of the user/operator who triggered this event at the Edge.
+  string user_id = 100;
+
+  // The Edge node identifier where this event originated.
+  string edge_node_id = 101;
+
+  // Monotonic sequence number from the Edge Outbox for ordering.
+  uint64 sequence = 102;
+
+  // --- Payload ---
+
+  // The domain event payload, packed as google.protobuf.Any.
+  // Consumers unpack using the type_url to resolve the concrete message type.
+  google.protobuf.Any data = 200;
+}
