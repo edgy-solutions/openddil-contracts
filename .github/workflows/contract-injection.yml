@@ -1,0 +1,44 @@
+name: Contract Injection
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'schema.hcl'
+
+jobs:
+  inject-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Contracts Repo
+        uses: actions/checkout@v3
+        with:
+          path: openddil-contracts
+
+      - name: Checkout Helm Chart Repo
+        uses: actions/checkout@v3
+        with:
+          repository: your-org/openddil-stack # Adjust to your actual repository
+          path: openddil-stack
+          token: ${{ secrets.PAT_TOKEN }}
+
+      - name: Inject HCL Content into values.yaml
+        run: |
+          export HCL_CONTENT=$(cat openddil-contracts/schema.hcl)
+          yq e '.contracts.hclContent = env(HCL_CONTENT)' -i openddil-stack/helm/openddil-node/values.yaml
+
+      - name: Commit and Push changes to Helm Repo
+        run: |
+          cd openddil-stack
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add helm/openddil-node/values.yaml
+          git commit -m "chore: inject updated schema.hcl contract"
+          git push
+
+      - name: Trigger Helm Upgrade
+        env:
+          KUBECONFIG: ${{ secrets.KUBECONFIG }}
+        run: |
+          helm upgrade openddil ./openddil-stack/helm/openddil-node -n openddil-namespace --install
