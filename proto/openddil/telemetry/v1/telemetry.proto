@@ -280,12 +280,32 @@ message AssetIdentity {
   string platform_type = 4;
 
   ForceAffiliation force = 5;
+
+  // CM enrichment fields — populated by the DIS ontology lookup in Bloblang.
+  // Fields 1-5 are stable; do not renumber. New fields start at 6.
+  DisEntityType dis_entity_type = 6;  // Full 7-tuple entity type (SISO-REF-010)
+  string platform_variant       = 7;  // e.g., "M1A2-SEPv3" (from ontology)
+  string configuration_baseline = 8;  // e.g., "M1A2-SEPv3-Baseline-2024.2"
+  string cbm_schema             = 9;  // e.g., "abrams-canbus-v3"
+  string domain_authority       = 10; // e.g., "TACOM", "AMCOM", "JPO"
+}
+
+// The DIS EntityType 7-tuple per IEEE 1278.1 / SISO-REF-010.
+// All fields default to zero (unspecified). Source: DIS PDU EntityType field.
+message DisEntityType {
+  uint32 kind        = 1;
+  uint32 domain      = 2;
+  uint32 country     = 3;
+  uint32 category    = 4;
+  uint32 subcategory = 5;
+  uint32 specific    = 6;
+  uint32 extra       = 7;
 }
 
 message DisEntityId {
-  uint32 site = 1;
+  uint32 site        = 1;
   uint32 application = 2;
-  uint32 entity = 3;
+  uint32 entity      = 3;
 }
 
 enum ForceAffiliation {

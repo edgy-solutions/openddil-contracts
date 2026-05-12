@@ -1,0 +1,174 @@
+# =============================================================================
+# OpenDDIL DIS Entity Type Ontology
+# =============================================================================
+# Maps a DIS EntityType 7-tuple (kind.domain.country.category.subcategory.specific.extra)
+# to an OpenDDIL canonical platform descriptor.
+#
+# KEY FORMAT: "kind.domain.country.category.subcategory.specific.extra"
+#   per SISO-REF-010 (DIS Enumerations for Exercises and Training)
+#
+# IMPORTANT: The triplet values below are illustrative and structurally correct
+# per SISO-REF-010 conventions. They MUST be verified against the current
+# SISO-REF-010 publication before use against a live DIS network.
+#
+# CURATION RULES (treat this file as code):
+#   - All changes require a PR with a domain expert reviewer.
+#   - Do not add entries without a verified SISO-REF-010 source citation.
+#   - The `_default` entry must always be present and must not be removed.
+#   - cbm_schema and default_baseline may be null for platforms not yet onboarded.
+#
+# Country codes (selected, per SISO-REF-010):
+#   225 = United States of America
+#   78  = Canada
+#   71  = United Kingdom
+#
+# =============================================================================
+
+mappings:
+
+  # ===========================================================================
+  # U.S. Army — Ground Platforms
+  # kind=1 (Platform), domain=1 (Land)
+  # ===========================================================================
+
+  "1.1.225.1.1.1.0":
+    platform_variant: "M1A1"
+    platform_family: "M1-Abrams"
+    nomenclature: "Tank, Combat, Full Tracked: 105-mm Gun, M1A1"
+    cm_schema: "ground-combat-vehicle-v1"
+    default_baseline: "M1A1-Baseline-2023.1"
+    cbm_schema: "abrams-canbus-v2"
+    domain_authority: "TACOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.2"
+
+  "1.1.225.1.3.1.0":
+    platform_variant: "M1A2-SEPv3"
+    platform_family: "M1-Abrams"
+    nomenclature: "Tank, Combat, Full Tracked: 120-mm Gun, M1A2 SEPv3"
+    cm_schema: "ground-combat-vehicle-v1"
+    default_baseline: "M1A2-SEPv3-Baseline-2024.2"
+    cbm_schema: "abrams-canbus-v3"
+    domain_authority: "TACOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.2"
+
+  "1.1.225.2.1.1.0":
+    platform_variant: "M2A3-Bradley"
+    platform_family: "Bradley-IFV"
+    nomenclature: "Fighting Vehicle, Infantry, M2A3 Bradley"
+    cm_schema: "ground-combat-vehicle-v1"
+    default_baseline: "M2A3-Baseline-2023.4"
+    cbm_schema: "bradley-canbus-v2"
+    domain_authority: "TACOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.2"
+
+  "1.1.225.3.1.1.0":
+    platform_variant: "HMMWV-M1151A1"
+    platform_family: "HMMWV"
+    nomenclature: "Truck, Utility, Tactical: High-Mobility, M1151A1"
+    cm_schema: "wheeled-vehicle-v1"
+    default_baseline: "HMMWV-M1151A1-Baseline-2023.1"
+    cbm_schema: "hmmwv-obd2-v1"
+    domain_authority: "TACOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.2"
+
+  # ===========================================================================
+  # U.S. Army — Aviation
+  # kind=1 (Platform), domain=2 (Air)
+  # ===========================================================================
+
+  "1.2.225.20.1.3.0":
+    platform_variant: "AH-64E-V6"
+    platform_family: "AH-64-Apache"
+    nomenclature: "Helicopter, Attack: AH-64E Apache Guardian Version 6"
+    cm_schema: "rotary-wing-v1"
+    default_baseline: "AH-64E-V6-Baseline-2024.1"
+    cbm_schema: "apache-1553-v3"
+    domain_authority: "AMCOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.3"
+
+  "1.2.225.21.1.2.0":
+    platform_variant: "UH-60M"
+    platform_family: "UH-60-BlackHawk"
+    nomenclature: "Helicopter, Utility: UH-60M Black Hawk"
+    cm_schema: "rotary-wing-v1"
+    default_baseline: "UH-60M-Baseline-2024.1"
+    cbm_schema: "blackhawk-1553-v2"
+    domain_authority: "AMCOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.3"
+
+  "1.2.225.22.1.1.0":
+    platform_variant: "CH-47F-BlockII"
+    platform_family: "CH-47-Chinook"
+    nomenclature: "Helicopter, Cargo: CH-47F Chinook Block II"
+    cm_schema: "rotary-wing-v1"
+    default_baseline: "CH-47F-BlockII-Baseline-2024.1"
+    cbm_schema: "chinook-1553-v2"
+    domain_authority: "AMCOM"
+    siso_ref: "SISO-REF-010-2023 Table 5.3"
+
+  # ===========================================================================
+  # U.S. Air Force — Fixed Wing
+  # kind=1 (Platform), domain=2 (Air)
+  # ===========================================================================
+
+  "1.2.225.40.1.5.0":
+    platform_variant: "F-35A-Block4"
+    platform_family: "F-35-Lightning-II"
+    nomenclature: "Aircraft, Fighter: F-35A Lightning II Block 4"
+    cm_schema: "fixed-wing-fighter-v1"
+    default_baseline: "F-35A-Block4-Baseline-2024.3"
+    cbm_schema: "f35-odin-v1"
+    domain_authority: "JPO"
+    siso_ref: "SISO-REF-010-2023 Table 5.3"
+
+  "1.2.225.41.1.1.0":
+    platform_variant: "F-16C-Block50"
+    platform_family: "F-16-Falcon"
+    nomenclature: "Aircraft, Fighter: F-16C Fighting Falcon Block 50"
+    cm_schema: "fixed-wing-fighter-v1"
+    default_baseline: null
+    cbm_schema: "f16-1553-v1"
+    domain_authority: "AFLCMC"
+    siso_ref: "SISO-REF-010-2023 Table 5.3"
+
+  # ===========================================================================
+  # Unmanned Systems
+  # ===========================================================================
+
+  "1.2.225.50.1.1.0":
+    platform_variant: "MQ-9A-Block5"
+    platform_family: "MQ-9-Reaper"
+    nomenclature: "Unmanned Aircraft: MQ-9A Reaper Block 5"
+    cm_schema: "uas-medium-altitude-v1"
+    default_baseline: "MQ-9A-Block5-Baseline-2024.2"
+    cbm_schema: "reaper-telemetry-v1"
+    domain_authority: "AFLCMC"
+    siso_ref: "SISO-REF-010-2023 Table 5.3"
+
+  "1.1.225.80.1.1.0":
+    platform_variant: "RCV-M"
+    platform_family: "Robotic-Combat-Vehicle"
+    nomenclature: "Robotic Combat Vehicle, Medium"
+    cm_schema: "ground-combat-vehicle-v1"
+    default_baseline: null
+    cbm_schema: null
+    domain_authority: "TARDEC"
+    siso_ref: "SISO-REF-010-2023 Table 5.2"
+
+  # ===========================================================================
+  # _default — MUST NOT BE REMOVED
+  # ===========================================================================
+  # When the incoming DIS triple does not match any entry above, this entry
+  # is applied. The asset is passed through with UNKNOWN platform metadata
+  # and flagged for ontology curation review.
+  # ===========================================================================
+
+  "_default":
+    platform_variant: "UNKNOWN"
+    platform_family: "UNKNOWN"
+    nomenclature: "Unrecognized DIS entity type — requires ontology curation"
+    cm_schema: "generic-v1"
+    default_baseline: null
+    cbm_schema: null
+    domain_authority: null
+    handling: "log_and_pass"

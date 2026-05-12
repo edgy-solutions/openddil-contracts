@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+package openddil.configuration.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Configuration Baseline — authoritative reference configuration for a variant
+// ADR-0009: Initially stored as YAML in openddil-contracts/baselines/.
+// =============================================================================
+
+// Source authority and type of a Modification Requirement.
+enum ModType {
+  MOD_TYPE_UNSPECIFIED     = 0;
+  MOD_TYPE_MWO             = 1; // Modification Work Order (Army)
+  MOD_TYPE_TCTO            = 2; // Time Compliance Technical Order (Air Force)
+  MOD_TYPE_SHIPALT         = 3; // Ship Alteration (Navy)
+  MOD_TYPE_FIELD_CHANGE    = 4; // Vendor-issued field change
+  MOD_TYPE_SOFTWARE_UPDATE = 5; // Software/firmware version update
+}
+
+// Mission and safety urgency of compliance.
+enum ComplianceCategory {
+  COMPLIANCE_UNSPECIFIED      = 0;
+  COMPLIANCE_SAFETY_OF_FLIGHT = 1; // Grounds the asset until applied
+  COMPLIANCE_MISSION_CRITICAL = 2; // Required before next mission window
+  COMPLIANCE_IMPROVEMENT      = 3; // Scheduled at next depot opportunity
+  COMPLIANCE_RECORDKEEPING    = 4; // Administrative compliance only
+}
+
+// An authorized BOM slot within a Baseline.
+// Multiple part numbers may fill a single slot (interchangeable items).
+message AuthorizedCi {
+  string slot_id                          = 1; // Logical BOM position ID
+  repeated string acceptable_part_numbers = 2; // Any of these is compliant
+  string minimum_revision                 = 3; // Inclusive lower bound on revision
+  bool optional                           = 4; // If true, absence is not a discrepancy
+}
+
+// A formal modification directive (MWO, TCTO, SHIPALT, etc.).
+message ModificationRequirement {
+  string mod_id                        = 1; // e.g., "MWO-2024-117"
+  ModType type                         = 2;
+  string title                         = 3;
+  google.protobuf.Timestamp due_date   = 4; // Compliance deadline
+  ComplianceCategory category          = 5;
+  repeated string applicable_ci_ids    = 6; // Empty = platform-wide
+}
+
+// A versioned, authoritative reference configuration for a platform variant.
+message ConfigurationBaseline {
+  string baseline_id                              = 1; // e.g., "M1A2-SEPv3-Baseline-2024.2"
+  string platform_variant                         = 2; // e.g., "M1A2-SEPv3"
+  string version                                  = 3; // e.g., "2024.2"
+  google.protobuf.Timestamp effective_from        = 4;
+  google.protobuf.Timestamp superseded_at         = 5; // Empty if currently active
+
+  repeated AuthorizedCi authorized_cis            = 6; // Authorized BOM slots
+  repeated ModificationRequirement required_mods  = 7; // Required mods at this version
+}

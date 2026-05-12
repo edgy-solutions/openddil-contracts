@@ -1,0 +1,59 @@
+syntax = "proto3";
+
+package openddil.configuration.v1;
+
+import "google/protobuf/timestamp.proto";
+import "openddil/configuration/v1/discrepancy.proto";
+
+// =============================================================================
+// As-Maintained Configuration — actual current state of one asset
+// ADR-0009: Persisted in compacted Kafka topic `asset-cm-state`, keyed by asset_id.
+// =============================================================================
+
+// Per-asset compliance state for a single Modification Requirement.
+enum ModComplianceState {
+  MOD_STATE_UNSPECIFIED    = 0;
+  MOD_STATE_NOT_APPLICABLE = 1; // Mod does not apply to this variant
+  MOD_STATE_PENDING        = 2; // Due but not yet applied
+  MOD_STATE_OVERDUE        = 3; // Past due date; requires immediate scheduling
+  MOD_STATE_APPLIED        = 4; // Successfully applied
+  MOD_STATE_WAIVED         = 5; // Formally waived by authority
+}
+
+// Rolled-up compliance posture for a single asset.
+enum ConfigurationStatus {
+  CONFIG_STATUS_UNSPECIFIED         = 0;
+  CONFIG_STATUS_IN_COMPLIANCE       = 1; // No discrepancies
+  CONFIG_STATUS_MINOR_DISCREPANCY   = 2; // Advisory/minor only
+  CONFIG_STATUS_MAJOR_DISCREPANCY   = 3; // At least one major discrepancy
+  CONFIG_STATUS_NOT_MISSION_CAPABLE = 4; // At least one grounding discrepancy
+}
+
+// What is physically installed in a specific BOM slot on a specific asset.
+message InstalledCi {
+  string slot_id                         = 1; // References AuthorizedCi.slot_id
+  string ci_id                           = 2; // References ConfigurationItem.ci_id
+  google.protobuf.Timestamp installed_at = 3;
+}
+
+// Per-asset, per-mod compliance tracking.
+message ModCompliance {
+  string mod_id                          = 1; // References ModificationRequirement.mod_id
+  ModComplianceState state               = 2;
+  google.protobuf.Timestamp applied_at   = 3; // Populated when state = APPLIED
+  string applied_by_work_order           = 4;
+}
+
+// The current, actual configuration state of a single asset compared
+// against its assigned baseline. ConfigurationDiscrepancy imported from discrepancy.proto.
+message AsMaintainedConfiguration {
+  string asset_id                                  = 1; // Canonical OpenDDIL asset identifier
+  string baseline_id                               = 2; // Which baseline is being measured against
+  google.protobuf.Timestamp as_of                  = 3; // Timestamp of last state update
+
+  repeated InstalledCi installed                   = 4; // What is physically installed
+  repeated ModCompliance mod_status                = 5; // Mod compliance per mod
+  repeated ConfigurationDiscrepancy discrepancies  = 6; // Computed deltas vs baseline
+
+  ConfigurationStatus overall_status               = 7; // Rolled-up posture
+}

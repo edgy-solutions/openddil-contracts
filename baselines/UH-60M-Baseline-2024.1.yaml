@@ -1,0 +1,60 @@
+# =============================================================================
+# OpenDDIL Configuration Baseline: UH-60M — version 2024.1
+# =============================================================================
+# Authoritative reference BOM for the UH-60M Black Hawk utility helicopter.
+# Source authority: AMCOM (Aviation and Missile Command)
+#
+# TODO: Verify part numbers against current AMCOM TM 1-1520-237-10
+# TODO: Verify required_mods against current AMCOM ASB/MWO register
+# =============================================================================
+
+baseline_id: "UH-60M-Baseline-2024.1"
+platform_variant: "UH-60M"
+version: "2024.1"
+effective_from: "2024-01-01T00:00:00Z"
+superseded_at: null
+
+authorized_cis:
+  - slot_id: "engine-left"
+    acceptable_part_numbers:
+      - "T700-GE-701D"
+    minimum_revision: "D"
+    optional: false
+
+  - slot_id: "engine-right"
+    acceptable_part_numbers:
+      - "T700-GE-701D"
+    minimum_revision: "D"
+    optional: false
+
+  - slot_id: "main-gearbox"
+    acceptable_part_numbers:
+      - "MGB-UH60M-Rev3"
+    minimum_revision: "3"
+    optional: false
+
+  - slot_id: "avionics-suite"
+    acceptable_part_numbers:
+      - "CAAS-M-Rev2"
+      - "CAAS-M-Rev3"
+    minimum_revision: "2"
+    optional: false
+
+  - slot_id: "hoist"
+    acceptable_part_numbers:
+      - "HOIST-600LB-Rev1"
+    minimum_revision: "1"
+    optional: true
+
+required_mods:
+  - mod_id: "MWO-UH60-2024-003"
+    type: MOD_TYPE_MWO
+    title: "Main rotor blade inspection interval reduction"
+    due_date: "2024-09-30T00:00:00Z"
+    category: COMPLIANCE_SAFETY_OF_FLIGHT
+
+  - mod_id: "ASB-UH60-2023-211"
+    type: MOD_TYPE_FIELD_CHANGE
+    title: "CAAS software update v3.1"
+    due_date: "2024-12-31T00:00:00Z"
+    category: COMPLIANCE_IMPROVEMENT

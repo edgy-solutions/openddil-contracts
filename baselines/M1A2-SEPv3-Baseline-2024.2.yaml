@@ -1,0 +1,61 @@
+# =============================================================================
+# OpenDDIL Configuration Baseline: M1A2-SEPv3 — version 2024.2
+# =============================================================================
+# Authoritative reference BOM for the M1A2 SEP Version 3 ground combat vehicle.
+# Source authority: TACOM (Tank-Automotive and Armaments Command)
+#
+# TODO: Verify authorized_cis part numbers against current TACOM TM 9-2350-388-10
+# TODO: Verify required_mods list against current MWO register (LOGSA SAMS-E)
+# =============================================================================
+
+baseline_id: "M1A2-SEPv3-Baseline-2024.2"
+platform_variant: "M1A2-SEPv3"
+version: "2024.2"
+effective_from: "2024-07-01T00:00:00Z"
+superseded_at: null
+
+authorized_cis:
+  - slot_id: "engine"
+    acceptable_part_numbers:
+      - "AGT-1500-RevD"
+      - "AGT-1500-RevE"
+    minimum_revision: "D"
+    optional: false
+
+  - slot_id: "transmission"
+    acceptable_part_numbers:
+      - "X-1100-3B"
+    minimum_revision: "3B"
+    optional: false
+
+  - slot_id: "fcs-computer"
+    acceptable_part_numbers:
+      - "FCS-SEPv3-A"
+      - "FCS-SEPv3-B"
+    minimum_revision: "A"
+    optional: false
+
+  - slot_id: "thermal-imager"
+    acceptable_part_numbers:
+      - "CITV-2A"
+    minimum_revision: "2A"
+    optional: false
+
+  - slot_id: "apkws-launcher"
+    acceptable_part_numbers:
+      - "APKWS-M299"
+    minimum_revision: "1"
+    optional: true
+
+required_mods:
+  - mod_id: "MWO-2024-117"
+    type: MOD_TYPE_MWO
+    title: "Transmission cooling system upgrade"
+    due_date: "2025-12-31T00:00:00Z"
+    category: COMPLIANCE_SAFETY_OF_FLIGHT
+
+  - mod_id: "MWO-2023-089"
+    type: MOD_TYPE_MWO
+    title: "FCS software update v4.2.1"
+    due_date: "2024-06-30T00:00:00Z"
+    category: COMPLIANCE_MISSION_CRITICAL

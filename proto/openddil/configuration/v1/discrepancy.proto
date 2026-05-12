@@ -1,0 +1,45 @@
+syntax = "proto3";
+
+package openddil.configuration.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Configuration Discrepancy — computed delta between as-maintained and baseline
+// =============================================================================
+
+// Type of gap detected between as-maintained and authorized configuration.
+enum DiscrepancyType {
+  DISCREPANCY_UNSPECIFIED        = 0;
+  DISCREPANCY_MISSING_MOD        = 1; // Required mod not yet applied
+  DISCREPANCY_UNAUTHORIZED_PART  = 2; // Installed CI not in authorized BOM
+  DISCREPANCY_OBSOLETE_REVISION  = 3; // CI revision below minimum authorized
+  DISCREPANCY_EXPIRED_INSPECTION = 4; // Inspection interval exceeded
+  DISCREPANCY_MISSING_CI         = 5; // Required BOM slot is empty
+}
+
+// Operational impact level of a configuration discrepancy.
+enum Severity {
+  SEVERITY_UNSPECIFIED = 0;
+  SEVERITY_INFO        = 1; // Advisory; no operational impact
+  SEVERITY_MINOR       = 2; // Degraded capability; mission capable
+  SEVERITY_MAJOR       = 3; // Significant degradation; limited mission capable
+  SEVERITY_CRITICAL    = 4; // Grounds the asset; not mission capable
+}
+
+// A computed gap between the as-maintained and authorized configuration.
+// Discrepancies are recomputed each time AsMaintainedConfiguration is updated.
+// Stable discrepancy_id allows deduplication and tracking across updates.
+message ConfigurationDiscrepancy {
+  string discrepancy_id     = 1; // Stable ID for tracking/deduplication
+  DiscrepancyType type      = 2;
+  string description        = 3; // Human-readable explanation
+  Severity severity         = 4;
+  string recommended_action = 5; // e.g., "Schedule depot routing for MWO-2024-117"
+
+  // Reference to the specific CI or mod that is discrepant (one or both set)
+  string related_ci_id  = 6;
+  string related_mod_id = 7;
+
+  google.protobuf.Timestamp detected_at = 8;
+}

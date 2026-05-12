@@ -1,7 +1,7 @@
 # ADR-0011: Strategic Sustainment Tool Positioning
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 The customer is currently using or evaluating commercial off-the-shelf (COTS) strategic sustainment modeling tools for long-term strategic analysis. A clear positioning strategy is needed to define how OpenDDIL relates to these classes of tools in the commercial portfolio, both competitively and architecturally.

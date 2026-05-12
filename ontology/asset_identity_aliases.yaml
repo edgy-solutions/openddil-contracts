@@ -1,0 +1,45 @@
+# =============================================================================
+# OpenDDIL Asset Identity Aliases
+# =============================================================================
+# Maps external feed identifiers to canonical OpenDDIL asset_id.
+# Used by the future asset-identity-resolver service (ADR-0010).
+#
+# CURATION RULES:
+#   - Changes require a PR with a domain expert reviewer.
+#   - canonical_asset_id format: "{country}-{service}-{unit}-{platform}-{hull/tail}"
+#   - Do not infer canonical IDs from simulator data; obtain from authoritative roster.
+#   - Each entry requires a 'notes' field explaining the mapping source.
+#
+# IMPORTANT: Sidecars emit raw native identifiers. This file is the ONLY place
+# where external identifiers are mapped to canonical asset_id. Do not add
+# identity resolution logic to sidecars.
+# =============================================================================
+
+aliases:
+
+  dis:
+    # DIS entity ID triplet (site:application:entity) → canonical asset_id
+    # site/application identify the simulation exercise node; entity identifies
+    # the platform instance within that node.
+    #
+    # TODO: Populate with real site/application values from exercise EXORD.
+    #       The entries below are illustrative (VR-Forces default site=1, app=1).
+
+    - dis_entity_id: { site: 1, application: 1, entity: 4773 }
+      canonical_asset_id: "USA-ARMY-1HBCT-M1A2-4773"
+      notes: "1st HBCT, M1A2 SEPv3 hull #4773 (VR-Forces simulation)"
+
+    - dis_entity_id: { site: 1, application: 1, entity: 4774 }
+      canonical_asset_id: "USA-ARMY-1HBCT-M1A2-4774"
+      notes: "1st HBCT, M1A2 SEPv3 hull #4774 (VR-Forces simulation)"
+
+    - dis_entity_id: { site: 1, application: 1, entity: 8001 }
+      canonical_asset_id: "USA-ARMY-CAB-AH64-8001"
+      notes: "Combat Aviation Brigade, AH-64E tail #8001 (VR-Forces simulation)"
+
+  proprietary:
+    # Proprietary feed identifier → canonical asset_id
+    # TODO: POPULATE ONCE PROPRIETARY FEED SAMPLE IS AVAILABLE.
+    # The proprietary feed's native identifier field name must be confirmed
+    # before adding entries here (see ADR-0010: proprietary adapter TBD).
+    []

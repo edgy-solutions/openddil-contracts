@@ -1,7 +1,7 @@
 # ADR-0010: Feed Integration Strategy
 
 ## Status
-Proposed
+Accepted
 
 ## Context
 OpenDDIL must integrate with multiple external feeds: 

@@ -1,0 +1,43 @@
+syntax = "proto3";
+
+package openddil.configuration.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Configuration Item — a discrete, trackable physical component
+// ADR-0009: Persisted in compacted Kafka topic `cm-items`, keyed by ci_id.
+// =============================================================================
+
+// Physical classification of a CI in the maintenance hierarchy.
+enum CiCategory {
+  CI_CATEGORY_UNSPECIFIED    = 0;
+  CI_CATEGORY_PLATFORM       = 1; // The asset itself (e.g., the M1A2)
+  CI_CATEGORY_MAJOR_ASSEMBLY = 2; // Engine, transmission, turret
+  CI_CATEGORY_SUBASSEMBLY    = 3; // Alternator, FCS computer
+  CI_CATEGORY_LRU            = 4; // Line Replaceable Unit
+  CI_CATEGORY_SRU            = 5; // Shop Replaceable Unit
+  CI_CATEGORY_CONSUMABLE     = 6; // Filters, fluids
+  CI_CATEGORY_SOFTWARE       = 7; // Firmware/software load (v2 active use)
+}
+
+// One ConfigurationItem = one physical, serialized, trackable instance.
+// ci_id is OpenDDIL-canonical. serial_number is the manufacturer's ID.
+message ConfigurationItem {
+  string ci_id           = 1;  // OpenDDIL canonical CI identifier
+  string nsn             = 2;  // National Stock Number (NIIN format preferred)
+  string part_number     = 3;  // Manufacturer Part Number
+  string serial_number   = 4;  // Physical instance identifier
+  string revision        = 5;  // Hardware or firmware revision string
+  string nomenclature    = 6;  // Human-readable name
+  CiCategory category    = 7;
+
+  // Bill-of-Materials hierarchy
+  string parent_ci_id          = 8;  // Empty for the platform (top-level)
+  repeated string child_ci_ids = 9;
+
+  // Lifecycle timestamps
+  google.protobuf.Timestamp installed_at      = 10;
+  google.protobuf.Timestamp last_verified_at  = 11;
+  string installed_by_work_order              = 12;
+}

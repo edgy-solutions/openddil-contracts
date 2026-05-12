@@ -1,0 +1,64 @@
+# =============================================================================
+# OpenDDIL Configuration Baseline: F-35A Block 4 — version 2024.3
+# =============================================================================
+# Authoritative reference BOM for the F-35A Lightning II Block 4 fighter.
+# Source authority: JPO (F-35 Joint Program Office) / AFLCMC
+#
+# NOTE: F-35 CM is managed via ODIN (Operational Data Integrated Network),
+# which replaced ALIS. OpenDDIL consumes JPO-published baselines and does
+# NOT replace ODIN as the CM authority.
+#
+# TODO: Verify part numbers against current JPO published configuration data
+# TODO: Verify TCTO list against current AFLCMC TCTO register
+# =============================================================================
+
+baseline_id: "F-35A-Block4-Baseline-2024.3"
+platform_variant: "F-35A-Block4"
+version: "2024.3"
+effective_from: "2024-10-01T00:00:00Z"
+superseded_at: null
+
+authorized_cis:
+  - slot_id: "propulsion"
+    acceptable_part_numbers:
+      - "F135-PW-100-Rev5"
+      - "F135-PW-100-Rev6"
+    minimum_revision: "5"
+    optional: false
+
+  - slot_id: "mission-computer"
+    acceptable_part_numbers:
+      - "ICP-4A"
+    minimum_revision: "4A"
+    optional: false
+
+  - slot_id: "eots"
+    acceptable_part_numbers:
+      - "EOTS-Block4-Rev1"
+    minimum_revision: "1"
+    optional: false
+
+  - slot_id: "software-load"
+    acceptable_part_numbers:
+      - "TR-3-OFP-BLK4.3"
+    minimum_revision: "BLK4.3"
+    optional: false
+
+  - slot_id: "decm-pod"
+    acceptable_part_numbers:
+      - "AN-ALQ-253-Rev2"
+    minimum_revision: "2"
+    optional: true
+
+required_mods:
+  - mod_id: "TCTO-F35-2024-011"
+    type: MOD_TYPE_TCTO
+    title: "Fuel system pressurization line inspection"
+    due_date: "2025-03-31T00:00:00Z"
+    category: COMPLIANCE_SAFETY_OF_FLIGHT
+
+  - mod_id: "TCTO-F35-2024-007"
+    type: MOD_TYPE_TCTO
+    title: "TR-3 OFP software update to BLK4.3"
+    due_date: "2025-06-30T00:00:00Z"
+    category: COMPLIANCE_MISSION_CRITICAL
