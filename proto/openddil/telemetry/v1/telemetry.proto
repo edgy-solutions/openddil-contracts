@@ -1,0 +1,339 @@
+syntax = "proto3";
+package openddil.telemetry.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+
+// =============================================================================
+// CORE PRIMITIVES — used everywhere
+// =============================================================================
+
+// A scalar measurement with a unit. Unit strings MUST be valid UCUM codes.
+// Examples: "Cel" (Celsius), "[degF]" (Fahrenheit), "K" (Kelvin),
+//           "m/s", "[kn_i]" (knots), "kPa", "V", "A", "%", "1" (dimensionless).
+// Algorithms MUST convert to their preferred unit using pint or equivalent.
+message Quantity {
+  double value = 1;
+  string unit = 2;
+
+  // Optional: standard uncertainty (1-sigma) in the SAME unit as `value`.
+  // Zero or unset means "unknown / not reported".
+  double std_uncertainty = 3;
+
+  // Optional: number of valid significant digits, if the source reports
+  // limited precision. 0 = unset.
+  uint32 sig_digits = 4;
+}
+
+// A vector quantity — all components share one unit.
+message Vector3 {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+  string unit = 4;
+}
+
+// A quaternion. Always dimensionless. Order: (w, x, y, z) with w as scalar.
+message Quaternion {
+  double w = 1;
+  double x = 2;
+  double y = 3;
+  double z = 4;
+}
+
+// =============================================================================
+// SPATIAL — position, velocity, attitude with explicit frames
+// =============================================================================
+
+// Earth-Centered Earth-Fixed (ECEF / WGS84 ellipsoid). Meters.
+message EcefPosition {
+  double x_m = 1;
+  double y_m = 2;
+  double z_m = 3;
+}
+
+// WGS84 geodetic. Degrees, meters. Altitude reference is explicit.
+message Wgs84Position {
+  double lat_deg = 1;
+  double lon_deg = 2;
+  double alt_m = 3;
+  AltitudeReference alt_ref = 4;
+}
+
+enum AltitudeReference {
+  ALT_REF_UNSPECIFIED = 0;
+  ALT_REF_WGS84_ELLIPSOID = 1;  // height above ellipsoid (HAE)
+  ALT_REF_MSL_EGM2008 = 2;      // mean sea level via EGM2008 geoid
+  ALT_REF_MSL_EGM96 = 3;
+  ALT_REF_AGL = 4;              // above ground level (requires DEM)
+  ALT_REF_BAROMETRIC = 5;       // pressure altitude, uncorrected
+}
+
+// Local tangent plane: East-North-Up. Origin is a separate field.
+message LocalEnu {
+  double east_m = 1;
+  double north_m = 2;
+  double up_m = 3;
+  Wgs84Position origin = 4;
+}
+
+// Discriminated position. Producers SHOULD emit the frame native to the
+// source; consumers convert lazily.
+message Position {
+  oneof frame {
+    EcefPosition ecef = 1;
+    Wgs84Position wgs84 = 2;
+    LocalEnu local_enu = 3;
+  }
+  google.protobuf.Timestamp valid_at = 10;
+  PositionQuality quality = 11;
+}
+
+message PositionQuality {
+  // Horizontal/vertical 1-sigma uncertainty in meters. 0 = unknown.
+  double horiz_std_m = 1;
+  double vert_std_m = 2;
+  PositionSource source = 3;
+}
+
+enum PositionSource {
+  POS_SRC_UNSPECIFIED = 0;
+  POS_SRC_GPS_L1 = 1;
+  POS_SRC_GPS_RTK = 2;
+  POS_SRC_GPS_PPP = 3;
+  POS_SRC_INS = 4;          // pure inertial
+  POS_SRC_GPS_INS = 5;      // tightly-coupled
+  POS_SRC_DEAD_RECKON = 6;
+  POS_SRC_OPERATOR = 7;     // human-entered
+  POS_SRC_SIMULATED = 8;
+}
+
+// Velocity in a named frame. Convert lazily.
+message Velocity {
+  oneof frame {
+    Vector3 ecef = 1;       // m/s in ECEF
+    Vector3 ned = 2;        // m/s in local North-East-Down
+    Vector3 body = 3;       // m/s in vehicle body frame
+  }
+  Quantity ground_speed = 10;     // optional convenience scalar
+  Quantity course_over_ground = 11;  // bearing, "deg"
+}
+
+// Attitude — orientation of the platform body relative to a reference frame.
+message Attitude {
+  oneof representation {
+    Quaternion quat = 1;            // body-to-NED by default
+    EulerAngles euler = 2;
+  }
+  AttitudeReference reference = 10;
+  // Per-axis 1-sigma uncertainty in degrees.
+  Vector3 std_dev_deg = 11;
+}
+
+message EulerAngles {
+  // All in degrees. Convention: ZYX intrinsic (yaw, pitch, roll).
+  double yaw_deg = 1;
+  double pitch_deg = 2;
+  double roll_deg = 3;
+}
+
+enum AttitudeReference {
+  ATT_REF_UNSPECIFIED = 0;
+  ATT_REF_BODY_TO_NED = 1;
+  ATT_REF_BODY_TO_ECEF = 2;
+  ATT_REF_BODY_TO_ENU = 3;
+}
+
+// =============================================================================
+// KINEMATIC STATE — full motion picture for an asset at a moment
+// =============================================================================
+
+message KinematicState {
+  Position position = 1;
+  Velocity velocity = 2;
+  Vector3 acceleration = 3;       // optional, m/s^2 in body frame
+  Attitude attitude = 4;
+  Vector3 angular_velocity = 5;   // optional, rad/s in body frame
+
+  // Dead-reckoning hints from DIS PDU, if applicable.
+  DeadReckoning dead_reckoning = 6;
+}
+
+message DeadReckoning {
+  DeadReckoningAlgorithm algorithm = 1;
+  google.protobuf.Duration max_age = 2;  // beyond this, extrapolation invalid
+}
+
+enum DeadReckoningAlgorithm {
+  DR_UNSPECIFIED = 0;
+  DR_STATIC = 1;
+  DR_FPW = 2;   // Fixed, Position World
+  DR_RPW = 3;   // Rotating, Position World
+  DR_RVW = 4;   // Rotating, Velocity World
+  DR_FVW = 5;   // Fixed, Velocity World
+  DR_FPB = 6;   // Fixed, Position Body
+  DR_RPB = 7;
+  DR_RVB = 8;
+  DR_FVB = 9;
+}
+
+// =============================================================================
+// SUSTAINMENT — the logistics/maintenance side of the kinetic-logistics bridge
+// =============================================================================
+
+message SustainmentMetrics {
+  ThermalMetrics thermal = 1;
+  PowerMetrics power = 2;
+  FluidMetrics fluids = 3;
+  ConsumablesMetrics consumables = 4;
+  ComponentWearMetrics wear = 5;
+  HealthFlags health = 6;
+}
+
+message ThermalMetrics {
+  // Use Quantity so source unit (F vs C vs K) is preserved.
+  Quantity component_temperature = 1;   // primary monitored component
+  Quantity ambient_temperature = 2;
+  Quantity coolant_temperature = 3;
+  Quantity exhaust_temperature = 4;
+
+  // Map for additional named thermal sensors. Key = sensor identifier.
+  // Value carries its own unit, so heterogeneous probes coexist.
+  map<string, Quantity> additional_probes = 10;
+}
+
+message PowerMetrics {
+  Quantity bus_voltage = 1;       // typical: "V"
+  Quantity bus_current = 2;       // typical: "A"
+  Quantity battery_state_of_charge = 3;  // "%"
+  Quantity battery_state_of_health = 4;  // "%"
+  Quantity generator_load = 5;    // "%" or "kW"
+  uint32 power_cycles = 6;
+}
+
+message FluidMetrics {
+  Quantity fuel_remaining = 1;       // "L", "gal_us", "kg" — UCUM
+  Quantity fuel_flow_rate = 2;       // "L/h", "kg/h"
+  Quantity oil_pressure = 3;         // "kPa", "psi"
+  Quantity oil_level = 4;            // "%" or volume
+  Quantity hydraulic_pressure = 5;
+}
+
+message ConsumablesMetrics {
+  // Ammunition, countermeasures, expendables. Free-form keyed map
+  // because inventory varies by platform type.
+  map<string, ConsumableState> items = 1;
+}
+
+message ConsumableState {
+  uint32 quantity_remaining = 1;
+  uint32 quantity_capacity = 2;
+  string nsn = 3;                   // National Stock Number, if applicable
+}
+
+message ComponentWearMetrics {
+  // Cumulative operational metrics that drive predictive maintenance.
+  // Named map because component set is platform-specific.
+  map<string, WearState> components = 1;
+}
+
+message WearState {
+  Quantity hours_in_service = 1;        // "h"
+  Quantity cycles = 2;                  // "1"
+  Quantity remaining_useful_life = 3;   // "h" or "%"
+  WearStatus status = 4;
+}
+
+enum WearStatus {
+  WEAR_UNSPECIFIED = 0;
+  WEAR_NOMINAL = 1;
+  WEAR_DEGRADED = 2;
+  WEAR_SERVICE_DUE = 3;
+  WEAR_CRITICAL = 4;
+}
+
+message HealthFlags {
+  bool engine_warning = 1;
+  bool transmission_warning = 2;
+  bool electrical_fault = 3;
+  bool comms_fault = 4;
+  bool weapons_fault = 5;
+  // Unstructured fault codes from BIT (Built-In Test).
+  repeated string active_fault_codes = 10;
+}
+
+// =============================================================================
+// IDENTITY & CLASSIFICATION
+// =============================================================================
+
+message AssetIdentity {
+  // Stable canonical ID assigned by OpenDDIL. UUID or URN preferred.
+  string asset_id = 1;
+
+  // DIS triplet, if sourced from a DIS feed. Optional.
+  DisEntityId dis_entity_id = 2;
+
+  // Human-readable callsign / marking. Optional.
+  string callsign = 3;
+
+  // Platform classification (e.g., M1A2, F-16C, MQ-9). Free-form.
+  string platform_type = 4;
+
+  ForceAffiliation force = 5;
+}
+
+message DisEntityId {
+  uint32 site = 1;
+  uint32 application = 2;
+  uint32 entity = 3;
+}
+
+enum ForceAffiliation {
+  FORCE_UNSPECIFIED = 0;
+  FORCE_FRIENDLY = 1;
+  FORCE_OPPOSING = 2;
+  FORCE_NEUTRAL = 3;
+  FORCE_UNKNOWN = 4;
+}
+
+// =============================================================================
+// PROVENANCE — non-negotiable for any defense system
+// =============================================================================
+
+message Provenance {
+  // The system that produced this event (e.g., "vrforces-bridge-01").
+  string producer_id = 1;
+
+  // The original protocol/source (e.g., "DIS/IEEE-1278.1", "MAVLink", "STANAG-4586").
+  string source_protocol = 2;
+
+  // Monotonic source sequence number, if available. Helps detect drops.
+  uint64 source_sequence = 3;
+
+  // When the sensor sampled the value (best available estimate).
+  google.protobuf.Timestamp sample_time = 4;
+
+  // When OpenDDIL ingested the event. Set by the Bronze sidecar.
+  google.protobuf.Timestamp ingest_time = 5;
+
+  // Classification level for downstream filtering. Application-defined.
+  string classification = 6;        // e.g., "U", "CUI", "S//NF"
+}
+
+// =============================================================================
+// THE EVENT
+// =============================================================================
+
+message EntityTelemetryEvent {
+  // Globally unique event ID (UUIDv7 recommended for time-orderability).
+  string event_id = 1;
+
+  AssetIdentity asset = 2;
+  KinematicState kinematics = 3;
+  SustainmentMetrics sustainment = 4;
+  Provenance provenance = 5;
+
+  // Schema version of THIS message structure. Independent of package version.
+  // Increment for additive changes; bump package to v2 for breaking changes.
+  uint32 schema_revision = 15;
+}
