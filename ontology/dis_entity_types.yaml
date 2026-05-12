@@ -31,7 +31,7 @@ mappings:
   # kind=1 (Platform), domain=1 (Land)
   # ===========================================================================
 
-  "1.1.225.1.1.1.0":
+  "1_1_225_1_1_1_0":
     platform_variant: "M1A1"
     platform_family: "M1-Abrams"
     nomenclature: "Tank, Combat, Full Tracked: 105-mm Gun, M1A1"
@@ -41,7 +41,7 @@ mappings:
     domain_authority: "TACOM"
     siso_ref: "SISO-REF-010-2023 Table 5.2"
 
-  "1.1.225.1.3.1.0":
+  "1_1_225_1_3_1_0":
     platform_variant: "M1A2-SEPv3"
     platform_family: "M1-Abrams"
     nomenclature: "Tank, Combat, Full Tracked: 120-mm Gun, M1A2 SEPv3"
@@ -51,7 +51,7 @@ mappings:
     domain_authority: "TACOM"
     siso_ref: "SISO-REF-010-2023 Table 5.2"
 
-  "1.1.225.2.1.1.0":
+  "1_1_225_2_1_1_0":
     platform_variant: "M2A3-Bradley"
     platform_family: "Bradley-IFV"
     nomenclature: "Fighting Vehicle, Infantry, M2A3 Bradley"
@@ -61,7 +61,7 @@ mappings:
     domain_authority: "TACOM"
     siso_ref: "SISO-REF-010-2023 Table 5.2"
 
-  "1.1.225.3.1.1.0":
+  "1_1_225_3_1_1_0":
     platform_variant: "HMMWV-M1151A1"
     platform_family: "HMMWV"
     nomenclature: "Truck, Utility, Tactical: High-Mobility, M1151A1"
@@ -76,7 +76,7 @@ mappings:
   # kind=1 (Platform), domain=2 (Air)
   # ===========================================================================
 
-  "1.2.225.20.1.3.0":
+  "1_2_225_20_1_3_0":
     platform_variant: "AH-64E-V6"
     platform_family: "AH-64-Apache"
     nomenclature: "Helicopter, Attack: AH-64E Apache Guardian Version 6"
@@ -86,7 +86,7 @@ mappings:
     domain_authority: "AMCOM"
     siso_ref: "SISO-REF-010-2023 Table 5.3"
 
-  "1.2.225.21.1.2.0":
+  "1_2_225_21_1_2_0":
     platform_variant: "UH-60M"
     platform_family: "UH-60-BlackHawk"
     nomenclature: "Helicopter, Utility: UH-60M Black Hawk"
@@ -96,7 +96,7 @@ mappings:
     domain_authority: "AMCOM"
     siso_ref: "SISO-REF-010-2023 Table 5.3"
 
-  "1.2.225.22.1.1.0":
+  "1_2_225_22_1_1_0":
     platform_variant: "CH-47F-BlockII"
     platform_family: "CH-47-Chinook"
     nomenclature: "Helicopter, Cargo: CH-47F Chinook Block II"
@@ -111,7 +111,7 @@ mappings:
   # kind=1 (Platform), domain=2 (Air)
   # ===========================================================================
 
-  "1.2.225.40.1.5.0":
+  "1_2_225_40_1_5_0":
     platform_variant: "F-35A-Block4"
     platform_family: "F-35-Lightning-II"
     nomenclature: "Aircraft, Fighter: F-35A Lightning II Block 4"
@@ -121,7 +121,7 @@ mappings:
     domain_authority: "JPO"
     siso_ref: "SISO-REF-010-2023 Table 5.3"
 
-  "1.2.225.41.1.1.0":
+  "1_2_225_41_1_1_0":
     platform_variant: "F-16C-Block50"
     platform_family: "F-16-Falcon"
     nomenclature: "Aircraft, Fighter: F-16C Fighting Falcon Block 50"
@@ -135,7 +135,7 @@ mappings:
   # Unmanned Systems
   # ===========================================================================
 
-  "1.2.225.50.1.1.0":
+  "1_2_225_50_1_1_0":
     platform_variant: "MQ-9A-Block5"
     platform_family: "MQ-9-Reaper"
     nomenclature: "Unmanned Aircraft: MQ-9A Reaper Block 5"
@@ -145,7 +145,7 @@ mappings:
     domain_authority: "AFLCMC"
     siso_ref: "SISO-REF-010-2023 Table 5.3"
 
-  "1.1.225.80.1.1.0":
+  "1_1_225_80_1_1_0":
     platform_variant: "RCV-M"
     platform_family: "Robotic-Combat-Vehicle"
     nomenclature: "Robotic Combat Vehicle, Medium"

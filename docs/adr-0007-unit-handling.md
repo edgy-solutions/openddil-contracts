@@ -20,3 +20,10 @@ We will **Carry Units and Defer Conversion**.
 
 ## Verification
 - **Truth Serum Test**: Sending `200 K` (cold) must not fire an anomaly that `200 F` (hot) would fire, even if the numerical value (200) is identical.
+
+## Related
+- **ADR-0013** (Physical Quantity Consistency, 2026-05-12) extends this rule
+  from sustainment scalars to every primary physical quantity in the Silver
+  schema (angles, positions, velocities). The `_deg`/`_m` bare-double field
+  shapes were a violation of ADR-0007's intent; ADR-0013 migrates them to
+  `Quantity { value, unit }` form.

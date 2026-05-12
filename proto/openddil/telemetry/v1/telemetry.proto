@@ -45,18 +45,22 @@ message Quaternion {
 // SPATIAL — position, velocity, attitude with explicit frames
 // =============================================================================
 
-// Earth-Centered Earth-Fixed (ECEF / WGS84 ellipsoid). Meters.
+// Earth-Centered Earth-Fixed (ECEF / WGS84 ellipsoid).
+// Per ADR-0013: components are Quantity-typed; producers tag the unit they
+// emit natively (UCUM `"m"` for canonical ECEF) and consumers convert lazily
+// via pint. Clean break from the prior `x_m double` bare-field shape.
 message EcefPosition {
-  double x_m = 1;
-  double y_m = 2;
-  double z_m = 3;
+  Quantity x = 1;
+  Quantity y = 2;
+  Quantity z = 3;
 }
 
-// WGS84 geodetic. Degrees, meters. Altitude reference is explicit.
+// WGS84 geodetic. Lat/lon as Quantity (typical UCUM `"deg"`), altitude as
+// Quantity with reference frame called out separately. Per ADR-0013.
 message Wgs84Position {
-  double lat_deg = 1;
-  double lon_deg = 2;
-  double alt_m = 3;
+  Quantity lat = 1;
+  Quantity lon = 2;
+  Quantity alt = 3;
   AltitudeReference alt_ref = 4;
 }
 
@@ -69,11 +73,12 @@ enum AltitudeReference {
   ALT_REF_BAROMETRIC = 5;       // pressure altitude, uncorrected
 }
 
-// Local tangent plane: East-North-Up. Origin is a separate field.
+// Local tangent plane: East-North-Up. Components are Quantity-typed per
+// ADR-0013 (typical UCUM `"m"`).
 message LocalEnu {
-  double east_m = 1;
-  double north_m = 2;
-  double up_m = 3;
+  Quantity east = 1;
+  Quantity north = 2;
+  Quantity up = 3;
   Wgs84Position origin = 4;
 }
 
@@ -130,11 +135,13 @@ message Attitude {
   Vector3 std_dev_deg = 11;
 }
 
+// Convention: ZYX intrinsic (yaw, pitch, roll). Per ADR-0013, each angle is
+// Quantity-typed so the source's native unit (DIS emits `"rad"`; many UI
+// systems emit `"deg"`) is preserved on the wire.
 message EulerAngles {
-  // All in degrees. Convention: ZYX intrinsic (yaw, pitch, roll).
-  double yaw_deg = 1;
-  double pitch_deg = 2;
-  double roll_deg = 3;
+  Quantity yaw = 1;
+  Quantity pitch = 2;
+  Quantity roll = 3;
 }
 
 enum AttitudeReference {
