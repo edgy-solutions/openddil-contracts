@@ -52,3 +52,7 @@ for all Protobuf event schemas in the OpenDDIL DDIL-resilient CQRS framework.
 # Makefile
 - All codegen goes through the Makefile. NEVER suggest running protoc directly.
 - Generated files are NOT committed to the repo. They are built on demand.
+
+# Cross-Repo Conventions
+- This repo's outputs (`gen/python`, `ontology/`, `baselines/`, `bootstrap/`) are mounted into many service containers. When a service repo adds a new mount of one of those directories, the mount goes in `openddil-demo/docker-compose.override.yml`, NEVER in the base `docker-compose.yml`. The base compose is REGISTRY IMAGES ONLY.
+- Customer-encumbered ontology entries (`proprietary:`, `sim_a:` sections) do NOT live here. They live in `openddil-customer-bundle/ontology/` (sibling repo, not OSS). Keep the OSS ontology files DIS-only or empty-array on those keys.

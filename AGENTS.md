@@ -58,3 +58,29 @@ After ANY change, update:
 2. `llms.txt` — Domain events list, key files, schema rules.
 3. `.cursorrules` — Only if new conventions are introduced.
 4. This file — Only if new safety constraints apply.
+
+## Cross-Repo Conventions (for context)
+
+### Docker Compose split in `openddil-demo`
+
+This contracts repo doesn't ship a container, but its outputs
+(`gen/python`, `ontology/`, `baselines/`, `bootstrap/`) are mounted into
+many service containers. Agents who edit those service repos must know:
+
+- **`openddil-demo/docker-compose.yml` is registry-images-only**. Every
+  service references an `image:` pulled from `ghcr.io/edgy-solutions/openddil/...`.
+- **Builds + dev source mounts** (including mounts of this repo's
+  `gen/python`, `ontology/`, `bootstrap/` directories) live ONLY in
+  `openddil-demo/docker-compose.override.yml`.
+- **New cross-repo dependencies on this repo** (e.g., a new service
+  mounting `bootstrap/`) MUST add the mount in the demo's OVERRIDE
+  file, not the base.
+
+### Customer overlay
+
+Customer-encumbered ontology entries (`proprietary:` and `sim_a:`
+sections of `asset_identity_aliases.yaml` and
+`platform_variant_aliases.yaml`) do NOT live in this repo. They live in
+the sibling `openddil-customer-bundle/ontology/`. This OSS file
+documents the schema with empty arrays / DIS-only entries; Bloblang
+mappings tolerate missing customer sections via `.aliases.<feed>.or([])`.

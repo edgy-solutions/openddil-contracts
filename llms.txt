@@ -44,3 +44,18 @@ Events are serialized with Protobufs for bandwidth efficiency in DDIL environmen
 - openddil-contracts (this repo): Language-agnostic Protobuf schemas.
 - openddil-edge-dotnet / openddil-edge-python: Edge SDKs consuming these contracts.
 - openddil-hq-dotnet / openddil-hq-python: HQ SDKs consuming these contracts.
+- openddil-cm-service, openddil-logistics-fusion-service, openddil-sensor-ingest,
+  openddil-tactical-agents: services that mount this repo's `gen/python`,
+  `ontology/`, `baselines/`, and `bootstrap/` directories at runtime.
+
+## Cross-repo conventions
+- This repo's directories are mounted by service containers via the
+  `openddil-demo/docker-compose.override.yml` (developer mode) file.
+- The OSS base compose at `openddil-demo/docker-compose.yml` is
+  REGISTRY IMAGES ONLY — never `build:` directives. When a service
+  needs to mount one of this repo's outputs (e.g., a new shared
+  library directory), the mount goes in the override compose.
+- Customer-encumbered ontology entries (proprietary feeds, customer
+  simulators) live in `openddil-customer-bundle/ontology/` — NOT in
+  this OSS repo's ontology files. Keep the OSS sections DIS-only or
+  empty-array on customer feed keys.
