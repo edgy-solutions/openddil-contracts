@@ -29,6 +29,18 @@ enum ConfigurationStatus {
   CONFIG_STATUS_NOT_MISSION_CAPABLE = 4; // At least one grounding discrepancy
 }
 
+// Operational lifecycle of an asset in the CM service. Orthogonal to
+// ConfigurationStatus: an asset can be ACTIVE + NOT_MISSION_CAPABLE
+// simultaneously, which is exactly the picture maintainers need. Tracked
+// as durable state on the AssetCM Virtual Object (ADR-0014).
+enum LifecycleState {
+  LIFECYCLE_UNSPECIFIED    = 0;
+  LIFECYCLE_REGISTERED     = 1; // Virtual Object exists, baseline lookup pending/failed
+  LIFECYCLE_ACTIVE         = 2; // Initialized against baseline, telemetry observed recently
+  LIFECYCLE_STALE          = 3; // No telemetry within the staleness window
+  LIFECYCLE_DECOMMISSIONED = 4; // Explicit retirement
+}
+
 // What is physically installed in a specific BOM slot on a specific asset.
 message InstalledCi {
   string slot_id                         = 1; // References AuthorizedCi.slot_id
@@ -56,4 +68,17 @@ message AsMaintainedConfiguration {
   repeated ConfigurationDiscrepancy discrepancies  = 6; // Computed deltas vs baseline
 
   ConfigurationStatus overall_status               = 7; // Rolled-up posture
+
+  // Operational lifecycle, owned by the AssetCM Virtual Object.
+  LifecycleState lifecycle                         = 8;
+
+  // When telemetry was last observed (for staleness detection). Updated by
+  // observe() handler. Distinct from `as_of` which marks the last full
+  // re-analysis.
+  google.protobuf.Timestamp last_observed_at       = 9;
+
+  // The compliance status the asset was in the last time an alert was
+  // emitted to tactical-events. Used by the AssetCM handler to detect
+  // transitions without an in-memory cache. Durable across restarts.
+  ConfigurationStatus last_alerted_status          = 10;
 }

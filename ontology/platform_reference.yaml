@@ -1,0 +1,58 @@
+# =============================================================================
+# OpenDDIL Platform Reference — Domain-Authoritative Per-Variant Properties
+# =============================================================================
+# Properties of platforms that are intrinsic to the platform itself, NOT
+# deployment-specific configuration. Examples: fuel-tank capacity, max
+# crew, weight-class, primary armament — facts about the M1A2 SEPv3, not
+# facts about how we choose to operate it.
+#
+# Curation rules (mirrors asset_identity_aliases.yaml):
+#   - Changes require a PR with a domain-expert reviewer.
+#   - Capacities cite an authoritative source in `notes`.
+#   - Use UCUM unit codes (per ADR-0013); algorithms convert via pint.
+#
+# Consumed by:
+#   - openddil-logistics-fusion-service (fuel%-to-volume conversion in rules.py)
+#   - Phase 4 COP UI (display: "fuel 285 / 504 gal_us, 56%")
+#
+# Deployment override:
+#   FUEL_CAPACITY_BY_VARIANT env var on the fusion service is an escape
+#   hatch for one-off operational tuning. This file is the source of truth.
+#
+# Cross-file integrity check:
+#   The fusion service at startup logs WARN for any platform_variant
+#   appearing in asset_identity_aliases.yaml or dis_entity_types.yaml that
+#   lacks a corresponding entry here. Catches ontology drift between files.
+# =============================================================================
+
+platforms:
+
+  M1A2-SEPv3:
+    fuel_capacity:
+      value: 504.4
+      unit: gal_us
+      notes: "504.4 US gal main + auxiliary internal tanks; M1A2 SEPv3 technical bulletin"
+    domain_authority: TACOM
+    weight_class: heavy
+
+  M1A2-SEPv2:
+    fuel_capacity:
+      value: 504.4
+      unit: gal_us
+      notes: "Same fuel system as SEPv3"
+    domain_authority: TACOM
+    weight_class: heavy
+
+  AH-64E:
+    fuel_capacity:
+      value: 376.0
+      unit: gal_us
+      notes: "Internal + crashworthy fuel cells; Apache AH-64E performance specifications"
+    domain_authority: AMCOM
+    weight_class: medium
+
+  # CONFIGURATION INJECTION POINT — additional variants land here as the
+  # alias and DIS entity ontologies expand. Each entry must include a
+  # fuel_capacity sub-tree at minimum so the fusion engine has a ratio
+  # denominator. Other intrinsic properties (max_crew, primary_armament,
+  # mtbf_targets) are optional now but reserved for future evaluators.

@@ -13,6 +13,11 @@
 # IMPORTANT: Sidecars emit raw native identifiers. This file is the ONLY place
 # where external identifiers are mapped to canonical asset_id. Do not add
 # identity resolution logic to sidecars.
+#
+# Customer-specific sections (proprietary feeds, simulator vendors) live
+# OUTSIDE this OSS file in a separate overlay that the customer maintains.
+# Bloblang mappings read `.aliases.<feed>.or([])` so missing sections fall
+# through to URN-form asset_id without breaking the pipeline.
 # =============================================================================
 
 aliases:
@@ -37,9 +42,9 @@ aliases:
       canonical_asset_id: "USA-ARMY-CAB-AH64-8001"
       notes: "Combat Aviation Brigade, AH-64E tail #8001 (VR-Forces simulation)"
 
-  proprietary:
-    # Proprietary feed identifier → canonical asset_id
-    # TODO: POPULATE ONCE PROPRIETARY FEED SAMPLE IS AVAILABLE.
-    # The proprietary feed's native identifier field name must be confirmed
-    # before adding entries here (see ADR-0010: proprietary adapter TBD).
-    []
+  # Additional feed sections (proprietary:, sim_a:, etc.) are appended by
+  # the customer overlay at deploy time. See:
+  #   openddil-customer-bundle/ontology/asset_identity_aliases.yaml
+  # The customer overlay is mounted OVER this file at /ontology/ in the
+  # Connect containers — it is a complete superset that includes the dis:
+  # section above plus the customer's own feed entries.

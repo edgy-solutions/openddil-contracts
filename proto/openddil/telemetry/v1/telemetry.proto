@@ -3,27 +3,15 @@ package openddil.telemetry.v1;
 
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
+import "openddil/common/v1/quantity.proto";
 
 // =============================================================================
 // CORE PRIMITIVES — used everywhere
 // =============================================================================
-
-// A scalar measurement with a unit. Unit strings MUST be valid UCUM codes.
-// Examples: "Cel" (Celsius), "[degF]" (Fahrenheit), "K" (Kelvin),
-//           "m/s", "[kn_i]" (knots), "kPa", "V", "A", "%", "1" (dimensionless).
-// Algorithms MUST convert to their preferred unit using pint or equivalent.
-message Quantity {
-  double value = 1;
-  string unit = 2;
-
-  // Optional: standard uncertainty (1-sigma) in the SAME unit as `value`.
-  // Zero or unset means "unknown / not reported".
-  double std_uncertainty = 3;
-
-  // Optional: number of valid significant digits, if the source reports
-  // limited precision. 0 = unset.
-  uint32 sig_digits = 4;
-}
+//
+// Quantity (value + UCUM unit) lives in openddil.common.v1; this package
+// uses it via the import above. Field types are fully qualified so the
+// resolver finds the import without ambiguity.
 
 // A vector quantity — all components share one unit.
 message Vector3 {
@@ -50,17 +38,17 @@ message Quaternion {
 // emit natively (UCUM `"m"` for canonical ECEF) and consumers convert lazily
 // via pint. Clean break from the prior `x_m double` bare-field shape.
 message EcefPosition {
-  Quantity x = 1;
-  Quantity y = 2;
-  Quantity z = 3;
+  openddil.common.v1.Quantity x = 1;
+  openddil.common.v1.Quantity y = 2;
+  openddil.common.v1.Quantity z = 3;
 }
 
 // WGS84 geodetic. Lat/lon as Quantity (typical UCUM `"deg"`), altitude as
 // Quantity with reference frame called out separately. Per ADR-0013.
 message Wgs84Position {
-  Quantity lat = 1;
-  Quantity lon = 2;
-  Quantity alt = 3;
+  openddil.common.v1.Quantity lat = 1;
+  openddil.common.v1.Quantity lon = 2;
+  openddil.common.v1.Quantity alt = 3;
   AltitudeReference alt_ref = 4;
 }
 
@@ -76,9 +64,9 @@ enum AltitudeReference {
 // Local tangent plane: East-North-Up. Components are Quantity-typed per
 // ADR-0013 (typical UCUM `"m"`).
 message LocalEnu {
-  Quantity east = 1;
-  Quantity north = 2;
-  Quantity up = 3;
+  openddil.common.v1.Quantity east = 1;
+  openddil.common.v1.Quantity north = 2;
+  openddil.common.v1.Quantity up = 3;
   Wgs84Position origin = 4;
 }
 
@@ -120,8 +108,8 @@ message Velocity {
     Vector3 ned = 2;        // m/s in local North-East-Down
     Vector3 body = 3;       // m/s in vehicle body frame
   }
-  Quantity ground_speed = 10;     // optional convenience scalar
-  Quantity course_over_ground = 11;  // bearing, "deg"
+  openddil.common.v1.Quantity ground_speed = 10;     // optional convenience scalar
+  openddil.common.v1.Quantity course_over_ground = 11;  // bearing, "deg"
 }
 
 // Attitude — orientation of the platform body relative to a reference frame.
@@ -139,9 +127,9 @@ message Attitude {
 // Quantity-typed so the source's native unit (DIS emits `"rad"`; many UI
 // systems emit `"deg"`) is preserved on the wire.
 message EulerAngles {
-  Quantity yaw = 1;
-  Quantity pitch = 2;
-  Quantity roll = 3;
+  openddil.common.v1.Quantity yaw = 1;
+  openddil.common.v1.Quantity pitch = 2;
+  openddil.common.v1.Quantity roll = 3;
 }
 
 enum AttitudeReference {
@@ -199,31 +187,31 @@ message SustainmentMetrics {
 
 message ThermalMetrics {
   // Use Quantity so source unit (F vs C vs K) is preserved.
-  Quantity component_temperature = 1;   // primary monitored component
-  Quantity ambient_temperature = 2;
-  Quantity coolant_temperature = 3;
-  Quantity exhaust_temperature = 4;
+  openddil.common.v1.Quantity component_temperature = 1;   // primary monitored component
+  openddil.common.v1.Quantity ambient_temperature = 2;
+  openddil.common.v1.Quantity coolant_temperature = 3;
+  openddil.common.v1.Quantity exhaust_temperature = 4;
 
   // Map for additional named thermal sensors. Key = sensor identifier.
   // Value carries its own unit, so heterogeneous probes coexist.
-  map<string, Quantity> additional_probes = 10;
+  map<string, openddil.common.v1.Quantity> additional_probes = 10;
 }
 
 message PowerMetrics {
-  Quantity bus_voltage = 1;       // typical: "V"
-  Quantity bus_current = 2;       // typical: "A"
-  Quantity battery_state_of_charge = 3;  // "%"
-  Quantity battery_state_of_health = 4;  // "%"
-  Quantity generator_load = 5;    // "%" or "kW"
+  openddil.common.v1.Quantity bus_voltage = 1;       // typical: "V"
+  openddil.common.v1.Quantity bus_current = 2;       // typical: "A"
+  openddil.common.v1.Quantity battery_state_of_charge = 3;  // "%"
+  openddil.common.v1.Quantity battery_state_of_health = 4;  // "%"
+  openddil.common.v1.Quantity generator_load = 5;    // "%" or "kW"
   uint32 power_cycles = 6;
 }
 
 message FluidMetrics {
-  Quantity fuel_remaining = 1;       // "L", "gal_us", "kg" — UCUM
-  Quantity fuel_flow_rate = 2;       // "L/h", "kg/h"
-  Quantity oil_pressure = 3;         // "kPa", "psi"
-  Quantity oil_level = 4;            // "%" or volume
-  Quantity hydraulic_pressure = 5;
+  openddil.common.v1.Quantity fuel_remaining = 1;       // "L", "gal_us", "kg" — UCUM
+  openddil.common.v1.Quantity fuel_flow_rate = 2;       // "L/h", "kg/h"
+  openddil.common.v1.Quantity oil_pressure = 3;         // "kPa", "psi"
+  openddil.common.v1.Quantity oil_level = 4;            // "%" or volume
+  openddil.common.v1.Quantity hydraulic_pressure = 5;
 }
 
 message ConsumablesMetrics {
@@ -245,9 +233,9 @@ message ComponentWearMetrics {
 }
 
 message WearState {
-  Quantity hours_in_service = 1;        // "h"
-  Quantity cycles = 2;                  // "1"
-  Quantity remaining_useful_life = 3;   // "h" or "%"
+  openddil.common.v1.Quantity hours_in_service = 1;        // "h"
+  openddil.common.v1.Quantity cycles = 2;                  // "1"
+  openddil.common.v1.Quantity remaining_useful_life = 3;   // "h" or "%"
   WearStatus status = 4;
 }
 

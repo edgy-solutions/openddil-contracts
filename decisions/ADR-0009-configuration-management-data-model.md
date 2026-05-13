@@ -35,3 +35,34 @@ All 7 enums are referenced in message fields. No orphan enums. All `google.proto
 - OpenDDIL **will not** implement IUID (Item Unique Identification) registry sync.
 - OpenDDIL **will not** own the authoritative source of NSN data.
 - OpenDDIL **will not** replace existing CM authorities (TACOM, AMCOM, JPO, etc.). It consumes their baselines and reports compliance against them.
+
+## Addendum (2026-05-13) — Manual discrepancies are a separate list
+
+Inside the `cm-service` persistence model, `AsMaintainedRecord` carries
+**two** discrepancy lists rather than one:
+
+- `discrepancies` — analyzer-computed entries, rebuilt from scratch on
+  every reanalysis cycle (`_reanalyze` clears and re-populates from the
+  current `installed`/`mod_status` state against the baseline).
+- `manual_discrepancies` — entries raised by humans or external systems
+  via `CmEvent.ManualDiscrepancyRaised`. These persist across reanalysis
+  cycles because the analyzer has no way to re-derive them (they reflect
+  human judgment, not baseline-vs-installed math).
+
+The two lists are merged into the protobuf `ConfigurationDiscrepancy[]`
+field at the serialization boundary (`store.record_to_proto`). On the
+wire and to downstream consumers, there is one unified list keyed by
+`discrepancy_id`. Manual entries are still identifiable by their
+`discrepancy_id` (`uuid5` over a seed beginning with `"manual|"`), so
+consumers that want to distinguish source can — but most don't need to.
+
+**Why this matters for future engineers**: it is tempting to "simplify"
+by collapsing `manual_discrepancies` back into `discrepancies`. **Do not.**
+Reanalysis would clobber every manual entry. The separation is deliberate
+and is verified by `test_manual_discrepancy_survives_reanalysis`,
+`test_critical_manual_discrepancy_escalates_overall_status`, and
+`test_manual_discrepancy_appears_in_wire_form` in
+`openddil-cm-service/src/tests/test_asset_cm.py`. A future
+`clear_manual_discrepancy(discrepancy_id)` handler (planned for
+Phase 3.5) is the right way to remove manual entries — not by letting
+the analyzer wipe them on the next observation.

@@ -1,0 +1,44 @@
+# =============================================================================
+# OpenDDIL Platform Variant Aliases
+# =============================================================================
+# Maps external-feed platform-type strings to canonical OpenDDIL platform
+# variant keys. Parallel to asset_identity_aliases.yaml — same pattern,
+# different identifier level. See ADR-0016.
+#
+# Why this file exists:
+#   External feeds emit platform-type strings the customer controls. Those
+#   strings are NOT guaranteed to match our canonical platform_variant keys
+#   in platform_reference.yaml — they could differ by spacing, hyphenation,
+#   capitalization, prefixing, or use entirely different internal names.
+#   Copying the native string straight to `asset.platform_variant` causes
+#   silent drift: the fusion service then can't look up fuel capacity,
+#   thresholds, etc., and the failure surfaces as wrong logistics status
+#   AFTER updates have already shipped.
+#
+#   Reconciling at the feed boundary mirrors the asset-identity pattern
+#   already in place. ADR-0010 generalizes to this level too: external
+#   protocols don't shape internal contracts at ANY identifier level.
+#
+# Bloblang behaviour:
+#   - If `native` matches: emit `canonical` in `asset.platform_variant`.
+#   - If no match:        emit `"UNKNOWN"`. The fusion service handles
+#     UNKNOWN gracefully (no fuel-pct evaluation; staleness fallback) and
+#     logs the unrecognized string for ontology curation.
+#
+# Curation rules:
+#   - Changes require a PR with a domain-expert reviewer.
+#   - canonical MUST be a key present in platform_reference.yaml — the
+#     startup integrity check on the fusion service warns if not.
+#
+# Customer-specific feed sections live in the customer overlay (see
+# openddil-customer-bundle/ontology/platform_variant_aliases.yaml). This
+# OSS file documents the schema and stays empty pending real entries.
+# =============================================================================
+
+aliases:
+
+  dis:
+    # DIS doesn't carry a platform_type string — variant is derived in
+    # dis_entity_types.yaml from the (kind, domain, country, category,
+    # subcategory, specific, extra) 7-tuple. No aliases needed here.
+    []

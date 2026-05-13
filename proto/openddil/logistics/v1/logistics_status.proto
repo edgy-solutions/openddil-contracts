@@ -1,0 +1,69 @@
+syntax = "proto3";
+package openddil.logistics.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "openddil/common/v1/quantity.proto";
+
+// =============================================================================
+// LOGISTICS FUSION OUTPUT — produced by the per-asset Restate workflow,
+// consumed by the System B egress pipeline (translated to customer JSON via
+// Bloblang).
+// =============================================================================
+//
+// Internal severity vocabulary is stable and tested. Customer-facing labels
+// (OK/DEGRADED/CRITICAL, FMC/PMC/NMC, green/amber/red) are applied at the
+// egress boundary via a Bloblang `match` block — never inside this proto and
+// never inside the fusion service.
+
+// Internal normalized severity. Stable, tested vocabulary.
+enum LogisticsSeverity {
+  LOGISTICS_SEVERITY_UNSPECIFIED = 0;
+  LOGISTICS_SEVERITY_OK = 1;
+  LOGISTICS_SEVERITY_DEGRADED = 2;
+  LOGISTICS_SEVERITY_CRITICAL = 3;
+  LOGISTICS_SEVERITY_NON_OPERATIONAL = 4;
+}
+
+// A single factor pulling the overall severity above OK. The fusion engine
+// produces one of these per evaluator that found a constraint; the overall
+// AssetLogisticsStatus.overall_severity is the max across all factors.
+message ConstrainingFactor {
+  string factor_id = 1;                                 // "fuel", "ammo.main_gun", "wear.transmission", "subsystem.POWERPLANT", "cm.discrepancy", etc.
+  LogisticsSeverity severity = 2;
+  string description = 3;                                // human-readable
+
+  openddil.common.v1.Quantity current_value = 4;         // optional — populated when the factor is quantitative
+  openddil.common.v1.Quantity threshold = 5;             // optional — the threshold this factor crossed
+
+  google.protobuf.Duration projected_time_to_worse = 6;  // optional — "how long until this gets worse"
+}
+
+message AssetLogisticsStatus {
+  string asset_id = 1;
+  string platform_variant = 2;
+
+  LogisticsSeverity overall_severity = 3;
+  repeated ConstrainingFactor constraining_factors = 4;
+
+  google.protobuf.Duration projected_mission_capable_remaining = 10;
+  google.protobuf.Duration projected_time_to_next_constraint = 11;
+
+  google.protobuf.Timestamp computed_at = 20;
+  google.protobuf.Timestamp latest_telemetry_sample_time = 21;
+  string cm_baseline_id = 23;
+
+  // Monotonic counter on the per-asset Restate object — increments on every
+  // emission. Lets downstream consumers detect skipped revisions.
+  uint64 status_revision = 30;
+}
+
+// Envelope on topic `asset-logistics-status`. Marks whether this is a state
+// transition (severity changed), the first observation for this asset, or
+// just a cadenced recompute.
+message AssetLogisticsStatusUpdate {
+  AssetLogisticsStatus status = 1;
+  LogisticsSeverity previous_severity = 2;
+  bool is_transition = 3;
+  bool is_initial = 4;
+}

@@ -1,0 +1,32 @@
+syntax = "proto3";
+package openddil.common.v1;
+
+// =============================================================================
+// CORE PRIMITIVES — shared across telemetry, logistics, configuration, etc.
+// =============================================================================
+//
+// Quantity is the foundational "value + unit" type used everywhere physical
+// measurements cross a boundary. Per ADR-0013, every numeric quantity carries
+// its source unit on the wire; algorithms convert lazily via pint.
+//
+// History: Quantity originally lived inside openddil.telemetry.v1; it was
+// extracted to openddil.common.v1 during Phase 3.5 so non-telemetry packages
+// (logistics_status, future inventory_events, etc.) can depend on it without
+// pulling in the entire telemetry schema.
+
+// A scalar measurement with a unit. Unit strings MUST be valid UCUM codes.
+// Examples: "Cel" (Celsius), "[degF]" (Fahrenheit), "K" (Kelvin),
+//           "m/s", "[kn_i]" (knots), "kPa", "V", "A", "%", "1" (dimensionless).
+// Algorithms MUST convert to their preferred unit using pint or equivalent.
+message Quantity {
+  double value = 1;
+  string unit = 2;
+
+  // Optional: standard uncertainty (1-sigma) in the SAME unit as `value`.
+  // Zero or unset means "unknown / not reported".
+  double std_uncertainty = 3;
+
+  // Optional: number of valid significant digits, if the source reports
+  // limited precision. 0 = unset.
+  uint32 sig_digits = 4;
+}

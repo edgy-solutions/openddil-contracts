@@ -1,0 +1,78 @@
+syntax = "proto3";
+package openddil.logistics.v1;
+
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/duration.proto";
+import "openddil/common/v1/quantity.proto";
+
+// =============================================================================
+// WINDOWED TELEMETRY — rolling-window aggregations computed by the Faust edge
+// agent and consumed by the logistics-fusion service.
+// =============================================================================
+//
+// Lives in openddil.logistics.v1 because the consumers (logistics fusion +
+// downstream COP/analytics) are logistics concerns; the telemetry package
+// owns the *raw* per-asset stream, not aggregates derived from it.
+//
+// Inputs: raw-sensor-stream (Silver, unified across feeds).
+// Window: per-asset, sized in wall time (see WindowSpec.duration).
+// Math:   pure-Python in openddil-tactical-agents/edge/detection/windows.py;
+//         Faust wraps it for buffering only.
+//
+// Per ADR-0013, every magnitude carries its UCUM unit. Slopes are expressed
+// in "value-unit/time-unit" form (e.g., fuel_consumption_rate.unit == "gal_us/h").
+
+message WindowSpec {
+  google.protobuf.Duration duration = 1;        // e.g., 15 min, 60 min
+  google.protobuf.Timestamp window_start = 2;
+  google.protobuf.Timestamp window_end = 3;
+  uint32 sample_count = 4;                       // points contributing to the fit
+}
+
+// Linear-regression result over a window: slope + R^2 + latest observed value.
+message ScalarTrend {
+  openddil.common.v1.Quantity latest = 1;        // most-recent sample
+  openddil.common.v1.Quantity slope = 2;         // per-unit-time rate
+  double r_squared = 3;                          // 0..1; quality of linear fit
+  google.protobuf.Timestamp latest_sample_at = 4;
+}
+
+// Keyed-map of consumable rates (one per weapon station / countermeasure slot).
+message ConsumableTrend {
+  string slot_key = 1;                           // e.g., "main_gun", "coax", "smoke"
+  ScalarTrend remaining = 2;                     // rounds_remaining over time
+  uint32 capacity = 3;                           // static slot capacity
+  string nsn = 4;                                // optional NSN passthrough
+}
+
+// Keyed-map of wear progression rates (one per tracked component).
+message ComponentWearTrend {
+  string component_key = 1;                      // e.g., "transmission", "engine"
+  ScalarTrend hours_in_service = 2;              // rate at which hours accrue
+  ScalarTrend remaining_useful_life = 3;         // rate at which RUL decreases
+}
+
+// Output record on topic `asset-telemetry-windows`, keyed by asset_id.
+// Compacted? No — windows are time-series; cleanup.policy=delete (24h).
+message WindowedTelemetry {
+  string asset_id = 1;
+  string platform_variant = 2;
+  WindowSpec window = 3;
+
+  // Fluid rates (one entry per monitored fluid; "fuel_remaining" is the
+  // common case but oil_level etc. could also appear).
+  map<string, ScalarTrend> fluid_trends = 10;
+
+  // Consumable rates by slot key.
+  repeated ConsumableTrend consumable_trends = 11;
+
+  // Wear progression by component.
+  repeated ComponentWearTrend wear_trends = 12;
+
+  // Subsystem-health string passthrough — non-quantitative, kept here so the
+  // fusion service can evaluate them without a second consumer of Silver.
+  // Format: "subsystem_id:health" (e.g., "POWERPLANT:DEGRADED").
+  repeated string active_fault_codes_latest = 13;
+
+  google.protobuf.Timestamp computed_at = 20;
+}

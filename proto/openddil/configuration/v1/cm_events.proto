@@ -1,0 +1,83 @@
+syntax = "proto3";
+
+package openddil.configuration.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// Configuration Management Events — discrete state-change events
+// =============================================================================
+// Published to the `cm-events` Kafka topic. Each event records a human or
+// system action that changes the as-maintained state of a single asset.
+//
+// ADR-0009: cm-events is hybrid compact+delete with 30-day retention.
+// ADR-0006: Persistence/Computation model separation — these protobuf types
+//           are the wire form; the CM service translates to a faust.Record
+//           form for its internal state table and to pure-Python dataclasses
+//           when invoking the analyzer.
+// =============================================================================
+
+// A discrete Configuration Management event.
+//
+// The `oneof event` discriminates the specific action; new event types are
+// added by appending to the oneof with the next unused field number.
+message CmEvent {
+  string event_id = 1;                              // UUIDv7 recommended
+  string asset_id = 2;                              // canonical OpenDDIL asset_id
+  google.protobuf.Timestamp recorded_at = 3;
+  string recorded_by = 4;                           // user identifier or system name
+  string work_order_ref = 5;                        // optional ALCS/EAGLE work order reference
+
+  oneof event {
+    PartReplaced part_replaced = 10;
+    ModApplied mod_applied = 11;
+    InspectionCompleted inspection_completed = 12;
+    CiSerialNumberCorrected serial_corrected = 13;
+    BaselineAssigned baseline_assigned = 14;
+    ManualDiscrepancyRaised manual_discrepancy = 15;
+  }
+}
+
+// A CI was physically replaced in a specific BOM slot.
+message PartReplaced {
+  string slot_id = 1;                               // BOM slot identifier
+  string old_ci_id = 2;                             // optional — may be unknown
+  string new_ci_id = 3;
+  string reason = 4;
+}
+
+// A required modification was completed on the asset.
+message ModApplied {
+  string mod_id = 1;
+  google.protobuf.Timestamp applied_at = 2;
+}
+
+// An inspection was performed.
+message InspectionCompleted {
+  string inspection_type = 1;
+  google.protobuf.Timestamp completed_at = 2;
+  bool passed = 3;
+  string notes = 4;
+}
+
+// The recorded serial number for a CI was wrong; correct it.
+message CiSerialNumberCorrected {
+  string slot_id = 1;
+  string corrected_serial = 2;
+  string reason = 3;
+}
+
+// The asset is being measured against a different baseline (variant change,
+// platform reclassification, etc.).
+message BaselineAssigned {
+  string baseline_id = 1;                           // explicit baseline override
+  string reason = 2;                                // e.g., "platform variant correction"
+}
+
+// A discrepancy detected outside the automated analyzer (e.g., a maintainer
+// observed something the system can't see) gets injected here.
+message ManualDiscrepancyRaised {
+  string description = 1;
+  string severity = 2;                              // "MINOR" | "MAJOR" | "CRITICAL"
+  string recommended_action = 3;
+}
