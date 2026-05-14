@@ -102,18 +102,33 @@ why the visible banner is absent. The parent component that mounts the
   telemetry path delivers; mock components render synthetic numbers
   instead.
 
-## Notes for future maintainers
+## Finalized — Phase 4d
+
+The Phase 4c rewiring this ADR anticipated is complete. The regional and
+HQ views were rewired to real ElectricSQL shapes; what remained mock was
+marked. The marker set is now stable, and `grep -rn DEMO_MOCK` is the
+authoritative inventory. The 4d Playwright smoke suite adds an automated
+check on top of the grep — `test_34_ui_demo_mock_banners.py` walks the
+three role views and asserts each always-visible mock surface renders its
+banner. Status remains **Accepted**; the rule stands unchanged.
+
+### Notes for future maintainers
 
 - The shared banner component is
   `openddil-demo/frontend/src/components/DemoMockBanner.tsx`.
-- As of Phase 4b, the marked components are: `LtamdsView`,
-  `DiagnosticCanvas`, `BattleView`, `LocalFleetRadar` (DOM banner +
-  const + comment), and `TacticalMapUnderlay`, `AssetSpawner` (const +
-  comment only — pure-3D primitives).
-- The regional and HQ view components (`RegionalApp`, `HqApp`, and their
-  children) are still mock as of Phase 4b but are NOT yet marked — they
-  are rewired or marked in Phase 4c, per the phase boundary. When 4c
-  touches each one, it either wires it to real shapes or applies this
-  ADR's marker. A 4c exit check should be `grep -rn DEMO_MOCK` plus a
-  confirmation that no regional/hq component renders mock data without
-  the marker.
+- Marked components as of Phase 4d (`grep -rn DEMO_MOCK` is authoritative
+  — this list is a snapshot, not a registry):
+  - **DOM banner + const + comment** (7): `BattleView`,
+    `DiagnosticCanvas`, `hq/HqBattleView`, `LocalFleetRadar`,
+    `LtamdsView`, `regional/RegionalBattleView`,
+    `regional/TacticalRuleBuilder`.
+  - **const + comment only** (pure-3D primitive, no DOM banner possible —
+    see the Exception above): `TacticalMapUnderlay`. (`AssetSpawner`,
+    listed here through Phase 4b, no longer exists.)
+- `test_34_ui_demo_mock_banners.py` checks the always-visible DOM banners
+  on the maintainer / regional / HQ views. Two markers are intentionally
+  out of its scope and verified by `grep` / review instead:
+  `TacticalRuleBuilder` (in a modal that is closed by default) and
+  `TacticalMapUnderlay` (renders no DOM banner by design).
+- When a mock is wired to real data, all three of its markers come off as
+  part of that work — and if it had a `test_34` entry, that comes off too.
