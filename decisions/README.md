@@ -14,10 +14,13 @@ This directory contains the Architectural Decision Records for the OpenDDIL proj
 - [ADR-0017: UI Mock Components Must Self-Identify](ADR-0017-ui-mock-components-self-identify.md) — Phase 4b: no orphan mocks — DEMO_MOCK const + banner + comment (2026-05-14, Status: Accepted)
 - [ADR-0018: asset-cm-state Wire Format Inconsistency](ADR-0018-asset-cm-state-wire-format-inconsistency.md) — Phase 4a: asset-cm-state is JSON while all other internal topics are protobuf; deliberately deferred (2026-05-14, Status: Accepted)
 - [ADR-0019: Single Kafka→Postgres Projector](ADR-0019-single-kafka-postgres-projector.md) — Phase 4a: one generic config-driven projector, not per-topic services (2026-05-14)
+- [ADR-0020: Prognostics Derivation Stage](ADR-0020-prognostics-derivation-stage.md) — Phase 5 candidate: derive sustainment estimates from kinematic history; calibrated against System A ground truth (2026-05-14, Status: Proposed — stub)
 
 ## Phase status
 
-Phase 4b in progress (2026-05-14): edge-view repair — simulator removed,
+Phase 4c in progress (2026-05-14): three role-aware views (maintainer /
+regional / HQ) wired to real pipeline shapes.
+Phase 4b complete (2026-05-14): edge-view repair — simulator removed,
 ElectricSQL shape hooks, App.tsx rewired to real pipeline data.
 Phase 4a complete (2026-05-14): single-region Postgres read-model tables +
 `openddil-projector` (Kafka→Postgres) + ElectricSQL wiring, verified live.
