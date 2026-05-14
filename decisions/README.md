@@ -16,6 +16,7 @@ This directory contains the Architectural Decision Records for the OpenDDIL proj
 - [ADR-0019: Single Kafka→Postgres Projector](ADR-0019-single-kafka-postgres-projector.md) — Phase 4a: one generic config-driven projector, not per-topic services (2026-05-14)
 - [ADR-0020: Prognostics Derivation Stage](ADR-0020-prognostics-derivation-stage.md) — Phase 5 candidate: derive sustainment estimates from kinematic history; calibrated against System A ground truth (2026-05-14, Status: Proposed — stub)
 - [ADR-0021: The Edge→HQ Topology Is Load-Bearing](ADR-0021-edge-hq-topology-is-load-bearing.md) — Phase 4c.5: the edge/HQ split is the architecture, not an implementation detail; collapsed in 4a/4b, restored in 4c.5; future simplifications must be explicit decisions (2026-05-14, Status: Accepted)
+- [ADR-0022: Hierarchical Aggregation Is the Architecture](ADR-0022-hierarchical-aggregation-is-the-architecture.md) — Phase 4d: edge→regional→HQ aggregation is the architecture (and the reason for Redpanda); the current flat single-tier topology is a recorded expedient; four "do not harden the flat assumption" constraints bind all work until hierarchical restoration (2026-05-14, Status: Accepted)
 
 ## Phase status
 
