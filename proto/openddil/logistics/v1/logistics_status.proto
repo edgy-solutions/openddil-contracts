@@ -4,6 +4,7 @@ package openddil.logistics.v1;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "openddil/common/v1/quantity.proto";
+import "openddil/telemetry/v1/telemetry.proto";  // for Origin enum
 
 // =============================================================================
 // LOGISTICS FUSION OUTPUT — produced by the per-asset Restate workflow,
@@ -37,6 +38,21 @@ message ConstrainingFactor {
   openddil.common.v1.Quantity threshold = 5;             // optional — the threshold this factor crossed
 
   google.protobuf.Duration projected_time_to_worse = 6;  // optional — "how long until this gets worse"
+
+  // Provenance of this factor. Reuses the same Origin enum as
+  // SustainmentMetrics.value_provenance (Phase 5 / ADR-0020) so the
+  // measured-vs-derived distinction propagates through the full chain
+  // unchanged. proto3 zero-default is ORIGIN_UNSPECIFIED — existing
+  // construction sites (8 evaluators in fusion/rules.py that haven't
+  // been made provenance-aware yet) get UNSPECIFIED for free, which is
+  // honest: "no claim about underlying-data origin." The new
+  // derived-sustainment evaluator sets ORIGIN_DERIVED explicitly.
+  openddil.telemetry.v1.Origin origin = 7;
+
+  // Confidence in [0.0, 1.0] for DERIVED factors; 0.0 is the accurate
+  // value in Phase 5 (no oracle — see ADR-0020). proto3 zero-default
+  // is 0.0, so existing factors don't need to set it.
+  float confidence = 8;
 }
 
 message AssetLogisticsStatus {

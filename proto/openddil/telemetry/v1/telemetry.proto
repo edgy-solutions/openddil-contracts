@@ -176,6 +176,24 @@ enum DeadReckoningAlgorithm {
 // SUSTAINMENT — the logistics/maintenance side of the kinetic-logistics bridge
 // =============================================================================
 
+// Whether a sustainment value is a MEASURED observation or a DERIVED estimate
+// (e.g. produced by the Phase 5 prognostics engine from kinematic history).
+// Per ADR-0020 the validation phase distinguishes the two; Phase 5 is
+// uniformly DERIVED — there is no measured-sustainment source yet.
+enum Origin {
+  ORIGIN_UNSPECIFIED = 0;
+  ORIGIN_MEASURED    = 1;
+  ORIGIN_DERIVED     = 2;
+}
+
+// Per-value provenance for a sustainment field. `confidence` is in [0.0, 1.0]
+// for DERIVED values; Phase 5 emits a placeholder (0.0) — confidence gets
+// real meaning at the validation phase per ADR-0020.
+message ValueProvenance {
+  Origin origin     = 1;
+  float  confidence = 2;
+}
+
 message SustainmentMetrics {
   ThermalMetrics thermal = 1;
   PowerMetrics power = 2;
@@ -183,6 +201,15 @@ message SustainmentMetrics {
   ConsumablesMetrics consumables = 4;
   ComponentWearMetrics wear = 5;
   HealthFlags health = 6;
+
+  // Per-value provenance map. Key = sustainment field path (e.g.
+  // "wear.track.remaining_useful_life"). Special key "*" means "every
+  // sustainment value in this message has this provenance" — Phase 5
+  // populates ONLY the wildcard ("message-level") per ADR-0020; per-field
+  // entries are forward-looking shape for the validation phase, where an
+  // asset may mix MEASURED and DERIVED values. ADR-0013-style "shape it
+  // right while it's cheap."
+  map<string, ValueProvenance> value_provenance = 7;
 }
 
 message ThermalMetrics {
