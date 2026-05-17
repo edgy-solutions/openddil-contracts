@@ -360,6 +360,19 @@ message Provenance {
 
   // Classification level for downstream filtering. Application-defined.
   string classification = 6;        // e.g., "U", "CUI", "S//NF"
+
+  // Origin-node provenance (ADR-0022 / ADR-0023). Stamped at the earliest
+  // tier in the pipeline that knows where the event physically came from:
+  // sensor-ingest for DIS, AMQP connectors for sim-a/proprietary, the
+  // faust-regional aggregator for rolled-up events. Values are assigned
+  // by the deployer (OPENDDIL_EDGE_ID / OPENDDIL_REGION_ID env-vars; no
+  // OpenDDIL-imposed namespace — see ADR-0023 §Topology). Phase 6a
+  // populates these for raw-sensor-stream only; cm-state / logistics /
+  // window emitters get coordinated upgrades in 6b. Consumers that
+  // receive an unstamped message fall back to the projector's env
+  // defaults — see openddil-projector/src/handlers/telemetry_latest.py.
+  string edge_id = 7;
+  string region_id = 8;
 }
 
 // =============================================================================
