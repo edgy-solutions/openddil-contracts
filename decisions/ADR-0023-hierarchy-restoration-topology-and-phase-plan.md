@@ -355,6 +355,15 @@ mid-build.
   edge (`faust-edge`) and the per-region rollups at the regional tier
   (`faust-regional`). The new `faust-regional` is the same placement
   decision applied one tier up.
+- **ADR-0024 — Multi-Cluster Faust Aggregator Pattern.** This ADR set
+  the topology decision (one `faust-regional` instance per region,
+  consuming its assigned edges' brokers); ADR-0024 captures the
+  implementation pattern that emerged from §B's spike and live-stack
+  diagnosis — Worker-composition of one aggregator App + N stateless
+  source Apps + per-region fan-in topic, with uniform wrap-and-
+  republish for ALL source clusters (including same-broker ones, per
+  the heterogeneous-source-cluster rule). Read ADR-0024 before
+  building any future regional-tier service.
 - **ADR-0017 — UI Mock Components Self-Identify.** Same spirit: the
   hierarchy must be real, not a UI illusion. Rejected-alternative
   passthrough-with-attribution would have been an ADR-0017 failure
