@@ -1,0 +1,68 @@
+syntax = "proto3";
+package openddil.regional.v1;
+
+import "google/protobuf/timestamp.proto";
+import "openddil/telemetry/v1/telemetry.proto";
+
+// =============================================================================
+// REGION WEAR TRENDS — per-region aggregate wear trend by component
+// =============================================================================
+//
+// ADR-0023 Phase 6b §B. Per-emit message keyed by region_id. Aggregates
+// remaining_useful_life across assets per component, computing a mean RUL
+// per (component_id, unit). Source data:
+//   - derived-sustainment (EntityTelemetryEvent with
+//     sustainment.wear.components[].remaining_useful_life) — LIVE in §B.
+//   - asset-telemetry-windows (WindowedTelemetry.wear_trends) — wired in
+//     §B but NOT driving emissions; ships pending follow-up #11's
+//     sustainment-data test fixtures, per the asymmetric-coverage call
+//     greenlit before §B build (region-wear-trends is computable from
+//     derived-sustainment alone for §B).
+//
+// MIXED-UNIT HANDLING (Phase 6b Open Question Q3, resolved pre-build):
+// per-(component_id, unit) grouping; the aggregator REFUSES to mean across
+// mixed units. If one asset reports remaining_useful_life in "h" and
+// another reports it in "%", the same component_id appears twice in the
+// `components` array — once with unit="h" and once with unit="%". The UI
+// renders them as separate rows; never collapses them into a synthetic
+// cross-unit mean.
+//
+// COLD-START EMIT-VS-HEARTBEAT (Q4, resolved): aggregator emits every 30s
+// heartbeat AND on new-asset-first-seen. Under cold start (no
+// derived-sustainment yet), skips emission; projector cold-state surfaces
+// "Awaiting first emission..." in the UI.
+
+message ComponentWearTrend {
+  // Component identifier from SustainmentMetrics.wear.components map key
+  // (e.g. "transmission", "engine", "barrel").
+  string component_id = 1;
+
+  // UCUM unit for remaining_useful_life. Per the mixed-unit rule, a single
+  // (region_id, component_id) may yield MULTIPLE rows in `components` if
+  // the source data uses different units per asset. Each row is internally
+  // unit-consistent.
+  string unit = 2;
+
+  // Arithmetic mean of remaining_useful_life values across the assets
+  // contributing to this (component_id, unit) bucket. NOT a weighted mean
+  // — every asset's contribution is equal weight, on the grounds that the
+  // commander-facing question is "how worn is the typical asset in this
+  // region," not "how worn is the fleet's collective stockpile."
+  double mean_rul_remaining = 3;
+
+  // Number of assets in the region whose derived-sustainment most-recent
+  // value for this component_id was reported in this unit.
+  uint32 asset_count = 4;
+}
+
+message RegionWearTrends {
+  string region_id = 1;
+
+  repeated ComponentWearTrend components = 2;
+
+  google.protobuf.Timestamp observed_at = 3;
+
+  // Origin-node provenance (ADR-0023 Phase 6b §A/§B). Stamped by
+  // faust-regional aggregator with producer_id="regional-aggregator".
+  openddil.telemetry.v1.Provenance provenance = 20;
+}

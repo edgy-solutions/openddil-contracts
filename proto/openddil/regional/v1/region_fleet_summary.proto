@@ -1,0 +1,51 @@
+syntax = "proto3";
+package openddil.regional.v1;
+
+import "google/protobuf/timestamp.proto";
+import "openddil/telemetry/v1/telemetry.proto";
+
+// =============================================================================
+// REGION FLEET SUMMARY — per-region severity counts
+// =============================================================================
+//
+// ADR-0023 Phase 6b §B headline rollup. Per-emit message keyed by region_id;
+// values are the count of assets in the region in each severity bucket.
+// Emitted by faust-regional's aggregator App every heartbeat interval
+// (30s default) AND on state-change events. Consumed by the projector's
+// region_fleet_summary handler, which UPSERTs into the region_fleet_summary
+// table keyed by region_id.
+//
+// Severity buckets here mirror LogisticsSeverity (asset-logistics-status
+// driver) and lifecycle/overall_status (asset-cm-state driver). An asset's
+// final bucket is the WORST of its logistics severity and its cm-state
+// derived severity (NMC > MAJOR/MINOR > IN_COMPLIANCE):
+//   - non_operational : LOGISTICS_SEVERITY_NON_OPERATIONAL OR
+//                       CONFIG_STATUS_NOT_MISSION_CAPABLE OR
+//                       LIFECYCLE_DECOMMISSIONED
+//   - critical        : LOGISTICS_SEVERITY_CRITICAL OR
+//                       CONFIG_STATUS_MAJOR_DISCREPANCY
+//   - degraded        : LOGISTICS_SEVERITY_DEGRADED OR
+//                       CONFIG_STATUS_MINOR_DISCREPANCY OR
+//                       LIFECYCLE_STALE
+//   - nominal         : everything else
+// asset_count is the sum (so the projection table can show
+// "X of N nominal" without computing it client-side).
+
+message RegionFleetSummary {
+  string region_id = 1;
+
+  uint32 nominal = 2;
+  uint32 degraded = 3;
+  uint32 critical = 4;
+  uint32 non_operational = 5;
+
+  uint32 asset_count = 6;
+
+  google.protobuf.Timestamp observed_at = 7;
+
+  // Origin-node provenance (ADR-0023 Phase 6b §A/§B). Stamped by
+  // faust-regional aggregator with producer_id="regional-aggregator",
+  // region_id mirrored to the provenance block for projector consistency
+  // with the §A pattern (resolve_provenance_from_proto).
+  openddil.telemetry.v1.Provenance provenance = 20;
+}

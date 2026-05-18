@@ -1,0 +1,55 @@
+syntax = "proto3";
+package openddil.regional.v1;
+
+import "google/protobuf/timestamp.proto";
+import "openddil/telemetry/v1/telemetry.proto";
+
+// =============================================================================
+// REGION TOP FACTORS — per-region top-N constraining factors by frequency
+// =============================================================================
+//
+// ADR-0023 Phase 6b §B. Per-emit message keyed by region_id. Aggregated from
+// the constraining_factors arrays of asset-logistics-status events across
+// the region's assets. Source App wraps each AssetLogisticsStatusUpdate;
+// aggregator maintains per-region Tables of factor counts and severity
+// breakdown, emits the top N (configurable, default 10) by count every
+// heartbeat interval (30s default).
+//
+// Severity breakdown is a map from LogisticsSeverity name (e.g.
+// "DEGRADED", "CRITICAL") to count, so the UI can render a stacked-bar
+// per factor without re-deriving it.
+//
+// Consumed by the projector's region_top_factors handler, which UPSERTs
+// the full factors array into the region_top_factors table's `factors`
+// JSONB column (one row per region; the table is naturally tiny).
+
+message FactorCount {
+  // Factor identifier from ConstrainingFactor.factor_id (e.g. "fuel",
+  // "ammo.main_gun", "wear.transmission", "cm.discrepancy").
+  string factor_id = 1;
+
+  // Number of distinct assets in the region currently constrained by this
+  // factor at any severity above OK.
+  uint32 count = 2;
+
+  // Breakdown of count by severity. Keys are LogisticsSeverity name
+  // strings (UNSPECIFIED / OK / DEGRADED / CRITICAL / NON_OPERATIONAL).
+  // Sum of values equals `count`.
+  map<string, uint32> severity_breakdown = 3;
+}
+
+message RegionTopFactors {
+  string region_id = 1;
+
+  // Top-N factors sorted DESC by count. N is configurable on the
+  // aggregator; default 10. Aggregator never emits an empty array — under
+  // cold start (no assets seen yet), it skips emission and the projector's
+  // cold-start state surfaces "Awaiting first emission..." in the UI.
+  repeated FactorCount factors = 2;
+
+  google.protobuf.Timestamp observed_at = 3;
+
+  // Origin-node provenance (ADR-0023 Phase 6b §A/§B). Stamped by
+  // faust-regional aggregator with producer_id="regional-aggregator".
+  openddil.telemetry.v1.Provenance provenance = 20;
+}

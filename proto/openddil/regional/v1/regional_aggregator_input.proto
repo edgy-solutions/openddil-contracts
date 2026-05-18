@@ -1,0 +1,85 @@
+syntax = "proto3";
+package openddil.regional.v1;
+
+import "google/protobuf/timestamp.proto";
+import "openddil/logistics/v1/logistics_status.proto";
+import "openddil/logistics/v1/windowed_telemetry.proto";
+import "openddil/telemetry/v1/telemetry.proto";
+
+// =============================================================================
+// REGIONAL AGGREGATOR INPUT — fan-in envelope for faust-regional source Apps
+// =============================================================================
+//
+// ADR-0023 Phase 6b §B. faust-regional runs as one container per region with
+// a Worker-composed set of Apps: one source App per source edge (each pointed
+// at that edge's Kafka cluster) plus one aggregator App on redpanda-hq. Source
+// Apps consume per-asset events from their assigned edge cluster, wrap each
+// in this envelope, and produce to the per-region fan-in topic on hq. The
+// aggregator App unwraps the oneof and dispatches to the appropriate
+// per-asset aggregation (region-fleet-summary, region-top-factors,
+// region-wear-trends).
+//
+// Why a oneof envelope rather than one fan-in topic per source-type:
+// keeping one fan-in topic per region preserves per-region partition
+// ownership (the aggregator co-partitions cleanly by asset_id) and lets the
+// aggregator's RocksDB Tables remain regionally scoped without cross-topic
+// joins. The oneof carries the source-typed payload so the aggregator can
+// dispatch by tag rather than introspect.
+//
+// Source Apps stay STATELESS — they wrap and forward. Pre-aggregating at
+// the source App was rejected (Option B in the §B greenlight discussion):
+// it leaves constraint 3 unverified and collapses the aggregator's purpose.
+// All Tables and state live on the aggregator App.
+
+message RegionalAggregatorInput {
+  // Origin of this wrapped payload — the edge cluster the source App
+  // consumed it from. Set by the source App, NOT inherited from the wrapped
+  // payload's own provenance (the wrapped provenance might be empty for
+  // pre-6b producers; the source App always knows which edge it just
+  // consumed from).
+  string source_edge_id = 1;
+
+  // Region this event rolls up into. Set by the source App from its
+  // OPENDDIL_REGION_ID env. Lets the aggregator confirm the envelope's
+  // intended region matches its own region (a defensive cross-check; should
+  // never mismatch if the deployment-time contract from ADR-0023 holds).
+  string region_id = 2;
+
+  // When the source App wrapped this payload. Lets the aggregator measure
+  // fan-in lag separately from the wrapped payload's own sample/ingest
+  // timestamps.
+  google.protobuf.Timestamp wrapped_at = 3;
+
+  // Asset this event pertains to. Duplicated at the envelope level so the
+  // aggregator can partition by asset_id without unwrapping the oneof
+  // first. Source Apps copy from the wrapped payload (status.asset_id /
+  // asset.asset_id / etc.).
+  string asset_id = 4;
+
+  oneof payload {
+    // From asset-logistics-status (proto, AssetLogisticsStatusUpdate).
+    // Consumed by: region-fleet-summary (uses overall_severity),
+    // region-top-factors (uses constraining_factors).
+    openddil.logistics.v1.AssetLogisticsStatusUpdate logistics_status = 10;
+
+    // From asset-cm-state (JSON envelope per ADR-0018, not proto). Ferried
+    // as raw bytes so the carve-out for cm-state's JSON encoding doesn't
+    // propagate into this envelope's schema. Aggregator does
+    // json.loads(payload) to access lifecycle / overall_status / edge_id.
+    // Consumed by: region-fleet-summary (cm-state contributes to severity
+    // counts when lifecycle == LIFECYCLE_STALE or overall_status != IN_COMPLIANCE).
+    bytes asset_cm_state_json = 11;
+
+    // From derived-sustainment (EntityTelemetryEvent with
+    // sustainment.value_provenance["*"] == ORIGIN_DERIVED). Consumed by:
+    // region-wear-trends. Verified live by Phase 6a end-to-end.
+    openddil.telemetry.v1.EntityTelemetryEvent derived_sustainment = 12;
+
+    // From asset-telemetry-windows (WindowedTelemetry). Consumed by:
+    // region-wear-trends. ADR-0023 Phase 6b §A.2 stamping is verified in
+    // code; end-to-end exercise pending follow-up #11's sustainment-data
+    // test fixtures. region-wear-trends ships with this input wired but
+    // not driving emissions in §B; full join verification deferred to #11.
+    openddil.logistics.v1.WindowedTelemetry asset_telemetry_windows = 13;
+  }
+}
