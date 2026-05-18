@@ -4,6 +4,7 @@ package openddil.logistics.v1;
 import "google/protobuf/timestamp.proto";
 import "google/protobuf/duration.proto";
 import "openddil/common/v1/quantity.proto";
+import "openddil/telemetry/v1/telemetry.proto";  // for Provenance
 
 // =============================================================================
 // WINDOWED TELEMETRY — rolling-window aggregations computed by the Faust edge
@@ -75,4 +76,13 @@ message WindowedTelemetry {
   repeated string active_fault_codes_latest = 13;
 
   google.protobuf.Timestamp computed_at = 20;
+
+  // Origin-node provenance (ADR-0022 / ADR-0023 Phase 6b §A.2). Stamped by
+  // faust-edge at emission time from the instance's OPENDDIL_EDGE_ID /
+  // OPENDDIL_REGION_ID env (faust-edge is already per-edge in 6a). The
+  // projector's telemetry_windows handler reads this with env-default
+  // fallback, and the faust-regional region-wear-trends aggregator
+  // (Phase 6b §B) consumes it as one of its attributed inputs. Additive
+  // proto3 field — pre-6b producers/consumers get zero-default.
+  openddil.telemetry.v1.Provenance provenance = 21;
 }
