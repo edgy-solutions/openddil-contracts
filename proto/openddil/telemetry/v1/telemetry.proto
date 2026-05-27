@@ -376,6 +376,142 @@ message Provenance {
 }
 
 // =============================================================================
+// OPERATIONAL STATE — orthogonal posture axes for any entity
+// =============================================================================
+//
+// Where SustainmentMetrics answers "does this entity have the consumables /
+// component-wear margin to keep operating?", OperationalState answers "is
+// this entity functional, what is it doing right now, and how healthy is
+// it?" Three orthogonal axes — an entity may be POWER_ON + MODE_ACTIVE +
+// HEALTH_DEGRADED simultaneously (operating with caveats — the most common
+// non-nominal state in practice).
+//
+// Designed to be a generic intersection of how multiple simulation and
+// real-feed sources represent entity state:
+//   * DIS (IEEE 1278) EntityState `appearance` bits + EmissionSystem
+//     system_status -> map to power_state + health_state + actively_*
+//   * AFSim (AFRL) platform.is_on() + sensor.mode() + damage -> all 3 axes
+//   * VRForces (MAK) entity damage states + behaviors -> power + health
+//   * Proprietary sensor feeds emitting a single combined-state enum (OFF /
+//     STANDBY / OPERATE / OPERATE_RX_ONLY / DEGRADED / SHUTDOWN / etc.) ->
+//     decomposed into the 3 axes by their ingest mapping
+//
+// Producers populate whichever axes their wire shape carries; consumers
+// MUST tolerate any axis being UNSPECIFIED (proto3 zero). Severity rules
+// in logistics-fusion fire on transitions into non-NOMINAL on any axis.
+
+message OperationalState {
+  // Coarse "is this entity functional?" axis. The minimum every source
+  // can populate. Mobile platforms typically just have OFF/ON; stationary
+  // emitters add STANDBY/MAINTENANCE/SHUTTING_DOWN nuances.
+  PowerState power_state = 1;
+
+  // Optional finer "what is this entity doing right now?" axis. Sensors
+  // and emitters use it to distinguish IDLE vs ACTIVE vs RX/TX-only vs
+  // SCAN/TRACK postures. Most mobile platforms leave UNSPECIFIED — their
+  // "mode" is implicit in being powered on.
+  FunctionalMode functional_mode = 2;
+
+  // Orthogonal "how healthy is this entity?" axis. Independent of power
+  // and mode — a radar can be POWER_ON + MODE_ACTIVE + HEALTH_DEGRADED
+  // (still doing its job with a redundant-component failure).
+  HealthState health_state = 3;
+
+  // Discrete-path activity cues, populated by entities with explicit RX/TX
+  // paths (radars, ECM, transponders, datalinks). NOT mutually exclusive
+  // with functional_mode — a search-while-track radar may have
+  // mode=ACTIVE with both flags true. Mobile platforms / facilities leave
+  // nil. Provides finer-grained visibility for the maintainer-view
+  // operational diagnostics panel without forcing every consumer to track
+  // separate IDLE / SCAN / TRACK modes.
+  bool actively_receiving = 4;
+  bool actively_transmitting = 5;
+}
+
+// PowerState — coarse availability. Every operational source can populate
+// at least this axis.
+enum PowerState {
+  POWER_STATE_UNSPECIFIED = 0;
+
+  // Powered off (commanded or unpowered). Entity contributes nothing.
+  POWER_STATE_OFF = 1;
+
+  // Powered on and available. The plain "it works" baseline.
+  POWER_STATE_ON = 2;
+
+  // Initialized and ready to transition to ON. Reserved-state for systems
+  // that draw a distinction between "warm-but-idle" and "actively serving."
+  POWER_STATE_STANDBY = 3;
+
+  // Intentionally unavailable for a scheduled service window. Differs
+  // from OFF: maintenance is a planned, time-bounded state.
+  POWER_STATE_MAINTENANCE = 4;
+
+  // Executing the shutdown procedure or has completed it. Transient.
+  POWER_STATE_SHUTTING_DOWN = 5;
+}
+
+// FunctionalMode — finer "what is the entity doing?" axis. Optional;
+// entities without mode discrimination leave UNSPECIFIED and consumers
+// treat their POWER_STATE_ON as implicitly active.
+enum FunctionalMode {
+  FUNCTIONAL_MODE_UNSPECIFIED = 0;
+
+  // Powered on but not actively performing its mission. Common idle
+  // posture for sensors / emitters between scan windows.
+  FUNCTIONAL_MODE_IDLE = 1;
+
+  // Performing its enabled capabilities (full RX + TX where applicable).
+  FUNCTIONAL_MODE_ACTIVE = 2;
+
+  // Receiving only — listening without radiating. Stealth/passive
+  // posture for radars and ECM. Operator choice, not a fault.
+  FUNCTIONAL_MODE_RECEIVE_ONLY = 3;
+
+  // Transmitting only — radiating without receiving. Calibration /
+  // beacon mode for transponders. Operator choice, not a fault.
+  FUNCTIONAL_MODE_TRANSMIT_ONLY = 4;
+
+  // Sensor sweep mode — actively scanning for new tracks.
+  FUNCTIONAL_MODE_SCAN = 5;
+
+  // Sensor track mode — locked on a specific track. Different from SCAN.
+  FUNCTIONAL_MODE_TRACK = 6;
+}
+
+// HealthState — orthogonal health axis. Logistics-fusion's
+// _eval_operational_state maps this to severity:
+//   FAILED          -> LOGISTICS_SEVERITY_CRITICAL (operational.failed)
+//   FAULT           -> LOGISTICS_SEVERITY_CRITICAL (operational.fault)
+//   DEGRADED        -> LOGISTICS_SEVERITY_DEGRADED (operational.degraded)
+//   NOMINAL         -> LOGISTICS_SEVERITY_OK
+//   UNSPECIFIED     -> no factor emitted (no claim)
+// Combined with PowerState rules (OFF/SHUTTING_DOWN/MAINTENANCE) for the
+// full severity picture.
+enum HealthState {
+  HEALTH_STATE_UNSPECIFIED = 0;
+
+  // No detected anomalies. The healthy baseline.
+  HEALTH_STATE_NOMINAL = 1;
+
+  // Non-critical anomaly limiting capability. Entity continues to perform
+  // at least part of its mission. Examples: redundant component failure
+  // while primary remains operational; quality-of-service decline; discrete
+  // mismatch; subset of components failed but functionality available.
+  HEALTH_STATE_DEGRADED = 2;
+
+  // Active fault detected. Entity may continue operating but requires
+  // attention. Distinct from DEGRADED in implying a specific fault code,
+  // not just reduced capability.
+  HEALTH_STATE_FAULT = 3;
+
+  // Hard failure. Entity cannot operate; requires service. Distinct from
+  // PowerState.OFF: OFF is "commanded down," FAILED is "broken and can't
+  // come up."
+  HEALTH_STATE_FAILED = 4;
+}
+
+// =============================================================================
 // THE EVENT
 // =============================================================================
 
@@ -387,6 +523,11 @@ message EntityTelemetryEvent {
   KinematicState kinematics = 3;
   SustainmentMetrics sustainment = 4;
   Provenance provenance = 5;
+
+  // Operational state for stationary infrastructure (sensors, facilities,
+  // fixed launchers). Mobile-asset feeds (DIS, sim-a) leave this nil.
+  // See OperationalState above.
+  OperationalState operational_state = 6;
 
   // Schema version of THIS message structure. Independent of package version.
   // Increment for additive changes; bump package to v2 for breaking changes.
