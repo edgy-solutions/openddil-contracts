@@ -24,7 +24,11 @@ name: Notify openddil-helm to rebuild runtime-bundle
 
 on:
   push:
-    branches: [ "master" ]
+    # openddil-contracts default branch is `main` (verified 2026-05-29 —
+    # contract-injection.yml in this repo also keys on `main`). Other
+    # sibling repos use `master`; per-repo branch name is whatever the
+    # repo's default actually is, NOT a stack-wide convention.
+    branches: [ "main" ]
     paths:
       - "proto/**"
       - "gen/**"
