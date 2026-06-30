@@ -1,0 +1,88 @@
+# =============================================================================
+# OpenDDIL Configuration Baseline: MRAD_Sensor — version 2026.1
+# =============================================================================
+# Authorized BOM for the MRAD (Multi-Mission Radar) sensor subsystem -- the
+# per-site `*_radar_MRAD_Sensor` asset (the multi-element AESA array,
+# distinct from the MRAD radar chassis Unit asset that carries it).
+#
+# Used by openddil-cm-service: when a sensor asset is first observed with
+# platform_variant=MRAD_Sensor, cm-service initializes its AsMaintained
+# state from this baseline. Until the operator records part installations
+# and mod applications (via cm-events), every non-optional slot fires
+# DISCREPANCY_MISSING_CI and every required mod fires DISCREPANCY_MISSING_MOD.
+# That's the intended demo state -- the maintainer view's CM card lights
+# up with a MAJOR DISCREPANCY badge and a populated discrepancies list,
+# and seed-cm-events.sh's part-replaced / mod-applied events DEMONSTRABLY
+# clear them (count drops, badge tier downgrades).
+#
+# Slot choice mirrors the seeder's PARTS array categories so the seeder's
+# default events actually align with this baseline's slot_ids:
+#   tr_module, power_supply, cooling_fan, processor
+#
+# Note: this is a demo baseline, not authoritative ICD. Real customer
+# baselines would be sourced from the platform's logistics-engineering
+# data set (TOMA / IETM equivalent) and shipped through the same
+# /baselines mount via the customer overlay's CM_BASELINES_DIRS pattern.
+# =============================================================================
+
+baseline_id: "MRAD_Sensor-Baseline-2026.1"
+platform_variant: "MRAD_Sensor"
+version: "2026.1"
+effective_from: "2026-01-01T00:00:00Z"
+superseded_at: null
+
+authorized_cis:
+  # T/R module -- the per-element GaN MMIC. ~4080 of these in a real array
+  # but we model the slot at the field-replaceable-unit level (one card
+  # carries many MMICs). Two acceptable revisions during overlap window.
+  - slot_id: "tr_module"
+    acceptable_part_numbers:
+      - "GaN-MMIC-Rev3-SN-90011"
+      - "GaN-MMIC-Rev4-SN-90012"
+    minimum_revision: "Rev3"
+    optional: false
+
+  # Primary DC bus power supply -- single unit feeding the array.
+  - slot_id: "power_supply"
+    acceptable_part_numbers:
+      - "PS-2400W-SN-77781"
+    minimum_revision: ""
+    optional: false
+
+  # Active liquid cooling loop -- single fan; failure trips the array
+  # into safe mode.
+  - slot_id: "cooling_fan"
+    acceptable_part_numbers:
+      - "CF-145B-SN-55501"
+    minimum_revision: ""
+    optional: false
+
+  # Beam-steering / range-gating SoC. Two revisions acceptable.
+  - slot_id: "processor"
+    acceptable_part_numbers:
+      - "BeamCtl-SoC-RevA-SN-12001"
+      - "BeamCtl-SoC-RevB-SN-12002"
+    minimum_revision: "RevA"
+    optional: false
+
+required_mods:
+  # Maps to seeder's MOD_PAIR cycle entry #1 -- this is the mod the
+  # default `bash seed-cm-events.sh -n 1` injects, so the demo's
+  # "discrepancy clears when operator applies the mod" flow works
+  # without a second mod-applied call.
+  - mod_id: "MWO-2024-117"
+    type: MOD_TYPE_MWO
+    title: "ECP-2024-A: T/R module GaN MMIC cooling rework"
+    due_date: "2026-09-30T00:00:00Z"
+    category: COMPLIANCE_SAFETY_OF_FLIGHT
+
+  # Second mod -- not yet hit by `-n 1` seeder runs (seeder cycles
+  # through MODS array as it iterates assets; this fires for the second
+  # asset onward). Kept in the baseline so a larger `-n 10` seeder run
+  # produces a mix of cleared + uncleared mods across the fleet, which
+  # is more realistic than every asset showing identical CM state.
+  - mod_id: "MWO-2025-088"
+    type: MOD_TYPE_MWO
+    title: "ECP-2025-B: cryptographic module firmware update"
+    due_date: "2026-12-31T00:00:00Z"
+    category: COMPLIANCE_MISSION_CRITICAL
