@@ -87,11 +87,26 @@ sharing one authorizer instance and one decision log. What is not
 acceptable is shipping both corpora as independent deciders over the
 same rows and calling that a shared PDP.
 
-A second, narrower reconciliation sits underneath it: ADR-0029 takes an
-explicit "asserted, never inferred — no directory sync" stance, while
-the agent-side policy directory ships sync tooling. Git-managed YAML
-synced *into* Topaz is not the same thing as directory-derived
-entitlement, but the boundary needs stating rather than assuming.
+**The narrower sync-tooling tension is resolved.** ADR-0029 takes an
+explicit "asserted, never inferred — no directory sync" stance, and the
+agent-side policy directory ships sync tooling under `policy/sync/`,
+which reads as a contradiction. It is not: that stance *originated* on
+the agent side, where the doctrine is that the hand-authored git file
+**is** the assertion — a directory may seed a *draft*, but the human's
+PR approval is what makes it an entitlement. The sync tooling is
+therefore the deployment pipe that transports asserted content into the
+running authorizer, not a derivation path.
+
+Both projects carry this sentence so the boundary is stated rather than
+assumed:
+
+> **Sync tooling transports asserted, PR-reviewed policy content into
+> the authorizer; it never derives entitlements from a directory or any
+> other source.**
+
+With that stated in both repositories, the accreditation-facing property
+of ADR-0029 — every entitlement has a named author, a reviewer, and a
+date — survives contact with the agent-side tooling intact.
 
 **(c) Provenance.** Agent answers cite OpenDDIL rows **and** carry the
 access decisions that gated their grounding — *decision-as-provenance*.
@@ -115,32 +130,110 @@ This ADR. The three shared elements above are the deliverable.
 
 ### Phase 2 — Read seam (~1 day)
 
+Three deliverables, in dependency order. §2.1 is **the first job** —
+everything else in the read seam is contingent on its answer.
+
+#### 2.1 — The edge read substrate (FIRST JOB)
+
+**Investigated 2026-08-06 against the deployed chart. Answer: there is
+no edge-local queryable relational store today.**
+
+The finding, from `openddil-helm/openddil-demo/templates/edge.yaml` and
+`values.yaml`:
+
+- `postgresHq` is the **only** relational store in the chart. No
+  per-edge Postgres exists.
+- There are four projectors — `projector-edge-01/02/03` plus
+  `projector-hq`. The per-edge projectors are edge-local **consumers**
+  but HQ **writers**: each subscribes to `KAFKA_BROKERS = <its own edge
+  broker>` and writes to `POSTGRES_DSN = postgres://…@<release>-postgres-hq`.
+
+So per-edge projection genuinely exists — but it projects *into HQ*.
+A reasoning plane "reading local rows" via SQL today would in fact be
+reading HQ Postgres across the tier boundary: the reachback dependency
+this ADR named, arriving as the default outcome rather than as a tail
+risk. It would fail precisely during severance, which is the condition
+that motivates edge co-location at all.
+
+**What is genuinely edge-local:** the truth exists at the edge, in
+Kafka form. Every broker — each edge and HQ — carries its own copy of
+every topic (the topic-init pattern), including the compacted
+`telemetry-latest-state`. The edge holds current per-asset state
+locally; it simply has no relational surface over it.
+
+That reframes the question from *"is there a substrate?"* (yes) to
+*"what is the minimal edge-local read surface over it?"* Three
+candidate shapes, to be decided in this phase:
+
+| Option | Shape | Trade |
+|---|---|---|
+| **(a) Edge-local Postgres** | Add a per-edge store; edge projector writes local (dual-write, or a second instance) | Heaviest footprint. **But** the read-seam contract becomes tier-independent — identical SQL surface at edge and HQ — and the edge projector already consumes the local broker, so only its write target changes. |
+| **(b) Read the local broker directly** | Reasoning plane consumes the edge's compacted topics | No new store, smallest footprint. No SQL; the agent must materialize and maintain its own view, and the ADR-0029 releasability columns exist only in the projected relational form. |
+| **(c) Minimal edge-local materialization** | Small purpose-built store fed from local compacted topics | Middle ground; risks becoming a second projector with a different schema — i.e. a second truth. |
+
+Option (a) is the current lean precisely because it keeps **one read
+contract across tiers**, which is what makes §2.2 writable once rather
+than per-tier. It is a lean, not a decision — this phase decides, with
+edge footprint (ADR-0021, ADR-0030 §engine policy) as the counterweight.
+
+#### 2.2 — The read surface contract
+
 Define and document the **stable read surface** a co-located agent
 consumes.
 
 - **Which relations:** `telemetry_latest_state`,
   `asset_logistics_status`, `asset_capability_state`, and the
   releasability-classified view from ADR-0029.
-- **Which mechanism at the edge:** direct database read vs. a filtered
-  subscription — **decide and document**, do not leave implicit.
-- **Open question this phase must resolve, not assume:** what the edge
-  tier's actual data stores are, versus HQ's. The current deployment
-  concentrates the read-model database at HQ; whether an edge-local
-  reasoning plane reads an edge-local store, or reads through a
-  tier-appropriate mechanism, is a genuine unknown that this phase must
-  settle with reference to the deployed topology rather than to the
-  architecture diagram. Getting this wrong produces a "local" agent with
-  a reachback dependency — i.e. one that fails exactly when it was
-  supposed to help.
+- **Which mechanism:** follows directly from §2.1.
 - **Precondition:** the releasability columns from ADR-0029 Phase 1 must
   be present, so the agent's Topaz checks have resource attributes to
   decide over. Without them the shared-policy element (b) is not
   expressible.
-- **Second deliverable:** the policy-corpus reconciliation named in
-  element (b) — decided and written down, before Phase 4 puts both
-  planes in front of the same rows.
 
-**Deliverable: a documented contract, not code.**
+#### 2.3 — Policy reconciliation: modules, not merge
+
+Resolving the open question raised in element (b). The shape:
+
+**Distinct policy modules, one authorizer instance, one decision log.
+Do not merge the grant models.**
+
+The two corpora answer *different questions about the same request*,
+which is why they compose rather than collide:
+
+- The **capability module** (agent-side) answers: which persona×domain
+  cells is this subject entitled to, which verbs/engines/tools may run,
+  which ontology compartments are reachable.
+- The **releasability module** (ADR-0029) answers: may this subject see
+  this row, given nations/clearance against the row's labels.
+
+When the reasoning plane grounds on an OpenDDIL row, the request passes
+both: the capability module governs *whether this kind of retrieval may
+run at all*; the releasability module governs *which rows may ground
+it*. **Only the releasability module ever decides row access.** That
+satisfies the no-second-decider-over-the-same-rows rule by
+decomposition rather than by merge — a stronger result than merging,
+because neither corpus has to absorb the other's model.
+
+**The real reconciliation deliverable is therefore the subject
+namespace, not the policy content.** Composition only works if both
+modules recognise the same subject. If the two `users.yaml` files name
+the same human differently, decisions cannot compose and the shared
+decision log cannot correlate — producing two-truths drift at the
+*identity* layer, which is worse than at the policy layer because it is
+invisible: both modules answer confidently, about different people.
+
+Concretely:
+
+> **One subject identity namespace. One subject record per human,
+> carrying both attribute families — the persona×domain matrix
+> (agent-side) and nations + clearance (ADR-0029). Merge the subjects,
+> federate the policies, share the log.**
+
+If the agent-side grant model resists this shape somewhere concrete,
+that resistance is itself a finding: record it here rather than
+bending the subject model around it silently.
+
+**Deliverable for all three: a documented contract, not code.**
 
 ### Phase 3 — Subset packaging seam (~1 day)
 

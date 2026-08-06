@@ -164,6 +164,22 @@ Deployments that need IdP integration replace this component. The
 contract — Topaz receives subject attributes from an authenticated
 identity — is unchanged.
 
+**"No directory sync" is a statement about derivation, not about
+transport.** Policy content still has to reach the running authorizer,
+and tooling that does so is not a violation of this stance. The
+boundary, which OpenDDIL shares verbatim with the co-located reasoning
+plane's policy corpus (ADR-0031):
+
+> **Sync tooling transports asserted, PR-reviewed policy content into
+> the authorizer; it never derives entitlements from a directory or any
+> other source.**
+
+A directory may seed a *draft* entitlement for a human to review. The
+PR approval is what makes it an entitlement. That distinction is what
+keeps the audit property intact — every entitlement has a named author,
+a reviewer, and a date — while still allowing normal deployment
+automation.
+
 ### 6. DDIL alignment: local authorizers, policy as bundles
 
 The ADR architecture is **one local Topaz authorizer per tier**, with
