@@ -68,6 +68,31 @@ in practice, without anyone deciding to bypass it. ADR-0029's
 single-PDP discipline extends across the plane boundary: the reasoning
 plane is another PEP, not another decider.
 
+**Open question — two policy corpora must be reconciled.** Both projects
+independently selected Topaz, which is what makes a shared PDP realistic
+rather than aspirational. But both also already carry their own
+git-managed policy content: ADR-0029 specifies an OpenDDIL
+`users.yaml` of asserted nation entitlements, while the Invincible Agent
+project already has a policy directory (`users.yaml`, `groups.yaml`,
+`domains.yaml`, `personas.yaml`, `trust_table.yaml`, plus asset,
+capability, task and ontology-compartment grants) with its own sync
+tooling.
+
+"One policy manifest" is therefore a **target state, not a current
+one**. Reconciling them is a required deliverable of Phase 2, and it is
+a design question rather than a merge: whether OpenDDIL's releasability
+attributes become an additional resource-attribute source consumed by
+the existing grant model, or the two remain distinct policy *modules*
+sharing one authorizer instance and one decision log. What is not
+acceptable is shipping both corpora as independent deciders over the
+same rows and calling that a shared PDP.
+
+A second, narrower reconciliation sits underneath it: ADR-0029 takes an
+explicit "asserted, never inferred — no directory sync" stance, while
+the agent-side policy directory ships sync tooling. Git-managed YAML
+synced *into* Topaz is not the same thing as directory-derived
+entitlement, but the boundary needs stating rather than assuming.
+
 **(c) Provenance.** Agent answers cite OpenDDIL rows **and** carry the
 access decisions that gated their grounding — *decision-as-provenance*.
 An answer is accompanied by what it was built from and by what the
@@ -111,6 +136,9 @@ consumes.
   be present, so the agent's Topaz checks have resource attributes to
   decide over. Without them the shared-policy element (b) is not
   expressible.
+- **Second deliverable:** the policy-corpus reconciliation named in
+  element (b) — decided and written down, before Phase 4 puts both
+  planes in front of the same rows.
 
 **Deliverable: a documented contract, not code.**
 
@@ -196,6 +224,10 @@ own project, against these contracts.
   future schema work.
 - Two projects sharing a policy manifest requires coordinated change
   management; a policy edit for one plane affects the other.
+- Both projects arrive with an existing, non-trivial policy corpus.
+  Converging them is real design work with a real chance of friction,
+  and until Phase 2 settles it, the "one authorization truth" property
+  is asserted rather than achieved.
 
 ### Neutral / acknowledged
 
