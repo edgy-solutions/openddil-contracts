@@ -113,7 +113,8 @@ resolved here:
 | `edge_id` / `region_id` as named proto fields (ADR-0023) | Hierarchy-path addressing (node id + parent chain); `edge_id`/`region_id` is its two-level projection. Deepest and most expensive to move. |
 | Named-tier components (`faust-regional`, projector tier parameters, helm's edge/region/hq structure) | One recursive node kind, instantiated per configured tier. |
 | The collapsed intermediate broker | A broker-bearing middle tier wherever a deployment wants presentation or buffering there. |
-| Three fixed UI views (maintainer / regional / HQ) | One presentation parameterized by "my tier + my subtree". |
+| Three fixed UI views (maintainer / regional / HQ) | One presentation parameterized by "my tier + my subtree" — framework statement recorded in ADR-0033 §Tier-parameterized presentation (2026-08-08). The current SPA is the demo instantiation; the node's UI slot ships it **interim**. |
+| Tree-only data flow (parent↔child) | Tree **plus** deployment-configured lateral peer links — ADR-0033 §Lateral peer topology. Mechanisms are already direction-agnostic; only configuration is tree-shaped. |
 | Aggregation semantics (ADR-0024) | Rollups must compose over *child-tier rollups*, not raw leaf streams — unbounded depth is rollup-of-rollups or it is nothing. Audit tracked in ADR-0033. |
 
 ### (a) Which tiers get stores — a conditional rule, not a tier-kind law

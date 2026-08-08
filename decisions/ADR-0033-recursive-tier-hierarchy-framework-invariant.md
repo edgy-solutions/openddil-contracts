@@ -14,6 +14,16 @@ ADR states the property that ADR-0022's three-tier instantiation is *an
 instance of*. It does not supersede ADR-0022; it removes an assumption
 that ADR-0022's implementation left implicit.
 
+**Amended 2026-08-08** with two framework intents recorded *before* any
+code exists to contradict them — the ADR-0033 lesson applied
+prospectively, which is the cheapest moment intent capture ever gets:
+
+- §Tier-parameterized presentation — the UI is a tier-node component,
+  not three fixed views.
+- §Lateral peer topology — the hierarchy is a tree **plus**
+  deployment-configured peer links. This changes the shape of the object
+  this ADR defines.
+
 ## Context
 
 ### Why this is being written now
@@ -123,6 +133,91 @@ Anything else in ADR-0024's aggregation set must be checked. That check
 is a tracked audit item (§Generalization backlog), not an assumption —
 "unbounded depth is rollup-of-rollups or it is nothing."
 
+## Amendment (2026-08-08) — Tier-parameterized presentation
+
+**The framework artifact is one UI, parameterized by tier, showing that
+tier's local truth plus its subtree rolled up, served by each tier node
+at that tier's own endpoint.**
+
+Consequences, in the same idiom as the rest of this ADR:
+
+- **"The HQ view" is the root node's instance.** "The maintainer view"
+  is a leaf node's instance. "The regional view" is any intermediate
+  node that took the presentation kit. None of them is a *kind* of view.
+- Presentation is a **tier-node component** (ADR-0032 §d's tier
+  presentation node already carries a UI slot; ADR-0032 §e already
+  decided each node serves its own).
+- What differs between instances is **depth and subtree**, not
+  implementation.
+
+**The current three-view SPA is the demo instantiation.** It composes
+all tiers into one pane behind role tabs because a demo needs one
+screen. That composition stays **legitimate as a demo shell**, honestly
+labelled, possibly indefinitely — but it becomes a *consumer* of the
+tier-parameterized presentation rather than the thing itself.
+
+**Forcing function, already scheduled:** the moment a deployment
+configures a fourth tier, *"which of the three hardcoded views does it
+get?"* has no answer. That unanswerable question is the tell that the
+three views were instantiation all along.
+
+**Phase 3 consequence — interim note only, no new work.** The tier
+node's UI slot ships the current SPA, because there is nothing else to
+ship, marked **interim** against this amendment — the same idiom as the
+analytics interim-bindings note (ADR-0034 §Constraints). UI
+genericization is its own future arc.
+
+## Amendment (2026-08-08) — Lateral peer topology
+
+**The hierarchy is a tree PLUS deployment-configured lateral links
+between peer nodes.** Which nodes may peer, over what transport, and
+under what policy is deployment configuration — like tier count, tier
+names, and every other topology fact in this ADR.
+
+This is a **topology-class change**: a tree with lateral edges is a
+different object with different properties than a tree, and recording it
+now is the whole point — before Arc 1–3 harden anything against it.
+
+**Motivating uses** (both fenced):
+
+- **Cross-site inventory query / requisition** — does a neighbouring
+  site hold the part this maintainer needs?
+- **Federated ML / prognostics** — model *updates* exchanged laterally
+  so fleet-wide learning improves from pooled experience **without
+  pooling raw data**.
+
+**Four interactions with existing arcs, all named, all fenced:**
+
+**(a) Peer exchange is a releasability boundary — and the ABAC
+architecture's best case.** Two peers may belong to *different
+sovereignties*, so a cross-peer query is exactly the boundary ADR-0029
+exists to gate. The fit is elegant and free: because ADR-0029 §6 puts a
+**local authorizer at every tier**, a peer request is decided **at the
+responding node, from its own policy, with no reachback**. The mechanism
+built for vertical boundaries extends to lateral ones unchanged — but
+only because this amendment says lateral boundaries exist.
+
+**(b) The distribution seam gains a future lateral leg.** ADR-0032 §c's
+five passengers all flow root→tier. Federated model updates flow
+**peer→peer** — same seam family, new direction. Named, not built.
+
+**(c) Inventory peer-query is a workflow step-type, not a standalone
+feature.** "Requisition from a neighbouring site" is a step in the
+sovereignty-configured process workflows of ADR-0034 §The two planes:
+the peer link is its transport, the responding node's Topaz is its
+authorization, the workflow is its home.
+
+**(d) DDIL gets *stronger*, not weaker.** Peer links sever
+**independently** of uplinks, so a node cut off from its parent may
+still reach a neighbour. Lateral reachability under uplink severance is
+a resilience asset the strict tree never had. `PRINCIPLES.md` §Locality
+extends cleanly: **a peer exchange is decided and executed from what the
+two peers locally hold.**
+
+**Raw data immobile, learning mobile, policy deciding at every hop** —
+the sovereignty constraint and the fleet-learning ambition reinforce
+here rather than fight, which is unusual enough to be worth stating.
+
 ## Constraints binding current work
 
 In the spirit of ADR-0022's "do not harden the flat assumption"
@@ -143,6 +238,16 @@ constraints, and binding until the generalization backlog is worked:
    level.
 4. **Do not assume leaf-stream inputs in new aggregations.** Write
    rollups that compose over child rollups.
+5. **Do not assume strictly-tree data flow as an invariant** *(added
+   2026-08-08 with the lateral-peer amendment)*. Nothing in Arcs 1–3 may
+   encode "data only ever moves parent↔child" as a structural
+   assumption.
+
+   **Verified cheap at the moment of recording:** brokers, projectors,
+   and the distribution seam are all **direction-agnostic mechanisms** —
+   only their *configuration* is tree-shaped today. So this constraint
+   costs nothing now, which is precisely why it is recorded now rather
+   than after something hardens against it.
 
 These constrain *how* work is written, not *whether* it ships. Arc 1
 proceeds unchanged under them — see §Effect on Arc 1.
@@ -199,6 +304,19 @@ The three fixed views (maintainer / regional / HQ) become one
 presentation parameterized by "my tier + my subtree." The role views
 remain as *presets over* that parameterization, not as distinct
 implementations.
+
+**Framework statement recorded 2026-08-08** — see §Tier-parameterized
+presentation above. This backlog entry is now the *implementation* of a
+stated position rather than an unstated intent. The current SPA is the
+demo instantiation and stays legitimate as a demo shell; Phase 3 ships
+it in the node's UI slot marked interim.
+
+### Lateral peer links
+
+Implement the topology declared in §Lateral peer topology: peer-link
+configuration (which nodes may peer, transport, policy), the responding
+node's Topaz gate on peer requests, and the seam's lateral leg for
+federated updates. Fenced; named here so it has a backlog home.
 
 ### Aggregation composability audit
 
