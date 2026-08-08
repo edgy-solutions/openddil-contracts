@@ -4,6 +4,13 @@
 
 Accepted (2026-08-05).
 
+**Amended 2026-08-07** — DDS ingress forced a distinction the original
+draft did not make: not every ingress is a byte-stream to decode. Added
+§Ingress classes (byte-stream decode vs. middleware participation), the
+DDS engine decision, and the QoS silent-failure trap. The two-stage
+division of labour and the zero-engine-code claim both survive the
+addition unchanged, which is the useful part — see §Ingress classes.
+
 ## Context
 
 ADR-0010 established the feed-integration strategy: multiple sources
@@ -80,6 +87,69 @@ placement is deliberate: it makes Stage 1 output independently
 inspectable, replayable, and testable against sample captures without
 running Stage 2 at all.
 
+### Ingress classes — byte-stream decode vs. middleware participation
+
+*(Added by the 2026-08-07 amendment.)*
+
+The original draft assumed every Stage 1 sidecar is a **decoder**: bytes
+arrive, a grammar turns them into fields. That is true of ASTERIX and of
+tactical datalink. It is **not** true of DDS, and forcing DDS into the
+decoder shape would have produced a dishonest ADR and a confused
+implementation.
+
+DDS is a **middleware you join**, not a format you decode. The sidecar
+is a *domain participant*: it performs RTPS discovery, matches
+publishers on topic + type + QoS, and receives samples that are
+**already typed**. The decoding is performed by the DDS stack itself,
+against IDL-defined types. There is no grammar file because there is no
+grammar — there is a participant configuration.
+
+So Stage 1 has two classes, distinguished by what their *definition
+artifact* is:
+
+| Class | Examples | Stage 1 definition artifact |
+|---|---|---|
+| **Byte-stream decode** | ASTERIX, tactical datalink, DIS | A **grammar** — category XML, `.ksy` |
+| **Middleware participation** | DDS | A **participant config** — domain id, topic list, per-topic QoS profiles, type source (IDL files or XTypes discovery) |
+
+**What survives unchanged, and this is the point:**
+
+- **Stage 2 is untouched.** Received DDS samples become JSON on
+  `ingress-dds-raw`, and Bloblang maps them to Silver exactly as it maps
+  everything else. The semantic layer cannot tell — and must not care —
+  whether a grammar or a middleware stack produced the JSON.
+- **The zero-engine-code claim holds**, restated for the class: a new
+  DDS integration is *participant config + type source + Bloblang
+  mapping*, no engine code.
+
+The two-stage division of labour absorbing something that is not a byte
+format at all is reasonable evidence the abstraction was cut at the
+right joint: the seam is *structure vs. semantics*, and "structure" was
+never specifically about bytes.
+
+### QoS mismatch fails silently — the class's characteristic trap
+
+DDS-specific and load-bearing enough to be an architectural
+requirement rather than an implementation note.
+
+A subscriber whose reliability / durability / history QoS do not match
+the publisher's **simply never matches**. No error is raised. No data
+arrives. Nothing appears in a log unless discovery events are
+explicitly inspected. The observable signature is an empty topic — which
+is indistinguishable from "the publisher is not running."
+
+This is the silent-absence failure mode in protocol form, and this
+project has been bitten by that class before (rows arriving with
+positions silently absent; a partially-labelled dataset under
+enforcement looking identical to correct enforcement — see
+`PRINCIPLES.md` §Ordering).
+
+**Requirement:** the DDS bridge must surface **discovery and matching
+state as a first-class observable** — publishers seen, readers matched,
+and QoS-incompatibility events emitted to logs and metrics. Data flow
+alone is not an adequate health signal for this ingress class, because
+its characteristic failure produces no data and no error.
+
 ### Engine policy
 
 Engines are chosen per format against the definition-driven test, not
@@ -115,6 +185,66 @@ format**. If a program requires a specific engine at a higher tier —
 where footprint is not the binding constraint — that substitution
 changes one sidecar and no downstream contract.
 
+**DDS engine: Eclipse Cyclone DDS in the OSS core.** *(Added by the
+2026-08-07 amendment.)*
+
+- **Licensing:** EPL-2.0 / EDL-1.0. Weak, file-level copyleft — clean to
+  depend on from an MIT-licensed project **as a container dependency**,
+  not vendored into OpenDDIL source. Recorded explicitly because the
+  Kaitai entry above establishes that licensing posture is a decision
+  criterion here, not an afterthought.
+- **Footprint:** a small C library with Python bindings and no JVM. It
+  passes the same tactical-tier discipline that excluded JVM-based
+  decoding engines, so the DDS bridge is deployable at the edge rather
+  than HQ-only.
+- **Maturity:** widely deployed, including as a ROS 2 RMW
+  implementation, so "obscure dependency" is not a live supply-chain
+  objection.
+
+**RTI Connext never ships in the OSS core.** It is commercial and
+unshippable, exactly like the controlled-spec formats below. The
+integration path for an RTI-based deployment is **wire-level interop,
+not vendor software**:
+
+- DDSI-RTPS is an OMG standard, and Cyclone participants interoperate
+  with RTI participants on the same domain. The OSS Cyclone bridge can
+  therefore subscribe to a deployment's RTI-published topics **without
+  any RTI software present**.
+- What the customer overlay carries is not RTI libraries but the
+  deployment's **artifacts**: IDL, QoS XML profiles (RTI deployments are
+  QoS-profile-heavy), and DDS Security material — governance and
+  permissions XML plus certificates, since secured domains are the norm
+  in the environments this targets, and Cyclone implements the DDS
+  Security specification.
+
+Interop caveats are real — XTypes compatibility and vendor-specific QoS
+extensions being the usual suspects. They are **verification items, not
+architecture blockers**: the claim OpenDDIL makes is standard RTPS
+interop, and it is verified against a real deployment's domain rather
+than by shipping a vendor stack to test against.
+
+**Type handling is an open decision, deliberately not made here.** It is
+the DDS-class analogue of the ASTERIX-XML-vs-Kaitai-CI split, and it
+resolves the same way — by which option is genuinely definition-driven:
+
+- **(a) IDL-compiled** — `idlc`-generated types built in CI. New topic =
+  new IDL + regeneration + image rebuild. Same operational rhythm as the
+  Kaitai path.
+- **(b) Runtime-dynamic via XTypes discovery** — hot configuration, no
+  rebuild, materially better if it is production-solid.
+
+(b) is preferable *if* the Python binding's dynamic-type support is
+mature enough to depend on. That maturity must be **verified honestly
+before committing**; if it is not production-solid, (a) wins and the
+reason is recorded. Choosing (b) on hope would reproduce the
+"believed-capability" pattern that ADR-0032's Phase 2 gate exists to
+prevent.
+
+**Convergence worth recording:** UCI commonly rides DDS in OMS
+environments. A DDS participation sidecar is plausibly the transport
+seat for a future UCI story — two roadmap items that may turn out to be
+one stack. Noted as a convergence, not a commitment.
+
 ### Controlled-spec formats follow the customer-bundle pattern
 
 For formats whose specifications are controlled (tactical datalink
@@ -134,6 +264,14 @@ specification, and the capability is still architecturally present and
 demonstrable. This is the same structure as existing deployment mapping
 overlays: the core defines the contract and the seat, the private bundle
 supplies the deployment-specific content.
+
+**The overlay seam now carries four distinct kinds of closed-world
+artifact** — proprietary AMQP message shapes, controlled-spec format
+definitions, vendor DDS artifacts (IDL + QoS profiles), and DDS Security
+material. That the same pattern keeps absorbing each new closed-world
+integration without changing shape is what makes the open-core story
+credible in environments where a large fraction of the integrations
+cannot be named in public.
 
 ## Phasing
 
@@ -190,6 +328,45 @@ appears where that coordinate should be.
 - **Datalink framing listener** as the sidecar seat — framing only, no
   message-internals decode in the OSS core.
 
+### DDS phasing *(2026-08-07 amendment)*
+
+ASTERIX and DDS are **peers**, not sequential: independent sidecars
+sharing nothing but the seat pattern. Order by available bandwidth.
+
+1. **This amendment** — the ingress-class distinction.
+2. **Cyclone bridge sidecar** — participant driven by a config YAML
+   (domain, topics, per-topic QoS, type handling), emitting one JSON
+   message per sample to `ingress-dds-raw` (topic name + payload +
+   reception metadata). **Discovery/matching observability is a Phase-2
+   deliverable, not a follow-up** — see §QoS mismatch fails silently.
+3. **Bloblang mappings** — one or two demonstration topic types defined
+   in core, from **an entity-state IDL of our own authorship**
+   (position / velocity / identity / status), mapped to
+   `EntityTelemetryEvent` + `OperationalState`. Authoring our own demo
+   IDL keeps any third-party type definition out of the OSS core. If the
+   status field decomposes cleanly onto the ADR-0026 three-axis model,
+   that is the **fourth** independent worked example — and the first
+   from a middleware-class source.
+4. **Verification** — compose-stack Cyclone publisher at rate → bridge →
+   Bronze → Silver → asset renders with correct position and severity.
+   Falsifiable end-to-end. Plus a restart check: publisher stays up,
+   bridge restarts, matching re-establishes, and the **discovery
+   observable proves it** rather than data flow implying it.
+   **RTI-interop verification is customer-side and fenced** — the claim
+   is standard RTPS interop; OpenDDIL does not ship a vendor stack in
+   order to test against it.
+5. **Fenced:** DDS Security config plumbing (overlay-shaped; build when
+   a secured domain is real), **DDS as egress** (publishing OpenDDIL
+   state into a domain — a real future item, out of scope here),
+   UCI-over-DDS payload handling, and the ADR-0017 3D-mock retirement.
+
+**ADR-0017 linkage.** ADR-0017 preserved the maintainer 3D views as
+deliberately-synthetic mocks "pending a future feed (RTI / … DDS)". This
+amendment is that feed arriving in the architecture. The retirement
+*trigger* is not the sidecar existing — it is **a real DDS feed carrying
+the relevant entity types actually flowing**. Recorded so the linkage is
+visible; not built here.
+
 ## Consequences
 
 ### Positive
@@ -239,5 +416,13 @@ appears where that coordinate should be.
   reconciliation, both Stage 2 concerns.
 - ADR-0021 — edge topology is load-bearing (why edge footprint
   constrains engine choice).
-- ADR-0026 — OperationalState axes; CAT034 is the third worked example.
+- ADR-0026 — OperationalState axes; CAT034 is the third worked example,
+  and a DDS-borne status field would be the fourth (first from a
+  middleware-class source).
 - ADR-0029 — provenance labelling stamped during Stage 2 mapping.
+- ADR-0017 — UI mocks self-identify; it names the DDS feed as the
+  retirement trigger for the deliberately-preserved maintainer 3D mocks.
+  This ADR's middleware class is that feed arriving architecturally.
+- `PRINCIPLES.md` §Ordering / §Verification — the silent-absence failure
+  family that the QoS-mismatch trap belongs to, and the
+  verify-before-committing discipline the type-handling decision inherits.
