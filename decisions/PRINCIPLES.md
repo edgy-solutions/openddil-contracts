@@ -257,6 +257,34 @@ generality keeps producing the better architecture.**
 
 ---
 
+## A deliverable's self-description is a claim
+
+**Verify the rendered artifact against its own header. Exit-zero proves
+the render ran, not that it rendered what the header promises.**
+
+The narrowest possible gap between claim and reality — an artifact's own
+documentation of itself, written by the same author, minutes apart — and
+it still opens.
+
+*Earned:* a chart template's header block listed
+`postgres + schema-init + projector + restate + fusion + cm-service +
+electric + frontend + topaz`. It rendered cleanly, `helm lint` passed,
+and **fusion and cm-service were absent** — described and never built.
+Every automated signal was green because every automated signal was
+answering a different question: *did this render?*, not *did it render
+what it says it contains?*
+
+*Enforcement:* diff **rendered object names** against the template's
+stated inventory. Standing practice for chart changes.
+
+*What made the catch possible:* the work checklist had *named*
+fusion+cm as a box, so there was something concrete to audit against.
+**Unnamed intentions cannot be caught missing** — which is the checklist
+discipline and the verification discipline reinforcing each other rather
+than duplicating.
+
+---
+
 ## Verification
 
 **Verify before multiplying.** A cheap pre-question before an expensive
