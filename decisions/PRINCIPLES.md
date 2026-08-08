@@ -171,6 +171,35 @@ legacy.
 
 ---
 
+## Narrate what you aligned to, never what you removed
+
+**Public artifacts state the standard adopted, not the thing displaced.
+A removal narrative is a pointer at the removed thing.**
+
+Renames, generalizations and cleanups are described by their
+destination — *"aligned to DIS / AFSim / Link 16 conventions"*,
+*"generalized to a canonical Silver shape"* — never by their origin.
+This applies to code, comments, commit messages, ADRs, and PR
+descriptions equally, because all of them are public and permanent.
+
+*Earned the hard way:* a commit message describing a cleanup **became
+the leak**. The artifact was clean; the sentence explaining why it had
+been cleaned disclosed that something proprietary had been displaced —
+which invites the question "displaced from what?" and points a reader
+at exactly the thing the work existed to remove. It required a history
+rewrite (amending both file content and commit message) and a
+force-push to remove.
+
+*Corollary — the expensive one:* **the cleanup is the highest-risk
+moment, not the safest.** Attention is on the artifact being cleaned,
+so the narrative describing the cleaning goes unexamined. Sweep the
+commit message with the same discipline as the diff.
+
+*Second corollary:* a "before → after" framing is a removal narrative
+wearing a table. State the after.
+
+---
+
 ## Similarity is a code claim, not a deployment claim
 
 **Structural similarity verifies at the code layer. Deployment surfaces
