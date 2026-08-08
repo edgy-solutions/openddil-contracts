@@ -283,6 +283,26 @@ Three questions answered before building, not during:
   column. If array containment isn't expressible in the filter grammar,
   the column shape changes (join table, or denormalized membership) and
   it is much cheaper to learn that now.
+
+  **PARTIALLY RETIRED 2026-08-07 — do not redo the Postgres half.** Arc 1
+  Phase 1 verification executed the exact filter shape against the real
+  column types on a live Postgres:
+
+  ```sql
+  SELECT count(*) FROM telemetry_latest_state
+   WHERE originator_nation = ANY(ARRAY['NAT_A'])
+      OR 'NAT_A' = ANY(releasable_to);
+  ```
+
+  It runs, and `text[]` containment is expressible and indexed (GIN).
+  So the *column shape* is validated at the database layer.
+
+  **What remains open** is the narrower question: whether the
+  **subscription/shape filter grammar** the gateway composes into can
+  express array containment, which is a property of that layer, not of
+  Postgres. If it cannot, the resolution is a projected boolean or a
+  membership join *for the subscription path only* — the underlying
+  column stays as validated.
 - **(c) Cheapest stable demo identity** — identity, not SSO. Enough to
   distinguish two users reproducibly.
 
@@ -300,6 +320,38 @@ works" — the delta is accounted for, row class by row class.
 ## Fenced — tracked, not built
 
 Named so they are decisions rather than omissions:
+
+- **Releasability label composition for aggregates** *(named design
+  question, added 2026-08-07 — deferred, not designed).* The Arc 1
+  Phase 1 migration deliberately excluded the `region_*` rollup tables,
+  because **what an aggregate is releasable to has no default answer**.
+  A rollup over assets from three nations is releasable to the
+  *intersection* of their `releasable_to` sets? The *union*? Neither is
+  automatically right.
+
+  Worse, neither captures the real concern. This is the classic
+  **aggregation-sensitivity** problem: composition can *change*
+  sensitivity, and an aggregate of individually-releasable facts can be
+  *less* releasable than any component, because the pattern reveals more
+  than the parts do. A count of degraded assets per nation may be
+  releasable per-nation and disclosive in aggregate.
+
+  Two connections make this more than a labelling detail:
+
+  1. **Label composition is itself an aggregation-composability
+     property** — the same class of question as
+     [AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md).
+     Union and intersection rules are distributive (they compose like
+     counts); the aggregation-sensitivity concern is *not* expressible
+     as either, and resembles the non-composable top-N case: information
+     that cannot be recovered from the emitted artifact alone.
+  2. **The input inventory is currently empty.** That audit's label
+     column found that *no* aggregation's inputs carry labels today —
+     the labels landed on Postgres tables while the proto `Provenance`
+     additions remain a Phase 0 deliverable. Any composition design must
+     account for all three aggregation inputs arriving unlabelled.
+
+  Belongs to Slice 2/3. Do not design it before labels are on the wire.
 
 - **Slice 2 — egress gating.** Releasability enforcement on outbound
   connectors.

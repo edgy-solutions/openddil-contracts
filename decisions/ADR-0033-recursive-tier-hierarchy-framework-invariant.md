@@ -207,6 +207,22 @@ child-tier rollups rather than over raw leaf streams. Fix or document
 each. This is a correctness prerequisite for any depth beyond three,
 and it is cheap to do now versus discovering it at depth.
 
+**DONE 2026-08-07 → [AUDIT-2026-08-07-aggregation-composability.md](AUDIT-2026-08-07-aggregation-composability.md).**
+Result: **this ADR's unbounded-depth claim is conditional, not clean.**
+All three aggregations are `assumes-raw-leaves` as implemented, but they
+differ in kind — `region_fleet_summary` (associative counts) and
+`region_wear_trends` (algebraic mean+count, and its wire message already
+carries the sufficient statistics) are plumbing away from composing.
+**`region_top_factors` is genuinely non-composable as specified**: top-N
+truncation is lossy, so a factor ranking 6th in every child is emitted
+by none of them and is invisible to the parent — silently, and
+compounding with each additional tier.
+
+**Gate established by the audit:** `region_top_factors` must be resolved
+before any deployment configures a fourth tier, or before any rollup
+consumes another rollup at any depth. Nothing there blocks Arc 1, which
+introduces no tier-consuming-tier path.
+
 ## Effect on Arc 1
 
 **Arc 1's work is unchanged; Arc 1's claims are corrected.**
