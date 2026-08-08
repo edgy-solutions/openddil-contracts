@@ -84,6 +84,36 @@ label rename, extended again by the session-scoped munitions
 
 ---
 
+## Locality
+
+**A tier that presents, decides, or detects must be able to do so from
+what it locally holds. Reachback is the same bug wearing different
+planes.**
+
+ADR-0022 stated severance tolerance for the **data** plane and it was
+implemented there. Every other plane inherited the *claim* without the
+*property*, and each violation was discovered separately, by accident,
+from an unrelated investigation:
+
+- **Presentation** — the maintainer UI served from and reading the root
+  tier; the persona closest to the equipment had the stalest view
+  (ADR-0032, found via the mini-agent read-seam work).
+- **Detection** — logistics-fusion deployed once at the root, reaching
+  *down* into child brokers; a severed tier gets no severity computed at
+  all (ADR-0034, found via the analytics-configurability work).
+- **Authorization** — pre-empted rather than discovered: ADR-0029's
+  per-tier local authorizers with policy as bundles exist precisely so a
+  severed tier still decides.
+
+*Corollary:* when adding any capability, ask which tier it must work at
+when the link above is cut, and whether its inputs are there. "It reads
+from the parent" is the failure, whatever the plane is called.
+
+*Earned three times before it was written down, which is two more than
+it should have taken.*
+
+---
+
 ## Provenance pays twice
 
 **Record what produced a value, not just the value. Provenance fields
