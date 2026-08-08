@@ -136,6 +136,15 @@ out to need exactly that field.
   mechanism as nation releasability without a second design
   (ADR-0029 §Classification).
 
+- **Third instance — process-as-provenance.** Workflow step executions
+  stamp `{workflow_def_hash, step, actor, access_decision}`, so *"which
+  version of whose procedure, executed by whom, under what
+  authorisation"* is answerable after the fact (ADR-0034 §The two
+  planes; the version-hash-in-decision-record pattern inherited from
+  `invincible-agent`). It completes a family: **decision**-as-provenance
+  (ADR-0031), **detection**-as-provenance (ADR-0034),
+  **process**-as-provenance.
+
 *Corollary:* the reverse also holds — a value with no provenance is a
 value that cannot later be composed, filtered, or explained. Hence the
 mandatory stamps on analytics outputs (ADR-0034), including

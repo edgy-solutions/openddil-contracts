@@ -175,6 +175,82 @@ artifact-distribution seam**, and models are its third passenger.
 The DDIL property carries too: artifact distributed ahead of time,
 inference local, **a severed tier keeps detecting**.
 
+### Execution classes — units declare how they must run
+
+*(Added 2026-08-08, with the ADR-0032 §d substrate decision.)*
+
+Not every registered unit has the same runtime needs, and the difference
+is structural rather than a tuning detail. A unit declares its
+**execution class** at registration:
+
+| Class | For | Substrate |
+|---|---|---|
+| **stream-parallel** | High-rate, partition-parallel analytics — the primitive algebra, windowed aggregations, stateless detectors | The stream processor (Faust/Kafka), partition-parallel by key |
+| **durable-workflow** | Stateful, timer-driven, long-running detection and processes — anything needing durable per-key state, durable timers, or resumability across restarts | **Per-tier Restate** (ADR-0032 §d) |
+
+The engine routes a binding to the substrate its class requires and
+**refuses bindings whose class the tier cannot satisfy** — same
+make-it-unwritable discipline as composition typing and the parallelism
+contract.
+
+**Migration posture correction.** The existing fusion and cm-service
+evaluators migrate **onto configurable durable-workflow units, not off
+Restate**. They are already durable-workflow-class by construction
+(per-key state + a cadence timer); the migration makes them *configured*
+rather than *hardcoded*, leaving the execution substrate unchanged.
+
+### The two planes — substrate and process
+
+*(Added 2026-08-08.)*
+
+This ADR governs the **substrate plane**: ingestion, aggregation,
+detection. Data-engineering territory; its outputs are inputs to
+decisions.
+
+A **process plane** sits above it — BPMN-shaped operational workflows
+owned by *process owners*, not data engineers:
+
+|  | Substrate plane (this ADR) | Process plane (future arc) |
+|---|---|---|
+| Authored by | Data engineers | Process owners / domain experts |
+| Content | Collection, aggregation, detection | Operational procedures — inspection, sign-off, requisition |
+| Config provenance | Analytics config | **Sovereignty overlay** (per nation / department) |
+| Consumes | Telemetry, child rollups | **Detection events + severity** from this plane |
+| Produces | Aggregates, detection events | Dispositions, records |
+| Execution class | Either | **durable-workflow** |
+
+The seam is narrow and one-directional by design: the substrate plane
+enters a process workflow only as **input** ("when severity goes CRITICAL
+on an asset of class X, open inspection workflow Y") and receives
+dispositions as output. Substrate **lineage is visible read-only** to
+process owners — they can see what produced the number that triggered
+their workflow, without owning or editing the substrate.
+
+**Maintainer operations are the motivating case**, and they are
+sovereignty-specific: a deployment runs its own nation's or department's
+maintenance procedure. Same node, different workflow definitions.
+
+**Reference implementation exists.** The `invincible-agent` project has
+already built and partially proven this machinery, and OpenDDIL inherits
+**decisions, not just intentions** — the same way it inherited Topaz's
+asserted-not-inferred stance (ADR-0031). Specifically inherited:
+
+- **Table/config-driven workflow definitions** with the definition
+  **version-hash read back in the decision record**, so behaviour is
+  attributed to a *confirmed* loaded definition rather than an assumed
+  one — the believed-vs-confirmed discipline applied to workflow
+  definitions.
+- **Policy-gated dispatch** — workflow execution denied at the gate
+  until a deliberate deny→allow ceremony, with unverifiable inputs named
+  as ceremony preconditions.
+- **Workflow state as its own first-class object**, deliberately distinct
+  from entity lifecycle state.
+
+**Fenced.** The process plane is a **named future arc**, not built here
+and not built by Arc 1. It now has a citable home and a reference
+implementation, which is precisely the state in which an attractive arc
+tries to pull itself forward. It does not.
+
 ### Parallelism is a registration contract
 
 Instances must scale horizontally, which in this stack means the

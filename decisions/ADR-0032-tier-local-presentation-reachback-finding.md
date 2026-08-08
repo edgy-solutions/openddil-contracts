@@ -228,10 +228,27 @@ the deploy cadence) is the **fallback** if the topic path proves
 problematic, and is recorded here so the fallback is a known option
 rather than an improvisation.
 
-**This is the arc's one new flow direction.** The topology has been
-upward-only (edge→region→HQ); `registry-sync` is the first
-deliberate HQ→edge flow. It is designed here, in the document, rather
-than discovered during implementation. Two constraints bind it:
+**This is the arc's one new flow direction**, and it has turned out to
+be **general infrastructure rather than registry-specific plumbing.**
+The topology has been upward-only (edge→region→HQ); `registry-sync` is
+the first deliberate HQ→edge flow. It is designed here, in the document,
+rather than discovered during implementation.
+
+**Passengers on this seam, in order of arrival:**
+
+1. `asset_registry` reference data (this section).
+2. **Policy bundles** — per-tier Topaz policy (ADR-0029 §6).
+3. **ML model artifacts** — versioned weights for durable-workflow
+   detectors (ADR-0034 §Serialization).
+4. **Sovereignty workflow definitions** — per nation/department
+   maintainer process procedures (ADR-0034 §The two planes).
+
+All four share the same DDIL property, which is why one seam serves
+them: **artifact distributed ahead of time, execution local, severed
+tier keeps working.** Passengers 2–4 are labelled artifacts subject to
+releasability policy, not merely private files.
+
+Two constraints bind it:
 
 1. **Reference data only.** `registry-sync` carries slow-changing
    assignment lineage. It is not a general downward channel, and
@@ -249,9 +266,58 @@ recursive node's presentation kit and helm templates and docs will
 inherit whatever noun is used here:
 
 > **tier presentation node** = postgres + schema-init job + projector
-> instance + Electric + UI + Topaz sidecar (passive)
+> instance + Electric + UI + Topaz sidecar (passive) + **restate-server
+> + logistics-fusion + cm-service** *(added 2026-08-08 — see below)*
 >
 > Attachable to **any broker-bearing tier**, at any depth.
+
+**2026-08-08 revision — the node gains a durable-workflow substrate.**
+
+The original stack contained no analytics: projector writes latest-state,
+store serves, UI presents. That was wrong, and the trace is short:
+fusion produces `asset-logistics-status` to the **root** broker, a tier
+projector subscribes **tier-local** topics only, so a tier store receives
+**no severity at all** — absent, not stale, and the UI renders ringless
+whether connected or severed. The severance-tolerance sweep
+([AUDIT-2026-08-08](AUDIT-2026-08-08-severance-tolerance-inventory.md))
+found `cm-service` is fusion's structural twin, so the same holds for CM
+state.
+
+Both are Restate Virtual Objects, and Restate was root-only. The node
+therefore gains **restate-server + fusion + cm-service**.
+
+**Three legs justify the substrate, not one:**
+
+1. **Detection today** — fusion and cm-service must compute at the tier
+   that presents, or a severed tier shows position without judgement.
+2. **Configurable analytics** — ADR-0034's *durable-workflow* execution
+   class requires a durable substrate at each tier.
+3. **Sovereignty maintainer process workflows** *(decisive)* — maintainer
+   operations run as customer-catered process workflows, custom per
+   nation or department, executing at the maintainer's tier. A maintainer
+   mid-procedure (inspection half-signed, requisition pending approval)
+   must not lose workflow state to a WAN drop. `PRINCIPLES.md` §Locality
+   applied to **process execution**.
+
+**Rejected alternative, recorded:** re-expressing fusion/cm as
+plain-Kafka consumers to avoid the substrate. It was recommended by
+[BRIEF-2026-08-08](BRIEF-2026-08-08-per-tier-severity.md) on the finding
+that fusion uses Restate thinly — a finding that is true of the
+**demo-era hardcoding** and silent about the roadmap. It would have
+removed, today, the exact substrate legs 2 and 3 need tomorrow. See that
+brief's §Resolution for the framework-vs-instantiation error in full.
+
+**Amortisation:** one substrate per tier serves two services today and
+the whole detection-plus-workflow plane tomorrow. The baseline is paid
+once per tier, not once per service.
+
+**Footprint honesty:** the `512Mi`-OOMKill note in `values.yaml` is
+**root-scale** — full-fleet Virtual Object state. A tier keyspace is
+order-100 assets holding order-KB per asset, i.e. single-digit MB of
+actual state; Restate's cost is dominated by its runtime baseline, not
+its data. What an honest tier-profile request/limit is remains an
+**open sizing question**, tracked as follow-on tasking — the cost is to
+be owned with numbers, neither denied nor inflated.
 
 It is built once and instantiated per configured tier. In this
 deployment it lands at the leaf tiers and the root, because those are

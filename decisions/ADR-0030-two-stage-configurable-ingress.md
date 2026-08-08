@@ -265,13 +265,21 @@ demonstrable. This is the same structure as existing deployment mapping
 overlays: the core defines the contract and the seat, the private bundle
 supplies the deployment-specific content.
 
-**The overlay seam now carries four distinct kinds of closed-world
+**The overlay seam now carries five distinct kinds of closed-world
 artifact** — proprietary AMQP message shapes, controlled-spec format
-definitions, vendor DDS artifacts (IDL + QoS profiles), and DDS Security
-material. That the same pattern keeps absorbing each new closed-world
-integration without changing shape is what makes the open-core story
-credible in environments where a large fraction of the integrations
-cannot be named in public.
+definitions, vendor DDS artifacts (IDL + QoS profiles), DDS Security
+material, and — as of 2026-08-08 — **sovereignty workflow definitions**
+(a nation's or department's maintainer process procedures; ADR-0034
+§The two planes). That the same pattern keeps absorbing each new
+closed-world integration without changing shape is what makes the
+open-core story credible in environments where a large fraction of the
+integrations cannot be named in public.
+
+**Note on the fifth class:** a nation's maintenance procedures may
+themselves be restricted material. Workflow definitions therefore carry
+releasability labels and distribute under policy like anything else on
+the wire (ADR-0029) — they are not merely private-by-repository, they
+are labelled artifacts.
 
 ## Phasing
 

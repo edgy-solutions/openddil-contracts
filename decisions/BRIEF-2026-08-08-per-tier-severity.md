@@ -1,6 +1,72 @@
 # Decision brief — per-tier severity (Arc 1 Phase 3 blocker)
 
-**Date:** 2026-08-08 · **Status:** decision reserved · **For:** a/b/c call
+**Date:** 2026-08-08 · **Status:** **DECIDED — (a)** · **For:** a/b/c call
+
+---
+
+## RESOLUTION (2026-08-08) — (a): Restate ships in the tier node
+
+**Decided by the roadmap-holder. The recommendation below — (c) now,
+(b) as destination — is SUPERSEDED.** Preserved unedited so the
+reasoning and its error stay legible.
+
+**Why the recommendation was wrong, precisely.** The brief's central
+finding — *fusion uses almost none of Restate's power* — is **correct
+about the present and silent about the future**. Fusion uses Restate
+thinly because the demo hardcoded everything. Thin usage is a fact about
+the **demo era**, not evidence the engine is unnecessary.
+
+This is the **framework-vs-instantiation tell applied to usage**
+(`PRINCIPLES.md` §Framework vs. instantiation): I made a categorical
+claim about a *kind* ("Restate is not needed at the edge") from evidence
+about a *configuration* ("today's hardcoded fusion barely uses it"). The
+same error class as reading a broker-less intermediate tier as a
+property of intermediate tiers. Recorded here because the tell is
+supposed to catch exactly this, and did not — only the roadmap intent
+did.
+
+**Option (b) would have optimised away, today, the precise substrate the
+roadmap needs, at the precise tier it needs it** — then paid a rewrite
+for the privilege of re-deploying the engine later when workflows
+arrive.
+
+### The three legs the decision actually rests on
+
+1. **Detection plane, today** — fusion + cm-service, per ADR-0034 and the
+   severance-tolerance sweep.
+2. **Configurable analytics workflows** — ADR-0034's durable-workflow
+   execution class needs a durable substrate per tier.
+3. **Sovereignty-specific maintainer process workflows** — the decisive
+   leg. Maintainer operations run as customer-catered process workflows,
+   custom per nation or department, executing at the maintainer's tier.
+   A maintainer mid-procedure — inspection half-signed, requisition
+   pending approval — must not lose workflow state to a WAN drop. That
+   is `PRINCIPLES.md` §Locality applied to **process execution**.
+
+### What this does to the economics
+
+The overnight sweep's `cm-service` twin-finding already improved the
+bill before the decision was made: **one substrate per tier now serves
+two services today** and the whole detection-plus-workflow plane
+tomorrow. The fixed baseline is paid once per tier, not per service.
+
+And the gate may be cheaper than (b) rather than more expensive: the
+blocker was *"Restate isn't at the edges."* With Restate present, the
+existing fusion/cm code with tier-scoped subscriptions **may simply
+run** — deployment work, not engineering work. That remains a **believed
+capability** and takes the compose gate before templating.
+
+### Follow-on tasking
+
+- **Gate:** compose-verify fusion **and** cm-service against an
+  edge-scoped Restate.
+- **Sizing:** the 512 Mi-OOMKill note is HQ-scale. Determine an honest
+  request/limit for order-100-asset keyspaces — the footprint gets owned
+  with numbers, neither denied nor inflated.
+- **ADR amendments:** ADR-0032 §d (node stack + three legs), ADR-0034
+  (execution classes, two-plane statement).
+
+---
 
 ## The problem, restated
 
