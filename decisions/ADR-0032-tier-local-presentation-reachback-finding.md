@@ -242,11 +242,29 @@ rather than discovered during implementation.
    detectors (ADR-0034 §Serialization).
 4. **Sovereignty workflow definitions** — per nation/department
    maintainer process procedures (ADR-0034 §The two planes).
+5. **Configuration-management baselines** — versioned reference
+   artifacts (e.g. `<variant>-Baseline-<year>.<rev>`) that define what
+   compliance *means* for a platform variant. Authored and approved
+   centrally, consumed at the tier, revised over time. Discovered as a
+   distribution concern by the Phase 3 gate: a tier's cm-service
+   produces meaningless output without its baselines mounted, so the
+   baseline is not chart decoration — it is the reference data the
+   detection depends on.
 
-All four share the same DDIL property, which is why one seam serves
+All five share the same DDIL property, which is why one seam serves
 them: **artifact distributed ahead of time, execution local, severed
-tier keeps working.** Passengers 2–4 are labelled artifacts subject to
+tier keeps working.** Passengers 2–5 are labelled artifacts subject to
 releasability policy, not merely private files.
+
+**Staleness classification** (per the velocity distinction in §d):
+passengers 1, 2, 4 and 5 are **slow-moving reference data** and degrade
+gracefully — a severed tier computing against its last-distributed
+baseline or policy bundle is correct DDIL behaviour, and stale-but-
+present beats absent. Passenger 3 (model artifacts) is likewise
+versioned and slow. **None of this channel's passengers are operational
+telemetry**, which is what keeps the "stale is acceptable here" stance
+consistent with §a's rejection of a store fed across the link it exists
+to survive.
 
 Two constraints bind it:
 
@@ -311,13 +329,45 @@ brief's §Resolution for the framework-vs-instantiation error in full.
 the whole detection-plus-workflow plane tomorrow. The baseline is paid
 once per tier, not once per service.
 
-**Footprint honesty:** the `512Mi`-OOMKill note in `values.yaml` is
-**root-scale** — full-fleet Virtual Object state. A tier keyspace is
-order-100 assets holding order-KB per asset, i.e. single-digit MB of
-actual state; Restate's cost is dominated by its runtime baseline, not
-its data. What an honest tier-profile request/limit is remains an
-**open sizing question**, tracked as follow-on tasking — the cost is to
-be owned with numbers, neither denied nor inflated.
+**Footprint — measured 2026-08-08, no longer an open question.**
+
+The `512Mi`-OOMKill note in `values.yaml` is **root-scale** — full-fleet
+Virtual Object state. It is not the binding constraint for a tier. The
+actual driver is **partition count**, and the numbers are:
+
+| `default-num-partitions` | Memory budget | Container RSS (idle) |
+|---|---|---|
+| 24 (product default) | 243.2 MiB | **388.6 MiB** |
+| 6 | 60.8 MiB | **167.0 MiB** |
+
+Roughly linear in partitions, over a fixed runtime floor of ~110 MiB.
+Per-asset state is negligible by comparison (order-KB per asset; a
+100-asset tier holds single-digit MB), which confirms the cost is
+**baseline, not data**.
+
+**Partition count is a first-boot template parameter, not a tuning
+knob.** `restate-server --default-num-partitions` documents: *"Number of
+partitions provisioned during initial cluster provisioning… This config
+entry only impacts the INITIAL number of partitions."* It cannot be
+changed after provisioning, so the tier profile must set it **before the
+node first starts** — which puts it in the chart, not in an ops runbook.
+
+**Choosing the tier number.** Partitions are the parallelism substrate
+that ADR-0034's registration contract keys against, so the value is
+chosen for *capacity*, not for the prettiest idle-memory figure. A tier
+profile should size for its keyspace **plus** the future workflow and
+detector instances that will share the substrate — deliberately not the
+bare minimum, because the cost of being wrong is a reprovision, and
+reprovisioning is exactly what "first-boot only" makes expensive.
+
+**Recommendation: 6 for a tier profile** (≈167 MiB idle vs. 388 MiB at
+the default) — comfortable headroom over an order-100-asset keyspace
+while leaving room for per-asset workflow units, and a >2× reduction on
+the dominant cost. Root keeps the default. Both are chart values, so a
+deployment with a large tier can raise its own before first boot.
+
+Net: the node's Restate adds roughly **0.2 GB idle**, not the 0.5–2 GB
+the unmeasured estimate implied.
 
 It is built once and instantiated per configured tier. In this
 deployment it lands at the leaf tiers and the root, because those are

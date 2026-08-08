@@ -171,6 +171,63 @@ legacy.
 
 ---
 
+## Similarity is a code claim, not a deployment claim
+
+**Structural similarity verifies at the code layer. Deployment surfaces
+verify one at a time.**
+
+Two services can be genuine twins — same shape, same mechanism, zero code
+difference between how they run — and still diverge in what they need to
+*start*: mounts, env, config files, credentials, sidecars.
+
+*Earned:* `cm-service` was classified as `logistics-fusion`'s structural
+twin by a reading-level sweep, and that classification was **correct**.
+Both ran unmodified against tier-scoped infrastructure. But cm-service
+additionally required a proto mount plus `PYTHONPATH`, and a baselines
+mount without which its output is meaningless — neither of which the
+twin claim predicted, because the twin claim was never about deployment.
+
+*Corollary:* "structurally identical, therefore fine" is a valid
+inference about behaviour and an invalid one about packaging. Run the
+second one anyway; it is usually twenty minutes.
+
+---
+
+## Public twin, declared by manifest
+
+**Any artifact class a deployment overlay carries must have a sanitized
+twin in the public sample overlay. Structure mirrors; content is
+fictional.**
+
+The seam that lets closed-world material meet an open core is only
+credible if the *mechanism* is publicly exercisable. Without a public
+twin: CI cannot test the overlay seam, worked-example pedagogy points at
+things its audience cannot open, and test harnesses invent throwaway
+fixtures per run.
+
+Make the rule checkable **without reference to any private material**:
+declare the artifact classes in a **public manifest**, and let the check
+be `sample overlay ⊇ manifest`. That runs anywhere, including CI, where
+private overlays do not exist and must not be named.
+
+Two properties follow, and both are the point:
+
+- The manifest becomes the citable public contract for *what a
+  deployment overlay consists of* — documentation deployers need
+  regardless.
+- Parity is verified structurally. **Content parity is neither possible
+  nor desired**; the twin's content is invented by design.
+
+*Earned:* the requirement to state the rule without reference to private
+material produced a manifest formulation better than the diff it
+replaced. Third instance of that pattern: standardizing capability
+naming on DoD sim/C2 conventions produced a cleaner generic Silver
+model; a deployment-overlay seam produced the public twin; a
+declare-don't-compare rule produced the manifest. **Designing for
+generality keeps producing the better architecture.**
+
+---
+
 ## Verification
 
 **Verify before multiplying.** A cheap pre-question before an expensive
