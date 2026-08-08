@@ -84,6 +84,36 @@ label rename, extended again by the session-scoped munitions
 
 ---
 
+## Provenance pays twice
+
+**Record what produced a value, not just the value. Provenance fields
+keep turning out to be load-bearing for purposes nobody designed them
+for.**
+
+They are written for honesty — *where did this come from, how many
+samples back it, what decided it* — and then something structural turns
+out to need exactly that field.
+
+*Earned, twice:*
+
+- `ComponentWearTrend.asset_count` was recorded as honesty about sample
+  size. It turns out to be precisely the sufficient statistic that makes
+  a mean compose across tiers — so that aggregation's **wire format was
+  already composition-ready** with no change required
+  ([AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md) §3).
+- `Provenance.classification` was carried as a free-text descriptive
+  field, and became the hook that lets classification ride the same ABAC
+  mechanism as nation releasability without a second design
+  (ADR-0029 §Classification).
+
+*Corollary:* the reverse also holds — a value with no provenance is a
+value that cannot later be composed, filtered, or explained. Hence the
+mandatory stamps on analytics outputs (ADR-0034), including
+`model_artifact_hash`, because *"which weights produced this alert"* is
+unanswerable retroactively.
+
+---
+
 ## Framework vs. instantiation
 
 **State the rule and the instantiation separately. A decision about
@@ -96,8 +126,9 @@ sentence about a *kind* ("regions get no store") where the evidence only
 supports a sentence about a *configuration* ("this deployment's
 intermediate tier has no broker, and the rule requires one").
 
-*Earned:* ADR-0032 §(a), corrected by ADR-0033. Also: "customer1 is
-single-edge by intent" (it was demo legacy).
+*Earned:* ADR-0032 §(a), corrected by ADR-0033. Also: a deployment
+overlay long assumed to be "single-edge by intent" — it was demo
+legacy.
 
 ---
 

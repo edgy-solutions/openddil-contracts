@@ -122,9 +122,69 @@ tier consumes another tier's rollup.
   suggest.
 
 **Recommendation for the eventual decision: (a),** unless factor
-cardinality is measured and proves unbounded. It converts a silent
-correctness bug into a size question, and size questions are the kind
-this project can answer with a measurement.
+cardinality proves unbounded. It converts a silent correctness bug into
+a size question, and size questions are the kind this project can answer
+with a measurement.
+
+### Cardinality measurement (2026-08-07)
+
+Run to replace "likely bounded" with a number. **Result: the static
+namespace is small and controlled; the runtime cardinality is *not*
+fully bounded by construction, and the difference matters.**
+
+The `factor_id` namespace in `fusion/rules.py` is **14 forms** — but
+they split into two kinds:
+
+**9 fixed IDs** (fully enumerable from source):
+
+```
+cm.overall_status      operational.degraded    operational.maintenance
+fuel                   operational.failed      operational.offline
+stale_inputs           operational.fault       operational.shutdown
+```
+
+**5 templated families** (expand at runtime from data):
+
+```
+ammo.{slot}          inventory.{cap_key}     mtbf.{component}
+subsystem.{NAME}     wear.{name}
+```
+
+**The correction:** the templated families do **not** expand over an
+ontology-fixed vocabulary. `platform_reference.yaml` (58 lines) carries
+per-variant capacities, not a component/subsystem catalogue — so slot,
+capability-key, component and subsystem names arrive **from the data**,
+not from a curated list. The prefixes are controlled; the expansions are
+open-ended.
+
+So runtime distinct-count ≈ `9 + Σ(distinct values per family)`, which
+scales with fleet heterogeneity (platform variants × their components,
+subsystems, capability keys, munition slots) rather than being fixed by
+the codebase.
+
+**Practical read:** for a fleet of ~10 platform variants with a handful
+of components/subsystems each, this plausibly lands in the tens-to-low-
+hundreds — still affordable for option (a), which is a per-region message
+carrying a bounded-in-practice map. But this is an *estimate from
+structure*, not a measurement, and the honest version requires a live
+cluster:
+
+```sql
+-- distinct factor_id actually emitted, and the per-region worst case
+SELECT count(DISTINCT f->>'factor_id') AS distinct_factors
+  FROM asset_logistics_status,
+       LATERAL jsonb_array_elements(constraining_factors) f;
+```
+
+**Status: static namespace measured (14 forms; 9 fixed + 5 templated).
+Runtime distinct-count NOT measured — requires a populated cluster.**
+Recorded rather than asserted, because option (a)'s affordability rests
+on it and "bounded by construction" turned out to be true only of the
+prefixes.
+
+If the runtime count ever proves genuinely large, fix shape (c)
+(count sketches with error bounds) is the standard answer — but it is
+not justified by anything measured so far.
 
 **Label column:** inputs carry **no** releasability labels.
 

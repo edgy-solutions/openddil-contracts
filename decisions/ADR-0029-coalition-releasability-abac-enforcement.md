@@ -235,6 +235,37 @@ These are additive and independently deployable.
 `telemetry.proto`**. They are a Phase 0 deliverable, not a completed
 capture.
 
+**Priority raised 2026-08-07 — this now blocks two downstream design
+questions.** The dependency chain, made explicit because the blockage is
+not obvious from either end:
+
+```
+Phase 0 proto captures
+   → labels present on the wire
+      → labels present on aggregation inputs
+         → label composition for aggregates is designable
+```
+
+Arc 1 Phase 1 put the labels on **Postgres tables**, which is what the
+read-path filter needs. It did **not** put them on the **wire**, which
+is what anything wire-fed needs.
+[AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md)
+confirmed the consequence empirically: *no* aggregation's inputs carry
+labels today — `AssetState` has no such fields, and a grep across the
+regional aggregator returns nothing.
+
+So Phase 0 is currently the blocking node for:
+
+1. **Label composition for aggregates** (the named design question
+   above) — undesignable while the input inventory is empty.
+2. **The audit's label inventory** — it can only ever report "none"
+   until the captures land.
+
+Neither is urgent on its own; together they mean Phase 0 has more
+downstream weight than "additive proto fields" suggests, and it should
+be sequenced early within Arc 2's runway rather than treated as
+paperwork.
+
 ### Phase 1 — Labels queryable (~½ day)
 
 Projector writes `originator_nation` and `releasable_to` as **real
