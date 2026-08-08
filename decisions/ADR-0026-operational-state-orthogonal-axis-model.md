@@ -234,7 +234,25 @@ per-source decompositions.
 
 ## References
 
-- Bloblang worked example: `openddil-customer-bundle-customer-overlay/dynamic-mappings/proprietary-mapping.yaml`
+- Bloblang worked example:
+  `openddil-customer-bundle-example/dynamic-mappings/sample-sensor-mapping.yaml`
+  — the combined-enum → three-axis decomposition, publicly readable.
+
+  **Amended 2026-08-08 (pointer only; no decision changed).** This
+  reference previously pointed into a private deployment overlay. Two
+  problems, and the second is the load-bearing one:
+
+  1. The worked example is pedagogy for adapter authors, and its
+     audience can only open public repositories — so a private path is
+     a **broken reference by construction**, not merely inconvenient.
+  2. Naming a private overlay's path in a public ADR asserts that
+     overlay's existence, which the sovereignty discipline forbids.
+
+  The pointer now targets the public sample overlay, whose specimen was
+  written for this purpose: fictional content, identical structure, with
+  the three match blocks annotated as three independent questions asked
+  of one input. Repointed in the same change that made the destination
+  exist, so the reference was never aspirational.
 - Fusion rule: `openddil-logistics-fusion-service/src/fusion/rules.py :: _eval_operational_state`
 - Proto: `proto/openddil/telemetry/v1/telemetry.proto :: OperationalState`
 - ADR-0010 (feed integration strategy) — establishes per-source adapter pattern
