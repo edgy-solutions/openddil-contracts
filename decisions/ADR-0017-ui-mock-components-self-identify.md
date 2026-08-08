@@ -24,7 +24,7 @@ Phase 4 is the convergence point: the UI is being wired to the real
 pipeline via the projector and ElectricSQL. But not everything wires up
 at once. Some components (the 3D maintainer views especially — see
 Decision 4 / LtamdsView) are deliberately preserved against synthetic
-data, pending a future feed (RTI / Cyber DDS). Those legitimate mocks
+data, pending a future feed (RTI / Cyclone DDS). Those legitimate mocks
 must not become invisible drift again.
 
 ## Decision
