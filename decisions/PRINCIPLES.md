@@ -285,6 +285,58 @@ than duplicating.
 
 ---
 
+## Match structure, not prose
+
+**Assert against parsed structure or exact equality. When a sentinel is
+needed, choose one no substring of which can match its own negation.**
+
+*Earned twice in one day* — which is why it stands on its own rather than
+sitting as a footnote to the principle above.
+
+**Instance 1 — the enforcement had the weakness inside it.** The acceptance
+suite for the tier-node template *is* the mechanism enforcing "a
+deliverable's self-description is a claim". It asserted
+`f"{component}-{tier}" in rendered`. A missing `---` at a loop boundary
+merged each tier's topaz Deployment into the next tier's first object, where
+last-wins silently discarded it — and **the discarded object's text remained
+fully present in the render**. Every substring assertion passed while three
+tiers received a Service with no endpoints, i.e. no local authorizer. The
+seventeen checks caught their own inadequacy only when a genuinely missing
+Deployment walked through the gap.
+
+**Instance 2 — a sentinel containing its own negation.** A provisioning task
+reporting whether it had rewritten a config used
+`changed_when: "'CHANGED' in stdout"`. `'CHANGED' in 'UNCHANGED'` is true, so
+a converged, correct task reported `changed` forever — training the reader to
+ignore the one run that would have mattered.
+
+*Why they are one disease:* both **matched prose where structure was meant**.
+A substring test answers *do these bytes appear somewhere?* when the question
+was *does this exist as a unit the consumer will act on?* For YAML the
+consuming unit is the document, not the byte range; for a status sentinel it
+is the whole token, not a fragment. In both cases the artifact was wrong and
+the bytes were right.
+
+*Enforcement:*
+
+- Assertions about what a system will **receive** are made against parsed
+  objects, never against rendered text.
+- Status sentinels are compared by **equality**, and chosen so no value is a
+  substring of another: `CHANGED` / `NOCHANGE`, never `CHANGED` /
+  `UNCHANGED`. Pick the pair so a careless rewrite cannot resurrect the bug.
+- **A guard is not evidence until it has been seen to fail.** Both
+  replacement checks were run against the unfixed artifact and confirmed to
+  fail before being trusted. A green test that has never been red proves
+  nothing about what it would catch.
+
+*Corollary:* when a check and the thing it checks share an author and a
+vocabulary, the check inherits the author's blind spot. Prefer a second check
+written against a **different representation** — parse vs. text, count vs.
+presence — over a more careful version of the same one. The 19-objects /
+18-separators arithmetic found the defect that the name-matching could not.
+
+---
+
 ## Verification
 
 **Verify before multiplying.** A cheap pre-question before an expensive
