@@ -390,6 +390,24 @@ No traffic → no buffer → 0 is genuinely correct → the bug is invisible. It
 took a real cluster, real DIS traffic and a deliberate severance to expose
 one wrong string.
 
+*The inverse instance, same week — unverified observability masking a
+SUCCESS.* Testing the Topaz seat, extra "what did the policy actually see?"
+rules were added to a Rego policy precisely to avoid a silent-absence trap:
+so that a `false` decision could be told apart from a policy that never
+received its input. Those rules returned strings and arrays. Topaz's `Is`
+API returns **boolean** decisions and errors the **entire query** if any
+requested decision is undefined or non-boolean — so every query failed with
+`undefined results`, for six iterations, while the bundle had in fact loaded
+and the policy was working correctly the whole time.
+
+The anti-silent-absence machinery produced a **loud failure that masked a
+success**, which is the mirror image of a silent failure masking a fault.
+The rule that covers it already exists — *hardening never run is new code* —
+and this is its second instance in one week, arriving from the opposite
+direction. **Observability added to a system is part of that system and
+inherits its verification burden.** A diagnostic you have not seen produce a
+correct reading is not yet a diagnostic.
+
 ---
 
 ## A documented hazard is not a mitigated one

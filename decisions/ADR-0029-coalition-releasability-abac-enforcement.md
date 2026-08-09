@@ -289,6 +289,44 @@ Entities without derivable national origin get a default
 Deploy Topaz (single HQ instance, per §6). Author git-managed
 `users.yaml` per §5.
 
+> **DEPLOYMENT GATE RUN 2026-08-09 — the seat is proven.** Topaz was
+> deployed to a real cluster (`topazd 0.33.16`, now pinned by digest) and
+> **answered 4/4 releasability decisions correctly** against a
+> hand-authored local bundle and an asserted-entitlement corpus in the §5
+> `users.yaml` shape — including default-deny for a subject absent from the
+> corpus. The invocation is `topazd run --config-file <path>` (`-b/--bundle`
+> loads local policy roots); `args: ["run"]` alone exits immediately.
+> Phase 3 therefore starts from a verified component rather than an
+> assumption.
+>
+> **Two findings carried into this phase:**
+>
+> **1. Topaz's internal `decision_logger` is not configurable on this
+> build, and that does NOT block Phase 5.** Both `plugins` and
+> `decision_logger` — documented online and present in the published JSON
+> schema — are rejected by 0.33.16 with `'config.Config' has invalid keys`.
+> Checked against the co-located reasoning plane (ADR-0031), which runs
+> Topaz in production: it is on **0.33.13**, the same generation, and its
+> config carries **no decision-logger block either**. So there is no newer
+> version to inherit and no solved configuration to copy.
+>
+> This is consistent rather than alarming, because **Phase 5's stated
+> mechanism is PEP-side**: *"the gateway logs every decision — user,
+> attributes considered, policy version, outcome, timestamp."* The gateway
+> records the decision it received. Topaz's internal logger would be a
+> second, independent record — defence in depth worth having, not the
+> critical path. **Named Arc 2 task:** revisit the internal decision logger
+> when Topaz's config schema catches up with its own documentation.
+>
+> **2. Inherited hazard — the PEP must fail CLOSED.** The reasoning plane
+> discovered that its gateway's `ALLOW_MOCK_AUTH` branch had been silently
+> converting *every* authorizer exception into allow-by-default, which meant
+> data-access authz was mock-allow for an extended period while appearing
+> to function. A PEP that cannot reach its PDP must **deny**, and any
+> mock/bypass branch must be removed the moment the real path works —
+> ADR-0026's "coupled interim mechanisms retire together". Phase 4 inherits
+> this as a design constraint, not a review comment.
+
 ### Phase 4 — Read-path gateway PEP (~1–2 days)
 
 A thin authenticated component that constructs the client's data
