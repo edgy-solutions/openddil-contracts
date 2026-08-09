@@ -337,6 +337,61 @@ presence — over a more careful version of the same one. The 19-objects /
 
 ---
 
+## A probe must fail distinguishably from its own zero
+
+**An instrument whose failure mode is indistinguishable from its healthy
+reading is not an instrument.** Absence, misconfiguration and "nothing to
+report" must produce different outputs.
+
+*Earned:* the edge→HQ buffer counter read **0 on every cluster, for months**.
+`edge_buffer_monitor.py` queried consumer group `bridge-group`; the bridges
+commit under `bridge-group-<edge_id>`. The probe was looking up a group that
+had never existed — and its own contract was *"returns 0 if the group has not
+committed any offsets yet."* A broken lookup and a healthy, caught-up link
+produced the identical number. Nothing errored, nothing warned (probe
+failures logged at DEBUG, invisible at the default level), and 0 was always
+plausible.
+
+The DDIL buffering worked the entire time. Only the instrument was blind, and
+**the buffering claim was therefore unverifiable rather than wrong** — which
+is worse, because it cannot be argued with.
+
+*This is the family's third instance:*
+
+| | looks like | actually is |
+|---|---|---|
+| DDS QoS mismatch | a quiet topic | no subscription match |
+| a site with no feed | a broken deployment | a site with no feed |
+| the buffer probe | a caught-up link | a group that never existed |
+
+Each pair is byte-identical from the observer's position. The shape recurs
+because "nothing arrived" is the natural rendering of both success and
+failure, and the innocent reading is always the comfortable one.
+
+*Enforcement:* a probe distinguishes **absent** from **zero**. In practice —
+raise on absence rather than returning a value; write a sentinel the UI
+cannot mistake for data (a negative lag prompts a question, a `0` ends one);
+warn at WARNING, not DEBUG, because a signal suppressed by default is not a
+signal; and deduplicate the warning, since a permanent error emitted 30×/min
+trains readers to filter it exactly as a permanent 0 trained them to trust it.
+
+*Corollary — a copied default inherits the bug and adds the copier's
+endorsement.* Three call sites carried this wrong group name in two different
+ways: two never passed the variable at all (silently taking the broken
+default), and one passed the broken default **explicitly**, written this week
+by copying the existing value. Precedent reads as verification. The newest
+code in the stack acquired the oldest bug because it was copied from
+something that appeared to work — the deployment-surface lesson wearing a
+different hat: **structural similarity carries defects with the authority of
+having shipped.**
+
+*What made the catch possible:* it could not be seen without a data source.
+No traffic → no buffer → 0 is genuinely correct → the bug is invisible. It
+took a real cluster, real DIS traffic and a deliberate severance to expose
+one wrong string.
+
+---
+
 ## A documented hazard is not a mitigated one
 
 **A hazard note ships with a mitigation or a tracked vehicle. A bare comment
