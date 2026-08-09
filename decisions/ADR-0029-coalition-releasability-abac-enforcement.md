@@ -310,13 +310,27 @@ Deploy Topaz (single HQ instance, per §6). Author git-managed
 > config carries **no decision-logger block either**. So there is no newer
 > version to inherit and no solved configuration to copy.
 >
-> This is consistent rather than alarming, because **Phase 5's stated
-> mechanism is PEP-side**: *"the gateway logs every decision — user,
-> attributes considered, policy version, outcome, timestamp."* The gateway
-> records the decision it received. Topaz's internal logger would be a
-> second, independent record — defence in depth worth having, not the
-> critical path. **Named Arc 2 task:** revisit the internal decision logger
-> when Topaz's config schema catches up with its own documentation.
+> This does not block Phase 5, because **Phase 5's stated mechanism is
+> PEP-side**: *"the gateway logs every decision — user, attributes
+> considered, policy version, outcome, timestamp."* The gateway records the
+> decision it received; Topaz's internal logger would be a second,
+> independent record — defence in depth, not the critical path.
+>
+> **But there is nothing to copy for the PEP side either — Phase 5 builds
+> it.** A first version of this note implied the reasoning plane
+> demonstrated the PEP-side mechanism. Reading its gateway showed
+> otherwise: it logs **failures** (`TOPAZ AUTHZ DENIED …` with user, URN,
+> status and body) and returns successful authorizations **silently**.
+> There is therefore no per-decision audit record on either side, anywhere,
+> today. Phase 5's decision log is new construction, not an integration.
+>
+> **Named Arc 2 tasks:** (a) build the PEP-side decision record — it is the
+> critical path and has no prior art here; (b) revisit Topaz's internal
+> logger when its config schema catches up with its own documentation.
+>
+> *Worth raising with the reasoning plane separately:* by the same
+> standard, its data-access authz currently has no positive-decision audit
+> trail. That is their call, not a dependency of ours.
 >
 > **2. Inherited hazard — the PEP must fail CLOSED.** The reasoning plane
 > discovered that its gateway's `ALLOW_MOCK_AUTH` branch had been silently
@@ -326,6 +340,19 @@ Deploy Topaz (single HQ instance, per §6). Author git-managed
 > mock/bypass branch must be removed the moment the real path works —
 > ADR-0026's "coupled interim mechanisms retire together". Phase 4 inherits
 > this as a design constraint, not a review comment.
+>
+> **Their fix is worth copying verbatim in shape.** Every non-200 and every
+> exception is a hard deny carrying a single searchable marker —
+> `TOPAZ AUTHZ DENIED` — followed by the cause, the user, the resource and
+> the upstream status. That gives an operator facing a sudden 403 storm one
+> string to grep, and it makes "authz is broken" impossible to confuse with
+> "authz denied you", which is the distinction a fail-open erases. Phase 4
+> adopts the same marker discipline.
+>
+> Note the asymmetry this creates and do not repeat it: loud on failure,
+> silent on success is exactly the shape that leaves an authorization
+> system with no positive audit trail. Phase 5's decision log is what
+> closes it.
 
 ### Phase 4 — Read-path gateway PEP (~1–2 days)
 
