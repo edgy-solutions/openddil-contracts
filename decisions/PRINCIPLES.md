@@ -337,6 +337,47 @@ presence — over a more careful version of the same one. The 19-objects /
 
 ---
 
+## A documented hazard is not a mitigated one
+
+**A hazard note ships with a mitigation or a tracked vehicle. A bare comment
+on a broken default is a confession, not a control.**
+
+*Earned:* the chart's restate-wipe hook pointed at
+`docker.io/bitnami/kubectl:1.30`, above a comment stating that Bitnami's
+catalog restructure had made those tags "hard to obtain reliably" and listing
+alternatives an operator might prefer. The hazard was correctly identified,
+written down — **and shipped as the default anyway**. The tag was later
+withdrawn entirely (`:1.30` and `:1.31` both 404). Nothing in the chart
+changed; the registry did.
+
+*Why it cost more than it should have:* the failure surfaced as
+`Error: failed pre-install: 1 error occurred: timed out waiting for the
+condition`, which names no image, no pull, and no registry. The comment that
+predicted the problem sat three files away from the error that expressed it.
+Someone had already done the hard part — noticing — and the noticing was
+stored where it could not act.
+
+*Enforcement:* when a comment says a dependency is unreliable, one of these
+must accompany it before the change lands —
+- **change the default** to the reliable thing, or
+- **open a tracked row** (debt registry / follow-up) naming the replacement
+  and the trigger, or
+- **add a pre-flight check** that fails with the real reason.
+
+If none of the three is affordable right now, that is worth saying out loud,
+because it is a decision rather than an oversight.
+
+*Corollary — verify the replacement, don't infer it.* Choosing the successor
+image looked obvious and was not: `registry.k8s.io/kubectl` and
+`rancher/kubectl` both exist, are both the "modern correct" answer, and both
+fail here because they are distroless and the hook runs a POSIX shell
+(`exec: "sh": executable file not found in $PATH`). Running all three
+candidates on a real cluster took minutes and made the fix right the first
+time. Reasoning about base images would have swapped one broken default for
+another.
+
+---
+
 ## Verification
 
 **Verify before multiplying.** A cheap pre-question before an expensive
