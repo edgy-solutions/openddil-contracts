@@ -79,6 +79,32 @@ source's hierarchy survives inside the JSONB, and our contract with it is
 three `.get()` calls in one evaluator. A field the source renames breaks a
 consumer with no schema check in between.
 
+### The layered verdict
+
+The question "is the open schema free of any particular integrator's
+influence?" has three answers, and only the third is interesting.
+
+| layer | verdict |
+|---|---|
+| **vocabulary** | **clean, verified.** No integrator-specific naming anywhere. The three field names in use — quantity, station, type-bearing identifier — are open domain vocabulary: stores and munition counts are DIS/AFSim concepts. |
+| **declared structure** | **clean, but vacuously.** The feared shape — one integrator's field hierarchy enshrined in an open proto under a generic name — does not exist, because *no declared shape exists*. Nothing is imitated because nothing is stated. This satisfies the letter of the provenance policy. |
+| **de facto contract** | **not corrupted, but dependent.** The only definition of the item shape that exists anywhere is whatever one deployment's mapping emits. Our code couples to it through three consumer reads. |
+
+**Free from corruption is not free from definition.** No intellectual
+property leaks and no foreign vocabulary appears — and yet the canonical
+model is a vacuum, and a vacuum gets filled by whoever integrated first. A
+second deployment mapping its data tomorrow would be mapping to a shape
+reverse-engineered from consumer reads of the first deployment's output.
+
+Dependence-by-vacuum is in one respect *worse* than a declared mirror: a
+mirror is visible, reviewable, and fails loudly when the source moves. This
+fails silently.
+
+**The escalation fired on the trigger's reason rather than its letter, which
+is the trigger working correctly.** The danger was never "a mirror exists" —
+it was "stockpile counting built on a shape that is not ours." An undeclared
+shape is that danger in stealth form.
+
 **One genuine modelling gap, already documented in code:** the feed carries
 an absolute count and *no per-store capacity*, so engagement-worthiness bands
 on an absolute threshold rather than percent-remaining
@@ -135,10 +161,19 @@ nothing built, per instruction.
   (`munitionType.ts:35-36`) is string surgery standing in for a field.
 - Vocabulary from the domain rather than invented: **stores/station**
   language is already what the code uses and matches simulation and C2
-  convention (AFSim stores, DIS munition/stores concepts, and the
-  J-series/Link 16 family for engagement-relevant reporting). The existing
-  words are good; they need a schema under them.
+  convention — **J3.7 weapon status**, **DIS munition-supply**, **AFSim
+  stores**, and **S2000M** where stockpile semantics land. The existing words
+  are good; they need a schema under them.
 - Keep the derived/fed split exactly as it is today.
+- **When the canonical shape lands, re-derive the sample overlay's authored
+  wire-schema as an instance of it.** That fiction was written into the same
+  vacuum this section describes, so it is currently a *second independent
+  definition* of the item shape rather than an example of one. Left as-is it
+  would quietly become a competing authority — two undeclared shapes instead
+  of one.
+
+**Fenced:** design work waits until scheduled. Today's deliverables are this
+sketch and the prerequisite link (GD-10), nothing built.
 
 ---
 
@@ -221,5 +256,10 @@ Stated so no one inherits a stronger claim than the reading supports:
 - ADR-0026 — the three-axis `OperationalState`.
 - `PRINCIPLES.md` §*Claims vs. sources* — the discipline the capability
   evaluator already applies correctly.
-- `GENERALIZATION-DEBT.md` — where a modelled `MunitionStore` would land if
-  the sketch in §1 is taken up.
+- `GENERALIZATION-DEBT.md` **GD-10** — the finding of §1, recorded as a hard
+  prerequisite of munitions stockpile work. **No munitions phase document
+  exists in any OSS repo**, so that row is currently the prerequisite's only
+  durable home; it should be cited from the phase plan when one is written.
+- **S2000M** — the stockpile-semantics standard named in the §1 sketch
+  alongside J3.7 / DIS munition-supply / AFSim stores, for when the canonical
+  item schema is scheduled.
