@@ -524,6 +524,38 @@ another.
 
 ---
 
+## "Not found" is not "cleared"
+
+**A report states what it did not establish, or its silence gets read as
+absence of the thing.** The negative-space section is what stops a narrow
+finding from being received as a broad all-clear.
+
+*Earned:* a long-parked audit asked a binary question — *is this schema a
+mirror of a source system's field hierarchy?* The answer was **no**. Stopping
+there would have closed the item clean and wrong, because the reason was not
+"we modelled it ourselves" but **"no declared model exists at all"** — a third
+state nobody had named, and a more consequential one than the fear. It
+appeared only because the reading went past the question to what the code
+actually does, and it survived into the record only because the audit had a
+section for *what this did not establish*.
+
+*The general shape:* a parked question is usually a **binary** framed from
+the outside. Reality answers *"no, and…"* far more often than *"no"*. The
+"and" is the finding; the question was only the reason to go looking.
+
+*Enforcement:* every audit or investigation ends with an explicit
+did-not-establish section — what was out of scope, what was read from a copy
+rather than a source, which judgements are first-pass rather than
+exhaustive. Without it the next reader inherits a stronger claim than the
+reading supports, and inherits it *silently*, which is the whole
+silent-absence family arriving at the report layer.
+
+*Related:* the same reflex as recording what a change deliberately did **not**
+do, and why a bounded task reports what it left out rather than letting scope
+appear complete.
+
+---
+
 ## Verification
 
 **Verify before multiplying.** A cheap pre-question before an expensive
