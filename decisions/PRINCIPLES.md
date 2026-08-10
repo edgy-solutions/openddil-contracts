@@ -337,6 +337,68 @@ presence — over a more careful version of the same one. The 19-objects /
 
 ---
 
+## The prose was accurate; the tense was inferred
+
+**A comment can be a true historical record and a false present-tense claim
+at the same time. Read the tense, then verify the state.**
+
+*Earned:* a cross-project read quoted a config comment describing an
+authorization fail-open — `ALLOW_MOCK_AUTH` converting every authorizer
+exception into allow-by-default — and reported it as the neighbouring
+system's **current** posture. The comment was entirely accurate. It was
+recording a defect that had been **found and removed in the same arc**, and
+said so three lines further down. The finding was filed as a live security
+hazard, escalated into a punchlist action, and was neither.
+
+*Why it is the sharpest member of the comment-as-claim family:* the other
+instances fail because the comment is wrong (a template header listing
+components it does not render; a hazard note on a default nobody changed).
+This one fails while the comment is **right**. Nothing in the text is false;
+the reader supplied a tense the text never claimed. There is no wrong
+statement to catch — only an unstated one.
+
+*Enforcement:* a comment describing system behaviour dates the behaviour or
+it describes nothing checkable. When reading someone else's comment as
+evidence: **grep for the thing it describes before believing it is still
+there.** In this case `ALLOW_MOCK_AUTH` appeared only inside comments —
+thirty seconds of checking against hours of consequence.
+
+*Corollary:* the same applies to our own comments. Every "X is broken" or
+"X does not work" note in this repo is a claim with an implicit `as of`, and
+the reader who finds it later has no way to recover the date from the prose.
+
+---
+
+## Two claims that cannot both be true are a stop signal
+
+**Mutually exclusive statements inside one report are a re-read gate before
+publication, not a curiosity to resolve later.**
+
+*Earned:* the same report asserted, in one message, that a neighbouring
+gateway had been fail-open *"the whole time"* and that its implementation
+was fail-closed *"verbatim — every non-200 and every exception is a hard
+deny"*. Both quoted the same file. They cannot describe one system at one
+time, and the contradiction was the fastest available route to the error.
+
+*What makes it worth a rule:* it is **mechanical**. It requires no domain
+knowledge, no repository access and no judgement — only reading two claims
+next to each other and asking whether both can hold. Every other check in
+this file needs context; this one needs attention.
+
+*Who caught it, and why that matters:* not the author, and not the reviewer
+who had already endorsed the report. A third reader, cold, with no stake in
+the report being right. **Proximity to a claim degrades scrutiny of it** —
+the same mechanism that makes a repo read outrank a confident recollection,
+one level up. Cold reads by someone who did not produce or bless the work
+are cheap and occasionally decisive.
+
+*Enforcement:* before publishing a report that makes several claims about
+one system, read the claims as a set and check for pairs that cannot
+co-exist. If one is found, neither is trustworthy until the source is
+re-read.
+
+---
+
 ## A probe must fail distinguishably from its own zero
 
 **An instrument whose failure mode is indistinguishable from its healthy

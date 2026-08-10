@@ -328,18 +328,68 @@ Deploy Topaz (single HQ instance, per §6). Author git-managed
 > critical path and has no prior art here; (b) revisit Topaz's internal
 > logger when its config schema catches up with its own documentation.
 >
-> *Worth raising with the reasoning plane separately:* by the same
-> standard, its data-access authz currently has no positive-decision audit
-> trail. That is their call, not a dependency of ours.
+> *Worth raising with the `dag-tools` side separately, as a **verify-first
+> question** rather than a finding:* by this standard its data-access authz
+> appears to have no positive-decision audit trail. Read from an installed
+> copy, so confirm against that project's source before treating it as
+> true. Not a dependency of ours either way.
 >
-> **2. Inherited hazard — the PEP must fail CLOSED.** The reasoning plane
-> discovered that its gateway's `ALLOW_MOCK_AUTH` branch had been silently
-> converting *every* authorizer exception into allow-by-default, which meant
-> data-access authz was mock-allow for an extended period while appearing
-> to function. A PEP that cannot reach its PDP must **deny**, and any
-> mock/bypass branch must be removed the moment the real path works —
-> ADR-0026's "coupled interim mechanisms retire together". Phase 4 inherits
-> this as a design constraint, not a review comment.
+> ---
+>
+> **AMENDMENT 2026-08-09 — what this note said first, and why it was
+> wrong.** Finding 2 originally described the `ALLOW_MOCK_AUTH` fail-open as
+> a **live hazard** in the reasoning plane, and attributed the gateway to
+> that project. Both were wrong:
+>
+> - **Tense.** The source was a *comment recording a defect that had already
+>   been found and fixed* — its own next lines say the branch "is removed in
+>   this same arc". The prose was accurate; the tense was inferred.
+> - **Attribution.** The gateway is `dag-tools/central_gateway`, read from
+>   an installed package inside the other project's virtualenv. The
+>   consuming project's chart references it; the code is not its own.
+>
+> The report that produced this note also **contained its own refutation**:
+> it asserted the fail-open was current *and* quoted the fail-closed
+> implementation verbatim from the same file. Those cannot both describe one
+> system at one time. Caught by a reviewer who read the report cold, without
+> having produced or endorsed it.
+>
+> Recorded rather than silently amended, because a decision record that
+> quietly revises its own history is worth less than one that shows where it
+> was wrong — and because the failure mode (a true comment read in the wrong
+> tense) is one this project keeps meeting. See PRINCIPLES,
+> *"a deliverable's self-description is a claim"* and its tense variant.
+>
+> **2. Inherited pattern — the PEP must fail CLOSED.** *(Corrected
+> 2026-08-09; see the amendment note below for what this said first and
+> why it was wrong.)*
+>
+> **`dag-tools/central_gateway`** — the PEP used by the co-located
+> reasoning plane, and a separate component from it — once carried an
+> `ALLOW_MOCK_AUTH` branch that converted *every* authorizer exception into
+> allow-by-default. For a period, data-access authz was mock-allow while
+> appearing to function. **That defect was found and removed in the same arc
+> that found it** (`dag-tools 60cf283`), together with the interim it
+> served, per ADR-0026's *coupled interim mechanisms retire together*. The
+> current posture there is fail-closed with no flag.
+>
+> Phase 4 inherits this as a design constraint: a PEP that cannot reach its
+> PDP must **deny**, and any mock/bypass branch retires the moment the real
+> path works.
+>
+> **The provenance is stronger for being historical, not weaker.** A
+> constraint inherited from an open wound is a warning; one inherited from a
+> hazard that was found, fixed, and retired *with its interim* is a
+> demonstrated pattern with a demonstrated remedy. The lesson is not "beware
+> a broken neighbour" but "this failure mode is real, it hides inside a
+> system that looks like it works, and here is the shape of the fix."
+>
+> **Copy the fix's shape verbatim.** Every non-200 and every exception is a
+> hard deny carrying a single searchable marker — `TOPAZ AUTHZ DENIED` —
+> followed by cause, user, resource and upstream status. An operator facing
+> a 403 storm gets one string to grep, and *"authz is broken"* cannot be
+> confused with *"authz denied you"*, which is precisely the distinction a
+> fail-open erases.
 >
 > **Their fix is worth copying verbatim in shape.** Every non-200 and every
 > exception is a hard deny carrying a single searchable marker —
