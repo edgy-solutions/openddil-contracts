@@ -367,6 +367,17 @@ thirty seconds of checking against hours of consequence.
 "X does not work" note in this repo is a claim with an implicit `as of`, and
 the reader who finds it later has no way to recover the date from the prose.
 
+*The write-side rule that prevents it:* **a hazard or defect note names its
+anchor** — a date, a commit, a gate, or a tracking ID. This project already
+half-practices it (gate findings cite their gates, the re-baseline notice
+cites its commit, debt rows carry their owning ADR); stating it makes the
+tense recoverable **by construction** rather than by luck.
+
+The grep rule governs *reading* someone else's old comment. The anchor rule
+governs *writing* one that will be read later. Together they close the loop
+at both ends: an anchored note cannot be misread as present-tense, because
+the reader can see exactly when it was true.
+
 ---
 
 ## Two claims that cannot both be true are a stop signal
