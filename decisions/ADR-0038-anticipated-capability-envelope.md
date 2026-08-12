@@ -121,12 +121,30 @@ uncertainty band, replacing the current fraction-remaining reading) and
 advisory generation (a recommended action attached to an assessed
 condition, with the provenance to justify it).
 
-**What it is not.** Not automated maintenance execution. Not work-order
-origination inside OpenDDIL — the external system of record keeps that,
-and `work_order_ref` stays a reference. Not validated life prediction
-until the AFSIM / VR-Forces gate ADR-0020 defines is passed; a horizon
-computed from authored coefficients is a horizon-shaped number and must
-render as one (ADR-0035 class 1's *modelled-not-measured* treatment).
+**Maintenance advisory is the concrete case, and it arrives here by
+relocation.** ADR-0011 previously claimed *"dynamic work order
+generation"* as a present capability; it was amended 2026-08-12 (AE-1)
+because nothing generates work orders and the contracts encode the
+opposite relationship. What that claim actually described is **block-6
+advisory generation with a maintenance-action shape** — *this asset, this
+condition, this recommended action, this basis* — optionally delivered to
+an external system of record over the existing egress seam. That is the
+capability anticipated here, at its honest status.
+
+**The boundary that makes it safe: OpenDDIL proposes, the system of
+record disposes.** An advisory is a recommendation with provenance, not
+an order. Authoritative work-order state — creation, assignment,
+scheduling, closure — stays external, and `work_order_ref` remains the
+join in that direction. A deployment may choose to have an advisory
+*create* an order in its own maintenance system through egress; that is
+an integration decision at the deployment's boundary, and OpenDDIL still
+does not become the system of record for the resulting order.
+
+**What it is not.** Not automated maintenance execution. Not authoritative
+work-order ownership (see the boundary above). Not validated life
+prediction until the AFSIM / VR-Forces gate ADR-0020 defines is passed; a
+horizon computed from authored coefficients is a horizon-shaped number and
+must render as one (ADR-0035 class 1's *modelled-not-measured* treatment).
 
 **Substrate it composes.** The derivation engine and its accumulator
 tables; `ORIGIN_DERIVED` and the `confidence` field already present in
@@ -285,19 +303,40 @@ machinery to do it accidentally is being built.
 
 ## 7. Registered gaps — where the architecture is already awkward
 
-**AE-1 — ADR-0011 claims a capability the system does not have.** Its
-Decision section lists *"dynamic work order generation"* among what
-OpenDDIL handles in the operational sustainment loop. Nothing generates
-work orders. The only work-order shape in contracts is
-`CmEvent.work_order_ref` — an optional **reference to an externally
-created** order — and `AsMaintainedState.applied_by_work_order`, likewise
-a foreign reference. The contract shape points the opposite way from the
-claim: the system records that an external action happened, it does not
-originate one. This is a claims-vs-sources defect at the ADR layer, in a
-document whose audience is positioning. *Fix shape: amend ADR-0011 to
-state the reference relationship, or move the claim into this ADR's §3 as
-anticipated. Not amended here — it is another document's text and this
-ADR's job is to record the finding.*
+**AE-1 — ADR-0011 claimed a capability the system does not have.**
+**RESOLVED 2026-08-12 — both halves.** The row is kept rather than
+deleted, per the registry discipline: the record of what *was* claimed is
+the useful part.
+
+*The finding.* ADR-0011's Decision section listed *"dynamic work order
+generation"* among what OpenDDIL handles in the operational sustainment
+loop. Nothing generates work orders. The only work-order shapes in
+contracts are `CmEvent.work_order_ref` and
+`AsMaintainedState.applied_by_work_order` — both **foreign references to
+externally created** orders. The contract shape points the opposite way
+from the claim: the system records that an external action happened and
+correlates its own state against it; it does not originate one.
+
+*Why it was worth acting on rather than tracking.* This is the corpus's
+first claims-vs-sources defect **at the ADR layer** — the same rule that
+governs mocks, labels and derived metrics (`PRINCIPLES.md` §Claims vs.
+sources), applied to a document asserting more than the artifacts it
+describes support. It sat in the one document whose audience is people
+deciding what the system is, and it asserted a capability *class*
+(ISO 13374 block 6) the system does not implement at all.
+
+*The resolution.* ADR-0011 amended: the bullet now states work-order
+**correlation** against an external system of record, with a dated
+Amendment section carrying the correction and its reasoning. The claim
+was not deleted but **relocated to its honest status** — §3 above now
+carries maintenance advisory generation as anticipated, with the
+propose/dispose boundary explicit. Positioning is otherwise unchanged;
+adjacency, the time-horizon argument, and the empirical-reliability
+feedback vector were never affected.
+
+*What remains open:* nothing in this row. The underlying capability is
+anticipated (§3) and constrained (C1, C2, C4), which is a different
+status from claimed.
 
 **AE-2 — The only recommendation-shaped field is unstructured and
 human-authored.** `ManualDiscrepancyRaised.recommended_action` is a bare
