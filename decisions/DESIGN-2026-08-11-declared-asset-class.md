@@ -112,6 +112,24 @@ That is good news for the fix: extending the ontology with munition-kind
 entries is an ontology PR, which is exactly where ADR-0016 says variant
 resolution changes belong.
 
+**Note what this gap has meant in practice:** the DIS path has never been
+*able* to classify a round. Every DIS-sourced munition to date has resolved
+to `_default` and landed somewhere it should not have — silently, because
+`_default` produces a value rather than a refusal.
+
+**The gap is testable today, before it is closed.** The overlay's DIS
+generator sets entity kind as the first element of a freely-specified tuple,
+and the wire field is `uint32`, so a `kind=2` entity is a one-line addition.
+That yields two guards for the price of one:
+
+- **now** — a munition entity proves the unrecognised path is *visible*
+  (resolves to UNKNOWN) rather than absorbed into a plausible class;
+- **after the ontology extension** — the same entity proves the new entries
+  actually resolve, on the day they land.
+
+A golden-file case built from that entity would guard the coverage gap in
+both directions. Worth doing when this is scheduled; not done here.
+
 ---
 
 ## Finding 2 — the mapping layer can already express this
@@ -161,8 +179,20 @@ point does Force Posture see a different answer than it does today.
 
 Today an unclassifiable asset becomes `MUNITION`. Afterwards it becomes
 `UNKNOWN` and looks it. **That will surface assets nobody knew were being
-mis-filed** — which is the fix working, not the fix breaking. Worth expecting
-in advance so it is not mistaken for a regression.
+mis-filed** — which is the fix working, not the fix breaking.
+
+> **A count that rises when an instrument is fixed was always that high.**
+>
+> This is the **third** time a correctness fix here has made a
+> previously-silent population visible: sensors with null positions, the
+> buffer counter reading a consumer group that never existed, and now
+> mis-filed asset classes. Each time the honest reading was identical — the
+> system did not get worse, the instrument got truthful.
+>
+> Say this to whoever watches the UNKNOWN count jump, **before** they see it.
+> Absent the sentence, a number going up reads as a regression, and the
+> reasonable response to an apparent regression is to revert the fix that
+> revealed it. That is the failure mode this note exists to prevent.
 
 ---
 
