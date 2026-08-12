@@ -85,18 +85,27 @@ capability table: only launcher hardware emits a capability record.
 **The Q-list itself is not in any repository** — no commit defines Q1, Q2 or
 Q3. Searched: commit bodies, all refs.
 
-**[memory]** — what Q3 is understood to mean: the upstream feed emits no
-termination event (no HIT / MISS / FAILED). A munition's end-of-life is
-inferred only from its track disappearing, which cannot distinguish a
-successful engagement from a failure or a dropped track. A `failed` counter
-built on that inference would be counting an artifact of the transport.
+**[ratified 2026-08-11]** — what Q3 means: the upstream feed emits **no
+termination event** (no HIT / MISS / FAILED). A munition's end-of-life is
+inferred only from its track disappearing.
 
-**[memory]** — Phase 6 was **parked 2026-07-14**, to be revisited only if the
-upstream feed gains termination events.
+**That inference is unsound at both levels**, which is the part worth
+carrying into any upstream conversation:
 
-> **Confirmation needed:** the Q3 statement and the parking decision are the
-> two items in this document that rest on conversation alone. Everything else
-> is cited.
+- **"How did it end?"** — disappearance cannot distinguish intercept-success
+  from miss, dud, self-destruct, or simply leaving the exercise volume.
+- **"Did it end at all?"** — disappearance *also* fires on dropped packets,
+  sim restarts and network gaps. So even the "something happened" half is
+  unreliable.
+
+A `failed` counter built on this would be counting an artifact of the
+transport, not an outcome.
+
+**[ratified 2026-08-11]** — Phase 6 was **parked 2026-07-14**, to be
+revisited only if the upstream feed gains termination events.
+
+> **No memory-class items remain in this document.** Both were confirmed by
+> the roadmap holder on 2026-08-11 and are now citable to this record.
 
 ---
 

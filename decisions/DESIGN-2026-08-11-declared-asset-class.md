@@ -203,13 +203,59 @@ question. The capability-item schema and the asset-class field are one
 conversation about one feed; sequencing them together avoids negotiating
 twice with the same people.
 
+### A related defect found while checking this — `_default` that confabulates
+
+The sting in the coverage gap is not that `_default` exists; it is that
+**`_default` produces a value rather than a refusal.** A fallback yielding
+`UNKNOWN` is honest. A fallback yielding a real-looking answer is a
+confabulation mechanism with a config file.
+
+Swept the DIS ontology's `_default` on 2026-08-11. Six of its seven fields
+are honest — `platform_variant: UNKNOWN`, `platform_family: UNKNOWN`, a
+nomenclature that literally says *"Unrecognized DIS entity type — requires
+ontology curation"*, and three explicit `null`s. **One field breaks the
+pattern:**
+
+```yaml
+cm_schema: "generic-v1"     # in the _default entry
+```
+
+`generic-v1` occurs in **exactly one place in the entire workspace** — that
+line. Every other `cm_schema` value belongs to a recognised entry
+(`ground-combat-vehicle-v1`, `rotary-wing-v1`, …). Nothing defines it,
+nothing resolves it. An unrecognised entity is stamped with a CM schema that
+does not exist, in a field whose six siblings correctly declare ignorance.
+
+**Blast radius today: zero.** `cm_schema` is declared but unconsumed — no
+code reads it. So this is **latent, not live**, and it is recorded rather
+than fixed here because tonight is design-only.
+
+**Why it still matters:** it is primed for whoever wires CM-schema
+resolution. They will get `generic-v1` for every unrecognised entity, and it
+will look like an answer rather than a gap. Fix is one line — `null`, like
+its siblings — and it should land *before* anything consumes the field, not
+after.
+
+**Follow-up, deliberately not done tonight:** sweep the remaining alias and
+enum resolutions the overlays perform for the same shape — a `_default` or
+fallback branch that manufactures a plausible value instead of declaring
+ignorance. `platform_variant_aliases.yaml` is the obvious next place. If the
+pattern appears elsewhere it is the same defect wearing different data.
+
+---
+
 **The upstream wire-contract ask should carry three questions, not two:**
 
 1. Does the feed carry a durable **stockpile / capacity** figure? *(the
    Phase-3 blocker — there is no capacity today, only an absolute count)*
 2. Does the feed emit **termination events** (HIT / MISS / FAILED)? *(the
-   Phase-6 blocker — end of life is currently inferred from a track
-   disappearing, which cannot distinguish success from failure)*
+   Phase-6 blocker)* — and frame it as the strong version: end of life is
+   currently inferred from a track disappearing, which cannot distinguish
+   success from miss, dud or self-destruct **and also fires on dropped
+   packets, sim restarts and network gaps**. The ask is therefore not for
+   better outcome attribution; it is for **the only signal that separates
+   "an event occurred" from "the feed hiccuped"** — a request producers
+   usually recognise as legitimate immediately.
 3. Does the feed **declare asset class**, or an attribute from which class is
    derivable *by declaration*? *(this document)*
 
