@@ -52,12 +52,29 @@ Five classes, derived from two signals already streaming to the client:
 - `MUNITION` — munition-candidate variant **and** no capability record
 - `PLATFORM` — everything else (legacy DIS platforms)
 
-**The discriminator is the load-bearing idea.** `LAUNCHER` and `MUNITION`
-can share a platform variant, so variant alone cannot separate them.
-Presence in the capability table can: only launcher hardware emits a
-capability record. That is a *wire-derivable* discriminator — it required no
-new field from any producer, which is why the taxonomy landed without a
-schema change.
+`LAUNCHER` and `MUNITION` can share a platform variant, so variant alone
+cannot separate them. The classifier resolves it by presence in the
+capability table: only launcher hardware emits a capability record.
+
+> **⚠ SUPERSEDED AS AN ARCHITECTURAL IDEA — 2026-08-11. See
+> `DESIGN-2026-08-11-declared-asset-class.md` and **GD-11**.**
+>
+> This entry originally praised the discriminator as *wire-derivable* — it
+> required no new field from any producer, which is why the taxonomy shipped
+> without a schema change. That framing was wrong, and the cheapness was the
+> tell.
+>
+> The rule infers ontology from **one feed's publishing behaviour** (*things
+> that report loadouts are launchers*), not from anything the domain or the
+> source declares. It fails silently in ordinary cases — a launcher that has
+> not yet emitted a snapshot classifies as MUNITION — and every failure
+> produces *a* class rather than `UNKNOWN`.
+>
+> **The phases and their status below are unaffected.** What changes is where
+> the rule belongs: it becomes a *deployment-specific stated mapping* in the
+> overlay, with `asset_class` declared as a Silver field the core reads
+> rather than computes. Behaviour is preserved through the migration; see the
+> design.
 
 ---
 
