@@ -39,19 +39,26 @@ projector/fusion layers — see *Did not establish*.
 
 | # | site | fallback | verdict |
 |---|---|---|---|
-| **F1** | `sim-a-mapping.yaml:105-106` | absent fuel → `0.0` **with unit always set** | ✗ **answers — LIVE, highest consequence** |
-| **F2** | `sim-a-mapping.yaml:114-115` | absent rounds/capacity → `0` | ✗ answers — same shape as F1 |
-| **F3** | `sample-sensor-mapping.yaml:99,114,121` | unrecognised mode → `POWER_STATE_ON` / `FUNCTIONAL_MODE_ACTIVE` / `HEALTH_STATE_NOMINAL` | ✗ answers — reference specimen, so it propagates |
-| **F4** | `dis_entity_types.yaml` `_default` | `cm_schema: "generic-v1"` | ✗ answered — **fixed in this commit** |
+| **F1** | `sim-a-mapping.yaml:105-106` | absent fuel → `0.0` **with unit always set** | ✗ answered — **FIXED `efef7a6`** |
+| **F2** | `sim-a-mapping.yaml:114-115` | absent rounds → `0` | ✗ answered — **FIXED `efef7a6`**, and narrower than stated below |
+| **F3** | `sample-sensor-mapping.yaml:99,114,121` | unrecognised mode → `POWER_STATE_ON` / `FUNCTIONAL_MODE_ACTIVE` / `HEALTH_STATE_NOMINAL` | ✗ answered — **FIXED `90cbaf6`** |
+| **F4** | `dis_entity_types.yaml` `_default` | `cm_schema: "generic-v1"` | ✗ answered — **FIXED, this commit** |
 | F5 | `dis_entity_types.yaml` `_default` | `platform_variant`/`platform_family`: `UNKNOWN`; nomenclature says "Unrecognized"; 3 × `null` | ✓ refuses |
 | F6 | `platform_variant_aliases.yaml` | no `_default`; unaliased variants pass through unchanged | ✓ passes through |
 | F7 | `asset_identity_aliases.yaml`, `platform_reference.yaml` | no fallback branch at all | ✓ n/a |
 | F8 | `sim-dis-mapping.yaml:36` | unmapped force id → `FORCE_UNKNOWN` | ✓ refuses |
 | F9 | `sample-sensor-mapping.yaml:151` | unparseable nation → `"UNKNOWN"` | ✓ refuses |
 
-**Base rate: 4 confabulating of 9 surfaces.** The DIS `_default` alone was
-six-sevenths honest, which is exactly why its one dishonest field read as
-deliberate.
+**Base rate: 4 confabulating of 9 surfaces** — revised to **5 of 10** once the
+F3 fix surfaced the activity booleans, which this sweep had passed over. The
+DIS `_default` alone was six-sevenths honest, which is exactly why its one
+dishonest field read as deliberate.
+
+*Note the revision's provenance: the fifth surface was found by **fixing**,
+not by **looking**.* Reading the block to change it forced attention onto
+every branch; reading it to audit it did not. A sweep is a weaker instrument
+than a rewrite, and a base rate produced by sweeping should be quoted as a
+floor.
 
 ---
 
@@ -92,6 +99,48 @@ fusion's existing check do the job it was written for.
 *A private overlay derived from this specimen very likely carries the same
 construction. Worth checking there first — this file is the public twin.*
 
+### Fixed 2026-08-12 (`efef7a6`) — and F2 above is overstated
+
+Authorised and landed. Two things the fix established that this audit had
+wrong or had not looked at:
+
+**F2 is not "the same construction" as F1.** The two `.or(0)` one line apart
+looked identical and were not:
+
+- `quantity_capacity` — `.or(0)` is **correct and load-bearing**. Fusion's
+  `_eval_ammo` skips any slot with `quantity_capacity == 0`, so zero is
+  already this field's declared *not-evaluable* sentinel. Kept deliberately.
+- `quantity_remaining` — `.or(0)` was the confabulation, and only in the
+  case the audit did not separate: **with a capacity present**, a missing
+  round count gives `0/N = 0%`, which fusion bands `CRITICAL`. A slot with
+  *no* ammunition telemetry was reported as a slot that is *out* of
+  ammunition, at the evaluator's highest severity.
+
+Reading the two calls as one finding would have produced the wrong fix —
+removing the capacity default would have *disabled* the sentinel that makes
+absence work. **The population-audit rule cuts both ways: the surrounding
+instances are where the worst case hides, and also where the false positive
+does.**
+
+**proto3 optionality constrains the fix.** Neither `Quantity` nor
+`ConsumableState` declares `optional`, so absent and zero are identical on
+the wire. Omitting a `uint32` therefore *cannot* express absence — it decodes
+as `0`, the value at issue. The fix had to find the level that can:
+
+- **fuel** — deleting the whole `Quantity` decodes as `unit="" value=0.0`,
+  which is exactly the pair fusion already tests. The check simply becomes
+  reachable; no downstream change.
+- **rounds** — map-key absence *is* expressible, so a slot with no round
+  count is dropped from the map entirely.
+
+**Verified by execution, not by reading.** Both expressions were run over six
+inputs. Absent fuel omits the Quantity; absent round count drops the slot.
+Critically, a **genuine `0.0` tank keeps its unit** and a **genuine `0` round
+count is retained** — real empty states still raise factors. The change
+separates *absent* from *zero*; it does not suppress zeros. That distinction
+is the entire fix, and it is the one thing worth re-checking if anyone
+revisits this.
+
 ## F3 — a residual class is not the same as an unrecognised input
 
 ```
@@ -116,6 +165,40 @@ authors, so the construction propagates to every mapping written from it.
 anything else fall to `UNSPECIFIED` / `UNKNOWN` on the health axis in
 particular. Not changed here — it alters fixture behaviour and the golden
 files that pin it.
+
+### Fixed 2026-08-12 (`90cbaf6`) — and the feared golden churn did not happen
+
+The catch-alls were not removed, they were **emptied**: all ten modes the
+source schema declares are now enumerated explicitly, so only genuinely
+unrecognised input reaches the final branch.
+
+**The concern that deferred this fix turned out to be unfounded, and
+measurably so.** Re-blessing all seven cases left the six pre-existing
+goldens **byte-identical** — `git status` reported only the new case
+directory. Behaviour for every declared mode is provably unchanged, which
+converts "this will change what we see" from an argument into a settled
+question. *Worth generalising: the cost of a fix and the cost of the fix's
+worst imaginable form are different numbers, and only one of them was
+measured before deferring.*
+
+A **fifth surface** the original sweep missed: the two activity booleans
+carried the same `_ => true` construction, so an unrecognised mode also
+asserted the sensor was actively receiving *and* transmitting. A bool has no
+`UNSPECIFIED`, and `false` is not a refusal — it asserts *"not receiving"*,
+equally unfounded. Those now **delete the field**; absent means not claimed.
+The sweep found this only because the fix required reading every branch in
+the block, not because the audit looked for it.
+
+New golden case `unrecognised-mode` pins the honest failure, and was
+**verified as a guard rather than assumed to be one**: reintroducing a single
+catch-all leaves all six declared-mode cases passing and fails only that one.
+A future "simplification" back to `_ =>` is caught by exactly one test, which
+is the reason it exists.
+
+*Harness portability note, incidental:* `run.sh` maps `uname -s` for
+linux/darwin only, so it fetches a nonexistent binary under Git Bash on
+Windows (`mingw64_nt-…`). CI is unaffected (ubuntu) and the suite runs under
+WSL. Not fixed — recorded so the next person does not debug it twice.
 
 ---
 
@@ -143,6 +226,15 @@ that had explicitly handled the absent case.
 
 - **Private overlays were not read** — not visible from here. Given F1/F2 live
   in the public twin they were derived from, that is the first place to look.
+  **Carried to the exchange list** rather than left as a remark, because a
+  finding whose only home is a *did-not-establish* bullet is a finding that
+  expires. The public fixes do **not** propagate on their own: an overlay
+  authored by copying this file holds its own copy of the construction, and
+  nothing in this repository can reach it.
+
+  *The check is one question, not a review:* does any mapping there set a
+  `Quantity.unit` unconditionally, or `.or(0)` a count that a capacity is
+  paired with? Both are greppable.
 - **Egress mappings were not swept** (`dynamic-mappings/egress/`).
 - **Projector and fusion handlers were not swept** for their own defaults —
   only fusion's fuel and inventory absence checks were read, and only far
@@ -151,6 +243,27 @@ that had explicitly handled the absent case.
   fuel data is a deployment question; this is a source reading.
 - **F3's blast radius is unmeasured** — how often an unrecognised mode string
   actually arrives is unknown.
+
+### The follow-up this audit earned but did not perform
+
+**Enumerate fusion's absence conventions, then verify each mapping can
+satisfy them.** F1 was found from the mapping side — *this default looks
+wrong* — and the fusion check was read only far enough to confirm it. That
+ordering is backwards, and it is why F2's capacity default was nearly
+mis-fixed.
+
+The correct direction: for every evaluator, ask **what does this code treat
+as "do not judge", and can every mapping feeding it actually produce that
+value?** Two conventions are already known and they are not the same shape —
+`not unit and value == 0.0` for `Quantity`, `quantity_capacity == 0` for
+`ConsumableState` — and neither is written down anywhere but in the
+evaluator's own body.
+
+**An absence convention known only to the consumer is a contract with one
+signatory.** Every producer has to rediscover it, and rediscovering it by
+reading Python is how it gets defeated by a mapping author who never saw the
+check. The output of that sweep should be a *stated* convention per field
+type, not a per-mapping fix list.
 
 ## Related
 

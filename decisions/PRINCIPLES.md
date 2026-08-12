@@ -483,6 +483,87 @@ correct reading is not yet a diagnostic.
 
 ---
 
+## A fallback answers only where it can name the class it answers for
+
+**A fallback that manufactures a value is indistinguishable from a successful
+lookup.** Nothing downstream can separate *"we recognised this"* from *"we
+made something up"*, because both arrive as data of the same shape. The
+mapping-layer twin of the probe rule above.
+
+Two constructions share one syntax — `_ =>`, `.or(…)` — and only one is
+legitimate:
+
+- a **residual class** says *"everything else is X"*, where X is a real
+  category chosen deliberately. Fine.
+- an **unrecognised input** must refuse: `UNSPECIFIED`, `null`, absent, or
+  pass the source value through for a drift check to flag.
+
+*The distinguishing question:* can you **name what falls into the branch**?
+If the answer is "anything, including values that do not exist yet", it is
+not a residual class.
+
+*Earned:* `AUDIT-2026-08-11-fallback-honesty` — four confabulating fallbacks
+across nine surfaces. The reference specimen ADR-0030 points adapter authors
+at resolved an unrecognised sensor mode to `POWER_ON / ACTIVE / NOMINAL`: the
+system asserting an asset is **healthy on the basis of not understanding
+it**, a safety-relevant false negative, reproducing into every mapping
+written from the specimen.
+
+*The fix shape, and why it is cheap:* the catch-alls were not removed, they
+were **emptied**. Every value the source schema declares is enumerated
+explicitly and resolves exactly as before; only genuinely unrecognised input
+reaches the final branch. Behaviour for known input is provably unchanged —
+the six existing goldens were re-blessed and came back byte-identical — so
+the objection "this will change what we see" is answerable with evidence
+rather than argument.
+
+*Where the type offers no refusal, omit rather than choose.* A bool has no
+`UNSPECIFIED`, and `false` is not a refusal — it asserts *"not receiving"*,
+as unfounded as `true` for an input never seen. Delete the field. Where
+proto3 gives a scalar no optionality (absent decodes as `0`, the very value
+at issue), find the level that **can** express absence: a map key can be
+dropped even when its uint32 fields cannot.
+
+**Corollary — filling an absence upstream destroys a downstream's ability to
+detect it.** A mapping that defaults is making a judgement on behalf of every
+consumer that will ever read the field, *including consumers that had
+explicitly handled the absent case*. In the earned instance, fusion declines
+to judge fuel it considers unset and detects unset as `not unit and value ==
+0.0` — **both**, since the empty unit is proto3's only available
+discriminator. The mapping set the unit unconditionally, making that check
+unreachable. An asset whose feed omitted fuel was presented as an asset with
+an **empty tank**.
+
+That is worse than neither side handling absence, because the code reads as
+though absence is handled: the correct check sits right there, and is dead.
+
+**Corollary — a mostly-honest structure is the better hiding place.** The DIS
+`_default` declared ignorance correctly in six of seven fields — two
+`UNKNOWN`, three `null`, a nomenclature saying *"Unrecognized … requires
+ontology curation"* — and carried one invented schema name. The honesty of
+the siblings is exactly what made the outlier read as deliberate. Two
+`.or(0)` calls one line apart looked identical and were not: one was the
+downstream's declared "not evaluable" sentinel, the other a confabulation.
+**Audit the surrounding population, never the flagged item alone** — and
+expect the worst instance to sit among correct ones rather than among other
+defects, since a field surrounded by obvious sloppiness gets re-read, and one
+surrounded by care does not.
+
+*Direction note, for the count that moves:* fixing these **lowers** the
+constraining-factor count, where the three earlier instrument fixes raised
+theirs. The reading is identical in both directions — the factors that
+disappear were never observations, they were **the absence of observations
+wearing the shape of one**. Say so before anyone sees the number move; a
+count that drops after a correctness fix reads as a regression, and the
+reasonable response to an apparent regression is to revert the fix.
+
+*Related:* *A probe must fail distinguishably from its own zero* — same rule
+at the instrument layer. `DESIGN-2026-08-11-declared-asset-class` — the same
+disease in the ontology layer, where absence of a declared property let one
+feed's behaviour become the model.
+
+---
+
 ## A documented hazard is not a mitigated one
 
 **A hazard note ships with a mitigation or a tracked vehicle. A bare comment
