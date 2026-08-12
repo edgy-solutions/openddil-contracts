@@ -198,6 +198,75 @@ convention for whether it is amended in place (as ADR-0032 and GD-09
 were) or replaced. The amend-in-place precedent is good and is currently
 a habit rather than a rule.
 
+**VE-7 — Evidence artifacts have no sanitization gate.** This is the row
+the Consequences section below gestures at, and it is the one gap this
+ADR *creates* rather than inherits.
+
+Two of the four evidence forms are sensitive-bearing by construction.
+Captured procedure outputs carry namespaces, release names, service
+hostnames, site names, chart and image versions, and — wherever a query
+returns rows — asset identifiers, positions, and ORBAT-derived
+organisational structure. A screen recording carries all of that plus
+whatever else was on the display for the duration. The measured-pair form
+is smaller but not clean: a before/after reading is a broker name, a
+consumer group, and a site name in one line. **Evidence is the
+highest-volume class of sensitive-bearing artifact this project produces,
+and this ADR increases the volume deliberately.**
+
+There is no gate. Nothing stands between an artifact being produced and
+it being pasted into a document, attached to a report, or handed to a
+reader outside the workspace.
+
+*Why this specific gap deserves a row rather than a mention:* the
+recurring failure here is not that sensitive material leaks from the
+places it obviously lives. It is that **the apparatus built to manage
+sensitive material becomes the exposure**, because attention sits on the
+artifact being protected rather than on the protecting. The instances
+share one shape — *the control describes what it protects*:
+
+- A commit message explaining why a cleanup happened disclosed that
+  something proprietary had been displaced, and pointed a reader at
+  exactly the thing the work existed to remove. The artifact was clean;
+  the sentence about the artifact was the leak
+  (`PRINCIPLES.md` §Narrate what you aligned to, never what you removed).
+- A guard's encoded pattern list is a public enumeration of the strings
+  it exists to catch.
+- A pinned-values file naming an internal mirror publishes internal
+  infrastructure in the course of making a deployment reproducible.
+
+Evidence artifacts are the fourth candidate and the largest.
+
+*Fix shape — a pre-share check at egress, not a post-hoc sweep.* The
+distinction is load-bearing and is the reason this cannot be deferred to
+review:
+
+- **A recording cannot be redacted after delivery.** There is no
+  equivalent of an amended commit.
+- **Rewriting history does not undo a leak** — a force-push leaves
+  unreachable commits retrievable for a period measured in weeks.
+- **An external reader's copy is beyond recall entirely.** Once evidence
+  has served its purpose, it is out of the project's control by
+  definition, because being read by someone else *is* its purpose.
+
+So the check binds at the moment an artifact **leaves the workspace**,
+and it is a step in the procedure that produces the artifact rather than
+a separate discipline someone remembers. This pairs with VE-3: the
+runbook step that names where a recording goes is the same step that
+states what must be true before it goes.
+
+*Where the check lives.* With the existing hygiene tooling, outside the
+public tree. **What is OSS-visible is the rule, not the pattern list** —
+publishing an enumeration of what a sanitizer matches is the second
+instance above, repeated knowingly. The public artifact is a statement
+that evidence is sanitized before it is shared and at which step; the
+patterns stay private, following the same declare-don't-compare shape as
+the overlay manifest.
+
+*What this row does not cover:* the sanitization discipline itself is
+established and predates this ADR. The gap is the absence of a **gate** —
+a named point where it is applied to this artifact class — not the
+absence of the rule.
+
 ## Consequences
 
 **Pros**
@@ -228,7 +297,10 @@ a habit rather than a rule.
   console output, recordings, and run records carry live deployment
   detail and are sanitized before they enter any public artifact.
   **Evidence-as-deliverable increases the surface that discipline has to
-  cover.**
+  cover** — and the increase is not yet gated anywhere, which is **VE-7**
+  above. This is the cost of the ADR, stated as a row rather than as a
+  caution, because a caution is what the third instance in that row
+  already was.
 
 **Rejected alternatives**
 
@@ -271,3 +343,14 @@ a habit rather than a rule.
   §Match structure, not prose · §"Not found" is not "cleared" ·
   §Similarity is a code claim, not a deployment claim · §The prose was
   accurate; the tense was inferred · §Verification.
+- **`PRINCIPLES.md` §Narrate what you aligned to, never what you
+  removed** — VE-7's governing rule, and the first instance of a control
+  becoming the exposure. Its corollary applies directly to evidence:
+  **the moment of cleaning is the highest-risk moment, not the safest**,
+  because attention is on the artifact and not on the narrative about it.
+- **`PRINCIPLES.md` §Public twin, declared by manifest** /
+  `openddil-customer-bundle-example/overlay-manifest.yaml` — the
+  declare-don't-compare shape VE-7's public statement follows: the rule
+  is expressible without reference to the private material it governs,
+  which is precisely why the pattern list stays private and the rule does
+  not.

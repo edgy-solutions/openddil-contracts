@@ -226,21 +226,23 @@ line. Every other `cm_schema` value belongs to a recognised entry
 nothing resolves it. An unrecognised entity is stamped with a CM schema that
 does not exist, in a field whose six siblings correctly declare ignorance.
 
-**Blast radius today: zero.** `cm_schema` is declared but unconsumed — no
-code reads it. So this is **latent, not live**, and it is recorded rather
-than fixed here because tonight is design-only.
+**Blast radius was zero** — `cm_schema` is declared but unconsumed, verified.
+Latent, not live.
 
-**Why it still matters:** it is primed for whoever wires CM-schema
-resolution. They will get `generic-v1` for every unrecognised entity, and it
-will look like an answer rather than a gap. Fix is one line — `null`, like
-its siblings — and it should land *before* anything consumes the field, not
-after.
+**FIXED 2026-08-11** (same session, deliberate exception to design-only): set
+to `null`, like its siblings. The exception was taken because a *latent*
+confabulation is worse than a live one — an active wrong value gets found
+when something downstream misbehaves, whereas this one waits, and the first
+person to wire CM-schema resolution inherits a field that reads as though it
+was populated deliberately for years. The fix was smaller than the record of
+the fix, and could not break anything, since nothing read the field.
 
-**Follow-up, deliberately not done tonight:** sweep the remaining alias and
-enum resolutions the overlays perform for the same shape — a `_default` or
-fallback branch that manufactures a plausible value instead of declaring
-ignorance. `platform_variant_aliases.yaml` is the obvious next place. If the
-pattern appears elsewhere it is the same defect wearing different data.
+**The follow-up sweep was also done** — see
+`AUDIT-2026-08-11-fallback-honesty.md`. It found the population: **four
+confabulating fallbacks across nine surfaces**, and two of them outrank this
+one. The most consequential is live: a mapping fills absent fuel with `0.0`
+*and always sets the unit*, which defeats fusion's own absence check and
+presents an asset with no fuel telemetry as an asset with an empty tank.
 
 ---
 

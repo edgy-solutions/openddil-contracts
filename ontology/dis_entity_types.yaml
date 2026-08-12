@@ -167,7 +167,15 @@ mappings:
     platform_variant: "UNKNOWN"
     platform_family: "UNKNOWN"
     nomenclature: "Unrecognized DIS entity type — requires ontology curation"
-    cm_schema: "generic-v1"
+    # null, not a schema name. This field previously read "generic-v1" — a
+    # value that existed nowhere else in the codebase, defined by nothing and
+    # resolved by nothing, sitting among six siblings that correctly declare
+    # ignorance (two UNKNOWN, three null, a nomenclature that says so
+    # outright). A fallback yielding UNKNOWN is honest; one yielding a
+    # real-looking name is a confabulation the next reader inherits as
+    # intentional. Harmless while nothing consumed the field; changed before
+    # anything did.
+    cm_schema: null
     default_baseline: null
     cbm_schema: null
     domain_authority: null
