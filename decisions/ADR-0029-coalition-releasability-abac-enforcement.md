@@ -220,6 +220,56 @@ default `originator_nation` from deployment configuration — the same
 overlay that owns site topology — so that "unlabelled" means "genuinely
 unknown", not "we haven't got to it yet".
 
+#### Constraint on the gate's implementation (added 2026-08-12)
+
+**The gate must enumerate the labelled tables from `information_schema`
+at run time. It must never carry a hardcoded list, and in particular
+never the migration's scope comment.**
+
+```sql
+SELECT table_name FROM information_schema.columns
+ WHERE column_name = 'originator_nation';
+```
+
+*Why this is a constraint and not a style preference.* Running the check
+against the lab on 2026-08-12 found `inventory_items` — named in the
+migration's scope list **and** present in `schema.hcl` — **absent from
+the deployed schema**. A gate iterating the migration's list would issue
+`SELECT … FROM inventory_items` and get:
+
+```
+ERROR:  column "originator_nation" does not exist
+```
+
+A gate that errors is a gate that did not run, and **an errored gate is
+indistinguishable from an unreachable database** — both surface as "the
+check failed", both invite a retry, and neither says *"your schema of
+record and your deployed schema disagree."* That turns the one
+instrument standing between partially-labelled data and enforcement into
+a source of ambiguous failures, which is precisely the shape §7 exists
+to prevent one layer down.
+
+*The deeper reason:* the gate's question is **"is every labelled row in
+this deployment labelled?"** — a question about *this deployment*. A
+hardcoded list answers a question about the schema of record instead,
+and silently substitutes one for the other.
+
+**Third recorded instance of schema-of-record versus deployed-state
+drift**, after the Atlas checksum divergence and chart-version /
+bundle-version independence. The three share a standing rule:
+
+> **Ask the running system.** Repository artifacts — migrations, HCL,
+> chart defaults, scope comments — describe what *should* be deployed.
+> Only the deployment knows what *is*. Any check whose purpose is to
+> gate on live state must derive its own inputs from live state,
+> including the list of things it intends to check.
+
+*Corollary, and the reason this is worth stating at all:* the drift here
+is **benign in isolation** — a table missing two nullable columns breaks
+nothing today. It becomes consequential only because a gate depends on
+the list. Drift is not dangerous where it occurs; it is dangerous where
+something reads the record as if it were the state.
+
 ## Slice 1 — read-path releasability
 
 Scope: two users of different nations, on one cluster, see different
