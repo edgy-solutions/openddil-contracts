@@ -48,6 +48,45 @@ zero. **Today it returns the row count.** Not because labelling is
 incomplete — because labelling is *unimplementable* until P0 lands. There is
 no value any producer could stamp that would reach that column.
 
+### Confirmed by query, 2026-08-12 — `edgy-lab`
+
+This section was written as a source reading and flagged as unverified. It
+has since been run against a live store (lab cluster, `openddil-postgres-hq-0`;
+the work cluster was **not** touched):
+
+```
+                          rows   labelled_nation   labelled_releasable_to
+asset_capability_state       0                 0                        0
+asset_cm_state              14                 0                        0
+asset_element_telemetry      0                 0                        0
+asset_logistics_status      14                 0                        0
+telemetry_latest_state      14                 0                        0
+```
+
+**42 populated rows across three tables, zero labelled on either column.**
+The query executing at all proves the columns exist; the zeros prove nothing
+writes them. §2 is **confirmed, not falsified**.
+
+*Two of the five tables are empty and therefore prove nothing* — a zero over
+zero rows is vacuous, and counting it as evidence would be the same error
+this document is about. The finding rests on the three populated tables.
+
+**A second finding fell out of the same query.** `inventory_items` — named in
+the migration's scope list and carrying the columns in `schema.hcl` — **does
+not have them in the lab's deployed schema**:
+
+```
+ERROR:  column "originator_nation" does not exist
+```
+
+The deployed bundle's Atlas migrations lag the contracts' `schema.hcl`. That
+is a known recurring condition rather than a new defect, but it matters here
+specifically: **the labelled-table set differs between the schema of record
+and the schema actually deployed**, so any completeness gate must enumerate
+tables from `information_schema` rather than from the migration's scope
+comment. A gate that hardcodes the migration's list would query a table that
+does not exist and fail in a way indistinguishable from a connection error.
+
 This is not a criticism of the sequencing decision. Arc 1 deliberately landed
 the columns early so every tier-local store is born with the final schema
 (ADR-0032 §b), and that was correct. **The defect is that "P1 done" and "P0
@@ -157,6 +196,13 @@ rather than by effect.
 `Provenance`. Purely additive.
 *Prerequisite for everything else in the arc. Blocks nothing itself.*
 
+> **Acceptance test, already identified:** the §4 conformance stage. When
+> the captures land, the specimen encodes and the stage passes; until they
+> land, it fails on the exact error quoted in §3. That makes P0's
+> completion **observable rather than asserted** — which is the property
+> §2 shows P1 lacked, and the reason P1 could report done while inert.
+> Build the stage as part of P0, not after it.
+
 **Step 2 — decide, explicitly, what stamps them.** ADR-0029 says labels are
 "stamped at ingress"; the specimen parses nation from an id convention and
 the config supplies a default that is *honest about being a default*. That is
@@ -199,11 +245,17 @@ everything else here.
 
 Per ADR-0037 clause 6.
 
-- **No live cluster was queried.** The NULL claim is derived from *no writer
-  existing* (proto absent + no handler reference + dynamically composed
-  SQL), which is a source reading. It was **not** confirmed with a `SELECT`
-  against a running store. That check is cheap and should be run before the
-  arc opens — a non-zero labelled count would falsify this analysis.
+- ~~**No live cluster was queried.**~~ **RESOLVED 2026-08-12** — run against
+  `edgy-lab`, result in §2. The source reading was correct. Note what the
+  query could *not* settle: it confirms **this** deployment writes no labels,
+  not that no writer exists anywhere. A deployment whose overlay stamps them
+  by another route would show a non-zero count, which is why the private
+  overlay remains open below.
+- **The work cluster was not queried**, per standing scope. If its bundle
+  digest differs from the lab's, its labelled-table set may differ too — the
+  `inventory_items` discrepancy in §2 is direct evidence that deployed
+  schemas diverge from `schema.hcl`, so *"the lab shows zero"* should not be
+  restated as *"the pilot cluster shows zero"* without running it there.
 - **Only the projector was read for writers.** Another component could write
   those columns; nothing suggests one does, and the grep was workspace-wide,
   but "no match" is not "no writer" if a writer composes the name.

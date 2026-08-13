@@ -74,6 +74,44 @@ inherits the competence of its evidence form**, and where it reaches past
 that, it says so — the severance-tolerance table is derived from charts
 and source and states this in its own scope limits.
 
+#### Named limits — evidence that looks stronger than it is
+
+Added as they are earned. Each is a case where a check *ran, passed, and
+proved less than the reader would assume*, which is more dangerous than a
+check that was skipped.
+
+- **Schema inspection proves a schema, never a producer.** `\d`,
+  `information_schema`, a migration that applied cleanly — all confirm a
+  column exists. **None of them distinguish a column that is written from
+  one that nothing has ever written**, because the observable is
+  identical in both cases. A phase whose deliverable is schema therefore
+  reports complete on evidence that cannot see its own most likely
+  failure. *Earned 2026-08-12:* ADR-0029's releasability columns shipped
+  correctly typed and indexed across five tables, and were verified as
+  present. A later query found **42 populated rows, zero labelled** —
+  nothing writes them, and nothing could, since the fields are in no
+  `.proto`. To claim a column is *populated*, count non-nulls over a
+  table with rows; a count over an empty table is vacuous and must not be
+  reported as evidence.
+  See `PLAN-arc2-slice1-opening-package.md` §2.
+
+- **A test proves the layer it operates at, and silently exempts the
+  layers below it.** *Earned the same day:* a golden-file suite running
+  JSON → mapping → JSON passed on seven cases that pin two fields the
+  canonical proto does not declare — the encoder rejects them outright.
+  Green suite, unencodable mapping, no contradiction, because the suite
+  never encodes. **When a test's medium differs from production's medium,
+  the difference is an untested seam**, and it will not announce itself:
+  every case passes. State the medium a suite exercises next to its pass
+  count.
+
+*The shared shape is this ADR's own thesis turned on verification
+itself:* both are instruments whose failure reading is indistinguishable
+from their success reading, which is why they belong here rather than in
+a test-hygiene note. Cf. `PRINCIPLES.md` §*A probe must fail
+distinguishably from its own zero* — the same family, arriving at the
+evidence layer.
+
 ### 2. Deployment proof is separate from test proof
 
 ADR-0025's rule stands unchanged and is restated as a clause of this one:
