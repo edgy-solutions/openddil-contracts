@@ -549,6 +549,29 @@ expect the worst instance to sit among correct ones rather than among other
 defects, since a field surrounded by obvious sloppiness gets re-read, and one
 surrounded by care does not.
 
+**Corollary — a sweep names surfaces; only reading each one names findings.**
+The audit that produced this principle got its own results wrong in both
+directions, and the error had one cause: surfaces were classified from their
+*shape* rather than from their *effect*.
+
+- It **missed** a surface — two activity booleans with the same construction,
+  found later only because fixing the block forced every branch to be read.
+- It **over-called** one. Two `.or(0)` calls **one line apart**, in the same
+  fold, on adjacent fields of the same message, carried **opposite**
+  semantics: `quantity_remaining`'s default was the confabulation;
+  `quantity_capacity`'s zero *is* the consumer's declared not-evaluable
+  sentinel and is load-bearing. A mechanical fix for "defaults" would have
+  removed the one that made absence work.
+
+So the residual-vs-unrecognised distinction recurs **inside the audit's own
+results**, one layer down. *Adjacent identical syntax can carry opposite
+semantics*, and no amount of pattern-matching separates them — only reading
+what each one does to its consumer does.
+
+*Enforcement:* a base rate produced by sweeping is quoted as a **floor**, not
+a count. And a finding is not actionable until the consumer's use of the
+field has been read; the audit that names a surface has done the cheap half.
+
 *Direction note, for the count that moves:* fixing these **lowers** the
 constraining-factor count, where the three earlier instrument fixes raised
 theirs. The reading is identical in both directions — the factors that
@@ -561,6 +584,42 @@ reasonable response to an apparent regression is to revert the fix.
 at the instrument layer. `DESIGN-2026-08-11-declared-asset-class` — the same
 disease in the ontology layer, where absence of a declared property let one
 feed's behaviour become the model.
+
+---
+
+## Measure the fix, not the fix's worst imaginable form
+
+**The cost of a change and the cost of the change's worst plausible version
+are different numbers, and deferral decisions routinely quote the second
+while believing they quoted the first.**
+
+*Earned:* the specimen-mapping fix was deferred with the note *"not changed
+here — it alters fixture behaviour and the golden files that pin it."* Every
+clause was true of the *imagined* fix (replace the catch-alls) and none was
+true of the *actual* one (empty them: enumerate the declared values, leave
+only unrecognised input falling through). Re-blessing all seven cases left
+the six pre-existing goldens **byte-identical**. The measured churn was zero;
+the quoted churn had never been measured, only pictured.
+
+*Why the error is systematic rather than careless:* at deferral time the fix
+is unwritten, so the only version available to cost is the first one that
+comes to mind — and the first one to come to mind is the blunt one. The
+estimate is honest and the number is still wrong. This is the same failure as
+reasoning from a deployment to a framework law, one tense earlier: reasoning
+from an *imagined* implementation to a *general* cost.
+
+*Enforcement:* when cost is the stated reason for deferring, spend the few
+minutes to produce the cheapest correct version and measure **that**. If the
+measurement is genuinely expensive, defer on the honest ground — *"cost
+unmeasured"* — rather than on a number nobody produced. **A deferral quoting
+an unmeasured cost is a decision presented as an observation**, which is this
+file's oldest theme arriving at the planning layer.
+
+*Corollary — the cheapest correct version is usually additive.* The blunt fix
+replaces; the cheap fix **narrows what the existing behaviour applies to**,
+leaving every known case provably untouched. That framing also answers the
+objection deferral was protecting against, since "will this change what we
+see?" becomes a question with evidence rather than an argument.
 
 ---
 

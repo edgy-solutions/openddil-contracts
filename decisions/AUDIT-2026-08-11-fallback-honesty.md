@@ -265,6 +265,19 @@ reading Python is how it gets defeated by a mapping author who never saw the
 check. The output of that sweep should be a *stated* convention per field
 type, not a per-mapping fix list.
 
+**Promoted to `GD-12` on 2026-08-12** — this outgrew a follow-up bullet. The
+reason is the proto3 constraint the fix ran into: with no `optional`, absent
+and zero are identical on the wire, so these conventions are not stylistic —
+they are **the only mechanism** by which absence is expressible at all. That
+makes them load-bearing and undeclared, which is the same shape as GD-10's
+capability-item vacuum and GD-11's inferred asset class: **a property nothing
+declares, filled de facto by whoever integrated first.** Third layer, same
+disease — payload *shape*, class *property*, now *absence semantics*.
+
+It is also now the higher-value of the two carried items. The overlay check
+is bounded and greppable; this one has an **unknown population**, and that is
+precisely its argument.
+
 ## Related
 
 - `PRINCIPLES.md` §*A probe must fail distinguishably from its own zero* —
