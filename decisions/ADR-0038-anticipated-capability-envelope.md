@@ -63,7 +63,7 @@ conformance claim.
 | **3 — State detection** | **Implemented** | `logistics-fusion` evaluators emitting `ConstrainingFactor` per non-nominal axis; `cm-service` compliance state; `assetTier` liveness classification |
 | **4 — Health assessment** | **Partial** | Severity roll-ups (`overall_severity`, `overall_status`) and the CM/operational quadrant model give an *assessed condition*. What is absent is **diagnosis** — fault-cause attribution. The system says *what is wrong*, not *why* |
 | **5 — Prognostics assessment** | **Partial — mechanism built, prediction not** | ADR-0020's derivation engine is **built and closed** (Phase 5): wear accumulators, remaining-life fractions, `ORIGIN_DERIVED` stamping. What is missing is a **time horizon with uncertainty** — the engine reports *fraction remaining against authored coefficients*, not *fails at H+N, ±M*. Coefficients are unvalidated by design (AFSIM / VR-Forces gated) and `confidence` is an acknowledged placeholder |
-| **6 — Advisory generation** | **Not implemented** | No component produces a recommended action. See AE-1 and AE-2 — an existing ADR claims otherwise, and one unstructured field looks like the seat |
+| **6 — Advisory generation** | **Partial — rule-based, shipping, unprovenanced** *(corrected 2026-08-12)* | `cm-service`'s discrepancy analyzer machine-generates recommended actions from baseline-vs-as-maintained comparison; they persist and render in the maintainer drill-in and in an HQ panel titled *"Enterprise CM Recommendations."* Narrow (CM domain, rule-based, no prognostic input) and carrying **no provenance whatever** — `Discrepancy.recommended_action` is a bare string. **This row read "Not implemented" as first published; AUDIT-2026-08-12 F1 falsified it** |
 | **Information presentation** | **Implemented** | The COP, governed by ADR-0035's claim classes |
 | **External system interfaces** | **Implemented, reference-only** | Egress connectors; `CmEvent.work_order_ref` carries a foreign reference to an **externally created** work order. The system points at maintenance actions; it does not originate them |
 
@@ -338,24 +338,66 @@ feedback vector were never affected.
 anticipated (§3) and constrained (C1, C2, C4), which is a different
 status from claimed.
 
-**AE-2 — The only recommendation-shaped field is unstructured and
-human-authored.** `ManualDiscrepancyRaised.recommended_action` is a bare
-`string` on a manually-raised event: no producer, no version, no
-confidence, no statement of what it does not claim. It is the natural
-attractor for the first machine-generated advisory precisely because it
-already exists and already means the right thing in English. Reusing it
-would give machine advice the provenance profile of a free-text note.
-This is what C4 exists to prevent, and it is a live risk rather than a
-theoretical one.
+**AE-2 — Machine-generated advisories already ship with no provenance.**
+**CORRECTED 2026-08-12 by AUDIT-2026-08-12 F1.** As first published this
+row said the only recommendation-shaped field was
+`ManualDiscrepancyRaised.recommended_action`, human-authored, and that
+reusing it *would* give machine advice a free-text provenance profile.
+**That understated the finding in both tense and scope.**
+
+`Discrepancy.recommended_action` — a different field, on the
+machine-produced discrepancy rather than the manual one — is populated by
+`cm-service/discrepancy/analyzer.py` at six construction sites, from
+baseline-vs-as-maintained comparison. Those advisories persist and reach
+operators in two surfaces, including an HQ panel rolled up
+enterprise-wide. Both fields are bare `string`s: no producer, no version,
+no `config_hash`, no confidence, no statement of what is not claimed.
+
+So the risk is not that machine advice *would* inherit a free-text
+provenance profile. **It already has**, in production, for as long as CM
+discrepancy analysis has run. *"Why was this advised?"* is answerable only
+by reading the analyzer at the deployed revision.
+
+*Consequence for C4:* its trigger — *"before the first
+advisory-producing unit is registered"* — **has passed**. Restated as:
+before the analytics registry multiplies advisory producers, and
+retrofitted onto the existing two fields as part of that work. The cost
+is no longer near-zero, but it is far smaller now than after registered
+units make advisory production configurable.
+
+*The original row's reasoning survives and was the useful part:* a bare
+string that already means the right thing in English is a strong
+attractor. It attracted before this ADR was written.
 
 **AE-3 — Supply-only.** No demand model of any kind exists, named in §4,
 deliberately not designed.
 
-**AE-4 — Prognostics report a fraction, not a horizon.** ADR-0020's
-engine reports remaining-life fractions against authored coefficients
-with a placeholder `confidence`. Block 5 is therefore *mechanism built,
-prediction absent* — and the gap is not plumbing, it is that a horizon
-implies a validity claim the unvalidated coefficients cannot support.
+**AE-4 — The horizon exists; the uncertainty band does not.**
+**CORRECTED 2026-08-12 by AUDIT-2026-08-12 F2/F3.** As first published
+this row said prognostics report a fraction and not a horizon. **A
+horizon ships.** `rules.py::_eval_mtbf` extrapolates
+`remaining_useful_life` latest-over-slope to hours-to-zero, emits it as
+`ConstrainingFactor.projected_time_to_worse`, and `compose_status` folds
+the soonest into `projected_mission_capable_remaining` — through the
+projector, into Postgres, onto the maintainer card as *"Projected
+mission-capable."*
+
+What is genuinely absent is the **uncertainty band**. There is no
+interval type in `common/v1/quantity.proto`, `confidence` is a scalar,
+and the horizon producer sets neither `confidence` nor `origin` (F4), so
+the most-derived factor in the system carries `ORIGIN_UNSPECIFIED` and
+`0.0` — honest by proto3 default, and under-claimed exactly where
+provenance matters most.
+
+*And the honesty consequence the original row missed:* that horizon
+**renders as a bare duration** with no basis marker, from coefficients
+ADR-0020 documents as unvalidated placeholders. Recorded as an ADR-0035
+class-1 finding (AUDIT-2026-08-12 F3), not as a capability gap.
+
+*What survives:* the reason a horizon is hard remains right — it implies
+a validity claim unvalidated coefficients cannot support. That argument
+now applies to something already on screen rather than to something
+anticipated, which makes it more urgent rather than less.
 
 **AE-5 — GD-10 is a prerequisite for §4 as well as for munitions work.**
 The capability-item shape is undeclared, defined de facto by whichever
@@ -377,11 +419,14 @@ Per ADR-0037 clause 6.
 - **The 13374 mapping is a reading, not a conformance assessment.** It was
   derived from ADRs and a targeted source read, not from a clause-by-clause
   comparison against the standard text. Block boundaries are interpreted.
-- **No sweep for foreclosure was run.** The constraints come from reasoning
-  about three named capabilities against known designs. The codebase was
-  **not** swept for existing assumptions that already violate C1–C7 — this
-  is the same limit UD-6 states for ADR-0036's register, and it means the
-  absence of a violation here is not evidence of none.
+- ~~**No sweep for foreclosure was run.**~~ **Run 2026-08-12 —
+  [AUDIT-2026-08-12](AUDIT-2026-08-12-capability-foreclosure.md).** The
+  limit as stated was right and the sweep collected on it: one violation
+  (C4 already overdue, not pending), one presentation-honesty violation,
+  four watch-items, and two corrections to this document's own claims
+  (§1 block 6, AE-2, AE-4). *The audit's own scope limits now stand in
+  place of this one — overlays, egress, `logistics-sim` and runtime
+  behaviour remain unswept.*
 - **Nothing outside the core contracts and OSS services was examined.**
   Deployment overlays, egress connectors, and the reasoning-plane seams
   (ADR-0031) were not read for capability-envelope implications.
