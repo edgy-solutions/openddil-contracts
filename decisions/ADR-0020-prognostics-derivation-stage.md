@@ -124,6 +124,79 @@ alternative (drop it from Phase 5, add it later) trades a free field now
 for an expensive migration later. This is a small ruling and open to
 redirect; it is called out here rather than buried.
 
+## Confidence staircase
+
+*(Added 2026-08-12, with the ADR-0035 IH-5 stamp. Extends this ADR's
+confidence ruling; no earlier decision changed.)*
+
+The `confidence` field was carried from Phase 5 as a forward-looking
+placeholder. IH-5 populated it on the mtbf projection —
+`_MTBF_ASSERTED_CONFIDENCE = 0.2` — and that value needs its status
+recorded, because a number in a confidence field invites the assumption
+that something computed it.
+
+**Nothing computed it. It is asserted, and asserted is the honest
+status.** A computed confidence is not available today for a structural
+reason rather than a scheduling one: linear extrapolation of a single
+trend line carries **no intrinsic uncertainty estimate**, and the wear
+accumulators retain `(mean, count)` — sufficient to merge a mean across
+tiers ([AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md)
+§3), insufficient for dispersion. There is no residual, no sample
+variance, nothing to derive a fit quality from. A computed-looking number
+here would be the confabulation shape the fallback audit named: a
+real-seeming answer where an honest assertion belongs.
+
+The value is low because the projection rests on authored placeholder
+coefficients this ADR documents as unvalidated. **It is a floor on trust,
+not a measurement of it.**
+
+### The four steps, and what each unlocks
+
+1. **Asserted placeholder — today.** A constant with a comment naming why
+   it is not a computation. Honest, cheap, and carries no claim it cannot
+   support.
+2. **Sample retention + regression → fit-derived confidence.** Retaining
+   points rather than only `(mean, count)` makes a fit quality
+   computable — R², residual spread, prediction interval on the slope.
+   **Still ceilinged by coefficient uncertainty:** a perfect fit to a
+   trend built on unvalidated coefficients is a precise projection of an
+   unvalidated model.
+3. **Coefficient validation (this ADR's AFSIM / VR-Forces gate) →
+   removes the ceiling.** This is the step that makes *any* computed
+   confidence trustworthy rather than merely arithmetic. Step 2 without
+   step 3 produces a number that is defensible about its own fit and
+   silent about whether the model means anything.
+4. **Failure history, or a registered ML unit (ADR-0034) → calibrated
+   probability**, plus the uncertainty **band** ADR-0038 AE-4 names as
+   absent. This is where *"fails at H+N, ±M"* becomes sayable.
+
+The staircase is ordered by dependency, not by preference: step 4's
+calibration needs step 3's validated coefficients, and step 2 without
+step 3 is a well-measured wrong answer.
+
+### Confidence-kind must be declared alongside confidence-value
+
+**A confidence number is meaningless without its kind.** An asserted
+floor, a regression fit quality, and a calibrated failure probability are
+**different quantities on different scales**, and 0.2 means something
+different in each. They must not share one field silently — a consumer
+comparing across producers, or across time as the staircase is climbed,
+would be comparing incomparable numbers with no way to detect it.
+
+So when step 2 lands, `confidence` gains a declared kind beside it. This
+is the same declared-vs-inferred discipline the project applies one field
+over — GD-11's asset class (declared, never inferred), GD-10's capability
+shape (declared, not defined de facto by the first integrator). The
+failure mode is identical: absent a declaration, the meaning is set by
+whoever wrote the first producer, and every later reader inherits it
+without knowing.
+
+*Not designed here.* Whether the kind is an enum on `ValueProvenance`, a
+field beside `confidence` on `ConstrainingFactor`, or part of the
+analytics-unit provenance stamp is a decision for the change that makes
+confidence computable. Recorded now so the field cannot quietly acquire a
+second meaning before then.
+
 ## No oracle — by design
 
 The earlier draft of this ADR treated "System A" as a real, integrated

@@ -271,10 +271,22 @@ fixed properly without this** — the renderer has no signal to branch on,
 so a basis marker would today have to be hardcoded per field rather than
 driven by the data. Producer-side stamp first, render second.
 
-*Fix shape:* set `origin = ORIGIN_DERIVED` on the mtbf factor, and treat
-`confidence` per ADR-0020's ruling (a placeholder until the validation
-gate, but an explicit one). Not fixed — the sweep was boxed as reading
-only.
+**FIXED 2026-08-12.** `_eval_mtbf` now stamps `origin = ORIGIN_DERIVED`
+and `confidence = _MTBF_ASSERTED_CONFIDENCE` (0.2), a named constant whose
+comment states that it is **asserted, not computed**, and why no
+computation is available: linear extrapolation of a single trend line
+carries no intrinsic uncertainty estimate, and the accumulators keep
+`(mean, count)` — enough to merge, not enough for dispersion. The path to
+a real number, and the rule that **confidence-kind must be declared
+alongside confidence-value**, are recorded in
+[ADR-0020 §Confidence staircase](ADR-0020-prognostics-derivation-stage.md).
+
+*Guard:* `test_mtbf_factor_stamps_derived_provenance`, **run red against
+the unstamped evaluator before being trusted** (ADR-0037 §3) — it failed
+on `origin == 0` vs `ORIGIN_DERIVED == 2`, which is precisely the state it
+exists to prevent recurring. `origin` is asserted by identity rather than
+truthiness, since `ORIGIN_UNSPECIFIED` is `0` and a truthiness check would
+fail open on exactly the case that matters. 76 tests pass.
 
 **IH-6 — A horizon renders as a bare duration with no basis.**
 *(AUDIT-2026-08-12 F3. Render-side; the consequence of IH-5.)*
@@ -286,6 +298,43 @@ unvalidated coefficients, presented as a plain fact. This is class 1's
 *modelled-not-measured* case, and the `SYNTHESIZED` treatment (or an
 equivalent for projections) is absent. See the review-unit note above for
 why it survived: the component around it is otherwise exemplary.
+
+**FIXED 2026-08-12, driven by IH-5's stamp.** A `DERIVED` badge in the
+same amber vocabulary as `SYNTHESIZED` now sits beside the horizon, and
+**no displayed value changed — only its basis became visible.**
+
+Two properties of the implementation are the point:
+
+- **Keyed off `origin`, not off the field.** `horizonSource()` recomputes
+  the same minimum fusion's `compose_status` used, finds the factor that
+  produced the horizon, and reads *its* stamp. When another evaluator
+  starts projecting, or a registered analytics unit replaces the rule, the
+  marker follows the data with no frontend edit. A per-field condition
+  would have worked exactly once.
+- **Hover text composed from provenance, not written as a sentence.**
+  `lib/valueBasis.ts` renders whatever stamp fields are present, with a
+  generic pass for keys it has no opinion about — so `detector`,
+  `version`, `config_hash`, `model_artifact_hash` (ADR-0034) and the
+  uncertainty band (ADR-0038 AE-4) appear **without a frontend change**
+  once they appear in the JSON.
+
+*Recorded because it will be asked again: the marker is permanent, not a
+simulation artifact.* A remaining-life horizon is modelled **by
+construction** — nobody measures *"37 hours until limit"*; it is a
+projection under assumptions, and real telemetry improves its **inputs**,
+never the output's nature. A validated Weibull fit on real failure history
+is still a model. What evolves is the marker's *content*
+(*"linear extrapolation, confidence asserted"* →
+*"weibull-v3.2 · interval ±6h @80%"*), never its *presence*. Removing it
+once the numbers look trustworthy would present a projection as a
+measurement — the decision-assertion hazard ADR-0038 §2 fences against,
+and the reason that boundary is an architectural limit rather than a
+maturity stage. The note lives in `valueBasis.ts` as well, where the next
+person to touch the badge will meet it.
+
+*Also confirmed:* `constraining_factors` persists as JSONB, so the stamp
+reaches the UI with **no projector or schema change** — the fix is one
+producer line, one helper, one badge.
 
 **IH-4 — "Which tier am I looking at?" is answered by the URL, not by
 the surface.** With three fixed views (GD-04) and the tier-presentation
