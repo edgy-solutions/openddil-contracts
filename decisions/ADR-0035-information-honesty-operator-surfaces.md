@@ -161,6 +161,52 @@ distinguishing treatment, not a caveat elsewhere on the page.
   is still a wrong number. The label is honest about provenance, not
   about correctness.
 
+### The check's subject is a value, not a component
+
+*(Added 2026-08-12, after AUDIT-2026-08-12 found the second instance.)*
+
+**A component can pass this ADR's check while carrying a dishonest field,
+because the check was asked once of the component instead of once of each
+value it renders.** This is a limit on the check above, stated here
+rather than discovered a third time.
+
+Two instances, and what makes them sharp is that **both components are
+exemplary**:
+
+- **IH-1** — `Header.tsx` handles its not-a-reading sentinel correctly:
+  `probe_healthy` false renders `—`, never the raw `-1`, never a coerced
+  number. That is class 2 done right. One line above it,
+  `status?.bridge_group_lag ?? 0` renders a confident zero produced by
+  having no reading at all.
+- **F3 / IH-6** — `LogisticsStatusCard.tsx` carries a syncing notice that
+  never falls through to empty copy, a genuinely-empty state, and a
+  backfill state that renders its own rationale. Three honest states in
+  one component. The *"Projected mission-capable"* row inside it renders
+  a linear extrapolation on unvalidated coefficients as a bare duration.
+
+And the sharpest form of it is at the component *boundary*:
+`HqWorkOrders.tsx` was **renamed under ADR-0017** precisely because the
+panel does not talk to a work-order system, with a file comment saying
+so. The honesty of the **panel** was reviewed and corrected. The
+**advisories rendered inside it** — machine-generated, unprovenanced —
+were never in scope, because the subject of that review was the panel.
+
+*The rule that follows:* **review the field.** Each rendered value is
+asked *what would have to be true for this pixel to be honest*
+separately, including values inside a component that has already passed.
+A component-level verdict is a summary of per-field verdicts, never a
+substitute for them.
+
+*What it costs, stated plainly:* more review surface, roughly by the
+average field count of a panel — and the cost is real, because the
+components most worth reviewing are the dense ones. Two mitigations, both
+partial: the six classes make each field's question fast to answer once
+the habit exists, and most fields fall into "support is solid, render
+plainly" in a sentence. This does not make the check cheap; it makes it
+correct. **The alternative is a discipline whose pass rate is highest
+exactly where it is applied most carefully**, which is what these two
+instances are.
+
 ## Registered gaps
 
 Per this project's discipline, positions the system does **not** yet
@@ -199,6 +245,47 @@ compare. This is class 6 at the storage layer rather than the render
 layer, which is why it survived a render-layer sweep. *Fix shape: carry
 the producing axis alongside the value, or normalize at extraction.*
 Not fixed here.
+
+**IH-5 — The most-derived value in the system carries the weakest
+provenance.** *(AUDIT-2026-08-12 F4. Producer-side; distinct from IH-6,
+which is the render.)*
+
+`rules.py::_eval_mtbf` is the one evaluator whose output is purely
+derived — a linear extrapolation of a wear-trend slope, on coefficients
+ADR-0020 documents as authored placeholders. It constructs its
+`ConstrainingFactor` setting neither `origin` nor `confidence`, so the
+factor emits `ORIGIN_UNSPECIFIED` and `0.0`.
+
+Both defaults are *honest* in the proto3 sense — ADR-0020 chose them
+deliberately so that evaluators which had not been made provenance-aware
+would claim nothing rather than claim wrongly. **The inversion is that
+the discipline landed everywhere except its most load-bearing point.**
+The derived-sustainment evaluator sets `ORIGIN_DERIVED` explicitly;
+measured values are stamped; the one value that is a *projection built on
+an extrapolation of placeholders* is the one that says nothing about
+where it came from.
+
+*Why it matters beyond tidiness:* `origin` is the field a surface would
+read to apply class 1's modelled-not-measured treatment. **IH-6 cannot be
+fixed properly without this** — the renderer has no signal to branch on,
+so a basis marker would today have to be hardcoded per field rather than
+driven by the data. Producer-side stamp first, render second.
+
+*Fix shape:* set `origin = ORIGIN_DERIVED` on the mtbf factor, and treat
+`confidence` per ADR-0020's ruling (a placeholder until the validation
+gate, but an explicit one). Not fixed — the sweep was boxed as reading
+only.
+
+**IH-6 — A horizon renders as a bare duration with no basis.**
+*(AUDIT-2026-08-12 F3. Render-side; the consequence of IH-5.)*
+`LogisticsStatusCard.tsx` renders *"Projected mission-capable"* as a
+formatted duration with no basis marker, no derived badge, and no
+tooltip. The value reaches it from `_eval_mtbf` via
+`projected_mission_capable_remaining` — a linear extrapolation on
+unvalidated coefficients, presented as a plain fact. This is class 1's
+*modelled-not-measured* case, and the `SYNTHESIZED` treatment (or an
+equivalent for projections) is absent. See the review-unit note above for
+why it survived: the component around it is otherwise exemplary.
 
 **IH-4 — "Which tier am I looking at?" is answered by the URL, not by
 the surface.** With three fixed views (GD-04) and the tier-presentation

@@ -270,9 +270,33 @@ bitten reference-data-reading units anyway.*
 default.** Where a stamp shape is being fixed, the actionable-output case
 is assessed explicitly rather than assumed to be the same. The existing
 attractor is named in AE-2 and must not become the model.
-*Cost today: near zero if decided now; a migration under live consumers
-if deferred past the first advisory.* This is the constraint with a real
-clock on it.
+
+***RE-PRICED 2026-08-12 — this constraint is overdue, not pending.***
+As first written, C4's trigger was *"before the first advisory-producing
+unit is registered"* and its cost was *"near zero if decided now; a
+migration under live consumers if deferred."* AUDIT-2026-08-12 F1 found
+that **the first advisory-producing unit shipped before this constraint
+was written.** `cm-service`'s discrepancy analyzer machine-generates
+recommended actions; they persist and render in two surfaces. The clock
+did not start with this ADR — it had already run out.
+
+*Cost today, honestly:* **no longer free.** The fix touches a proto field
+with a populated history (`Discrepancy.recommended_action`), its manual
+sibling, a persistence layer, and **two rendered surfaces**. It is a
+schema-and-producer change against live consumers, which is the exact
+category C4 was written to avoid — arrived at not by deferral but by the
+capability having preceded its own constraint.
+
+*Still small, and smallest now.* The population is one analyzer and six
+construction sites. After the analytics registry makes advisory
+production configurable, every registered advisory unit inherits whatever
+shape is standing. **The re-pricing is a reason to schedule it sooner,
+not a reason to treat it as sunk.**
+
+*Restated trigger:* before the analytics registry admits its first
+advisory-class unit — and retrofitted onto the two existing fields as
+part of that work, rather than leaving a provenanced new path beside an
+unprovenanced old one.
 
 **C5 — The process plane's workflow subject must not be assumed to be an
 asset.** ADR-0034's process-plane seam is described as *"when severity
