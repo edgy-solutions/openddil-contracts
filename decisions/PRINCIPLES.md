@@ -655,6 +655,55 @@ question that found the stockpile accumulator.
 
 ---
 
+## Stage paths, not everything
+
+**`git add <path>`, never `git add -A`. A file being edited in one
+session is not committed by another.**
+
+A commit message describes the diff its author *intended*. A broad add
+silently falsifies that: the content is fine, the message is fine, and
+the two now describe different changes. Nothing breaks, which is why it
+goes unnoticed — and it erodes exactly the property this project invests
+most in, since commit messages here are where findings, reasoning and
+corrections live durably.
+
+The downstream cost is an anchoring failure. *Findings are anchored* so
+their tense is recoverable (ADR-0037 §7) — and a register row whose
+anchor commit is about something else has an anchor that misleads
+rather than one that is merely absent.
+
+*Earned, and the base rate is the point:* two concurrent sessions worked
+`decisions/` on 2026-08-11. **Both** commits made while the other session
+had uncommitted work in that directory swept it in — three ADRs into a
+commit about a confabulating `_default`, and a register row about
+evidence sanitization into a commit about fallback honesty. Two windows
+of exposure, two sweeps. **Not an occasional accident — the default
+outcome**, because `-A` is the reflex and the working tree is shared.
+
+Both were pushed before they were noticed, so neither is fixable: the
+content is correct and permanently filed under the wrong description.
+Same asymmetry as the commit-message leak — the record is the thing you
+cannot amend after it travels.
+
+*Enforcement, both sides:*
+
+- **Stage explicitly.** `git add <path>` for every file you intend to
+  commit. `git status` before staging is the thirty-second check.
+- **Ownership until committed.** A file another session is editing is
+  theirs until it lands. If it appears in your `git status` and you did
+  not write it, it is not yours to commit — ask or wait.
+- **Commit promptly.** The exposure window is the time your work sits
+  uncommitted, so the cheapest mitigation on the *writing* side is not
+  leaving finished work in the tree. Both sweeps happened inside windows
+  that lasted minutes.
+
+*Corollary:* this generalizes past agents to any shared working tree —
+pair sessions, a colleague on the same box, a background process that
+writes generated files. The rule is about the tree being shared, not
+about who is sharing it.
+
+---
+
 ## How to use this file
 
 - Add a principle when a *specific near-miss* produces a rule that would
