@@ -335,6 +335,46 @@ written against a **different representation** — parse vs. text, count vs.
 presence — over a more careful version of the same one. The 19-objects /
 18-separators arithmetic found the defect that the name-matching could not.
 
+### Generalized 2026-08-12 — the shared signature is *the assertion is weaker than it reads*
+
+The two instances above are both string-shaped, and the family is not. A
+third arrived in a different type system entirely, which is what earns the
+wider statement:
+
+**Instance 3 — enum truthiness.** The IH-5 guard asserts that the mtbf
+projection stamps its provenance. Written as `assert factor.origin`, it
+reads as *"origin is set"* and means *"origin is not zero"* — and
+`ORIGIN_UNSPECIFIED` **is** zero while every other value is truthy. So the
+check passes for `ORIGIN_MEASURED`, which is the wrong answer, and fails only
+for the unstamped case it happens to catch by coincidence of encoding. Had
+the bug been *"stamped, but stamped MEASURED"* — a claim that the projection
+was observed rather than computed — the assertion would have been green. It
+is written `== tel.ORIGIN_DERIVED`.
+
+*The signature all three share:* **an assertion that appears to test the
+right property while being satisfiable by the wrong one.** It is not
+specifically about strings; strings were just where we met it first.
+
+| layer | the check | what it actually asked |
+|---|---|---|
+| string containment | `'CHANGED' in stdout` | do these bytes appear anywhere |
+| document structure | `f"{c}-{tier}" in rendered` | do these bytes appear anywhere |
+| test medium | a JSON→JSON golden suite | does the mapping round-trip *in JSON* |
+| enum encoding | `assert factor.origin` | is the value non-zero |
+
+*The portable question, asked of any assertion before trusting it:* **what
+else would satisfy this?** If the answer includes a state you would consider
+a defect, the assertion is weaker than it reads. Sentinel-vs-substring,
+document-vs-bytes, medium-vs-production, identity-vs-truthiness are four
+instances of one habit — and the habit is cheap, because the question takes
+one sentence to ask and does not require knowing the bug in advance.
+
+*Related, and not the same thing:* ADR-0037 §1's *named limits* covers checks
+that ran, passed, and proved **less than the reader assumes** — schema
+inspection proving a schema and not a producer, a suite proving its own
+medium. That family is about **scope**; this one is about **satisfiability**.
+They meet in the golden-suite case, which is both.
+
 ---
 
 ## The prose was accurate; the tense was inferred
