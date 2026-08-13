@@ -328,6 +328,21 @@ the bytes were right.
   replacement checks were run against the unfixed artifact and confirmed to
   fail before being trusted. A green test that has never been red proves
   nothing about what it would catch.
+- **A verification that includes its own subject in its evidence is not a
+  verification.** The limiting case of the rule above: where a check cannot
+  be seen red *by construction*, "see it red first" is not unsatisfied, it
+  is unsatisfiable. *Earned inside the anti-drift tooling itself* — the
+  follow-up index's checker scanned `*.md`, which includes the index, so
+  every ID written there appeared in its own "corpus" and the phantom-row
+  direction could never report anything. Half the check was decorative and
+  looked identical to the half that worked. Not *"the instrument reads zero
+  when broken"* but *"the instrument is inside what it measures"*, and no
+  amount of running it would have shown this, because running it is what it
+  does successfully. **When a check's scope is a pattern — a glob, a
+  directory, a selector — ask whether the checker is inside the set the
+  pattern selects**, and if so exclude it explicitly and say why at the
+  exclusion, since that line looks like noise and is the only thing making
+  the check real.
 
 *Corollary:* when a check and the thing it checks share an author and a
 vocabulary, the check inherits the author's blind spot. Prefer a second check
@@ -624,6 +639,49 @@ reasonable response to an apparent regression is to revert the fix.
 at the instrument layer. `DESIGN-2026-08-11-declared-asset-class` — the same
 disease in the ontology layer, where absence of a declared property let one
 feed's behaviour become the model.
+
+---
+
+## Indexes drift where the work is not
+
+**Propagation succeeds toward attention and fails away from it. An index is
+by definition the place attention is not, so it is the first thing to go
+stale and the last thing anyone notices.**
+
+*Earned 2026-08-12, from a clean contrast in one corpus on one day.* An
+audit falsified two claims in the ADR that commissioned it. The **ADR was
+updated correctly** — its rows rewritten, a constraint moved from pending to
+overdue — because the author was already reading that file. The **README
+was not**: it still announced *"four divergences registered"* after two more
+had been added the same day, from that same audit.
+
+Nobody was careless. The update happened where the work was, and did not
+happen where the work was not.
+
+A wider check the same afternoon found **eleven documents missing from the
+index entirely**, including `PRINCIPLES.md` and `GENERALIZATION-DEBT.md` —
+the two most-cited files in the corpus — and three of five audits. The
+project that most values written-down state had not indexed the documents it
+cites most.
+
+*The conclusion is mechanical checking, not more diligence.* Diligence is
+precisely the resource that is unevenly distributed here — it concentrates
+where someone is already looking, which is the one place drift does not
+occur. A rule of the form *"remember to update the index"* asks for more of
+the thing whose distribution is the problem. Two commands, each under a
+second, cover both drift classes: **does every ID have a row, and does every
+document have an entry.** Neither needs judgement, which is exactly why they
+belong in CI rather than in a habit.
+
+*Related:* **VE-1** (`ADR-0037`) registers *no index of evidence* as a gap —
+the same mechanism one layer over. An index nobody is standing in front of
+does not maintain itself, whether its subject is findings or evidence.
+
+*Corollary — the check must not be able to satisfy itself.* See *a
+verification that includes its own subject in its evidence is not a
+verification*: the first draft of the ID check scanned a glob that included
+the index it was checking. The anti-drift tooling and the self-reference
+trap were earned in the same hour, from the same file.
 
 ---
 

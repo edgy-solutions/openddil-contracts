@@ -45,6 +45,27 @@ This directory contains the Architectural Decision Records for the OpenDDIL proj
 
 - [AUDIT-2026-08-07: Aggregation composability (ADR-0024 set)](AUDIT-2026-08-07-aggregation-composability.md) — verifies ADR-0033's unbounded-depth invariant against the three regional rollups. **Result: conditional, not clean.** All three are `assumes-raw-leaves` as implemented, but differ in kind: `region_fleet_summary` (associative counts) and `region_wear_trends` (algebraic mean+count — its wire message already carries the sufficient statistics, so no format change is needed) are plumbing away from composing. **`region_top_factors` is genuinely non-composable**: top-N truncation is lossy, so a factor ranking 6th in every child is emitted by none and is invisible to the parent — silently, compounding with each tier. Fix shapes recorded, none applied. Gate: resolve top-factors before any fourth tier, or any rollup consuming a rollup. Nothing blocks Arc 1. Also carries the label-inventory annotation: **no aggregation's inputs carry releasability labels today** (2026-08-07)
 
+- [AUDIT-2026-08-11: Fallback honesty](AUDIT-2026-08-11-fallback-honesty.md) — do our fallbacks refuse, or do they answer? Ten mapping-layer surfaces; **five confabulated**. The rule extracted: *a fallback answers only where it can name the class it is answering for* — a residual class ("everything else is X") is a modelling decision; an unrecognised input must refuse. F1–F4 **all fixed**; the surviving item became **GD-12**. Base rate quoted as a floor, because the fifth surface was found by *fixing* the block rather than by sweeping it (2026-08-11, closed 2026-08-12)
+
+- [AUDIT-2026-08-09: Schema provenance](AUDIT-2026-08-09-schema-provenance.md) — where did the Silver shapes come from? Governing rule: **discovery is not derivation** — a feed's fields are input to the *mapping*, never sources for the *model*. Found the capability-item vacuum now tracked as **GD-10** (2026-08-09)
+
+- [AUDIT-2026-08-08: Severance-tolerance inventory](AUDIT-2026-08-08-severance-tolerance-inventory.md) — per-component behaviour under a cut uplink, derived from charts and source. Annex to ADR-0036 clause 4; its scope limits are load-bearing — **no component was observed under an actual sever** (2026-08-08)
+
+## Registers and working documents
+
+Standing files rather than dated decisions. Listed here because they are the
+most-cited documents in the corpus and were, until 2026-08-12, the least
+indexed — see `FOLLOW-UPS.md` §Reconciliation.
+
+- [PRINCIPLES.md](PRINCIPLES.md) — the portable one-liners: the *shape of the mistake we keep almost making*, each earned by a specific near-miss. Add a principle when a near-miss produces a portable rule; if it needs paragraphs of qualification it is an ADR instead.
+- [GENERALIZATION-DEBT.md](GENERALIZATION-DEBT.md) — **GD-01..GD-12**, framework properties the current implementation does not yet have, recorded so a shortcut cannot be mistaken for a design.
+- [FOLLOW-UPS.md](FOLLOW-UPS.md) — pointer index across all six ID'd registers (GD / UD / VE / IH / AE), with a **mechanical drift check**. Never restates content; the home document is always authoritative.
+- [EXCHANGE-LEDGER.md](EXCHANGE-LEDGER.md) — **X-1..X-8**, items resolvable only outside these repositories: questions for an upstream producer, checks against systems not visible here. Generic framing; VE-7's egress gate binds every row.
+- [PLAN-arc2-slice1-opening-package.md](PLAN-arc2-slice1-opening-package.md) — Arc 2 Slice 1's actual starting state, verified rather than assumed. **P1 shipped a schema nothing can fill** — 42 populated rows, zero labelled, confirmed by query — and the reference specimen already emits fields the proto rejects outright. Plan only; go-signal reserved.
+- [PLAN-munitions-taxonomy-phases.md](PLAN-munitions-taxonomy-phases.md) — the munitions phase list recovered from commit bodies, with evidence classes marked. Phase 6 parked pending **X-2**.
+- [DESIGN-2026-08-11-declared-asset-class.md](DESIGN-2026-08-11-declared-asset-class.md) — asset class becomes a *declared* Silver field; the assignment ladder (producer-declared → mapped-from-declared → *stated* deployment rule → UNKNOWN) that **the core never infers**. Design only.
+- [BRIEF-2026-08-08-per-tier-severity.md](BRIEF-2026-08-08-per-tier-severity.md) — per-tier severity computation brief.
+
 ## Phase status
 
 Phase 4c.5 (2026-05-14): real DDIL edge→HQ topology — edge-hq-bridge,

@@ -136,6 +136,31 @@ blind spot — so prefer a second check written against a **different
 representation** (parse vs. text, count vs. presence) over a more careful
 version of the same one.
 
+**The limiting case — a verification that includes its own subject in its
+evidence is not a verification.** Where the check *cannot* be seen red by
+construction, the rule above is not merely unsatisfied, it is
+unsatisfiable, and the check will read green forever.
+
+*Earned 2026-08-12, inside the tooling written to prevent drift.* The
+follow-up index ships with a command that compares the IDs in the corpus
+against the rows in the index, in both directions. Its obvious form scans
+`*.md` — **which includes the index itself.** Every ID written in the
+index therefore appears in its own "corpus", so the second comparison,
+the one that catches a phantom row or an ID renamed at home, **could
+never report anything.** Half the check was decorative and looked
+identical to the working half.
+
+This is the silent-absence family turned reflexive: not *"the instrument
+reads zero when it is broken"* but *"the instrument is inside what it
+measures."* No amount of running it would have revealed this, because
+running it is what it does successfully.
+
+*Enforcement:* when a check's scope is defined by a pattern — a glob, a
+directory, a label selector, a namespace — **ask whether the checker
+itself is inside the set the pattern selects.** If it is, exclude it
+explicitly and say why at the exclusion, because the line looks like
+noise to the next reader and is the only thing making the check real.
+
 ### 4. Assertions are made against structure
 
 Assertions about what a system will **receive** are made against parsed

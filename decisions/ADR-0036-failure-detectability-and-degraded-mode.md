@@ -216,6 +216,45 @@ observable does not exist, because the participation sidecar does not
 exist. Registered so the sidecar cannot ship without it and call the
 silence nominal.
 
+**UD-7 — A resource failure can manifest on a component that did not cause
+it.** *(Found 2026-08-12; the chart instance is fixed, the class is not.)*
+
+The NFS escape hatch swapped a PVC for an `emptyDir` and, in doing so,
+dropped the size bound the PVC path carried — the branches rendered
+`emptyDir: {}` while `persistence.redpandaSize` / `restateSize` bounded the
+`volumeClaimTemplates` they replaced.
+
+**The detectability problem is not the missing field; it is where the
+failure surfaces.** An unbounded `emptyDir` is charged against the *node's*
+ephemeral storage with no cap. A broker filling that disk triggers kubelet
+eviction **across the whole node**, and eviction selects victims by usage —
+so the pods killed are frequently **not** the pod that caused it. The
+operator sees unrelated components dying on a node where nothing local looks
+wrong, and the component actually at fault may survive.
+
+Every clause-1 instinct fails here, because they all assume the failing
+component is the one to instrument. **The signal has to be sought at the
+node, not at the victim**, and nothing in this system currently looks there.
+
+*Detection story, as required by clause 5 — partial, which is why this is a
+register row and not a closed item.* `sizeLimit` (chart 0.1.46) converts the
+node-wide, misattributed failure into a **pod-local, correctly-attributed**
+one: the offending pod alone is evicted, for a legible reason. That is a
+real improvement and it is **not detection** — nothing yet *reports* node
+ephemeral-storage pressure, and the other 21 `emptyDir` volumes in the chart
+are bounded by construction rather than by policy, which is an argument, not
+an observable.
+
+*The generalizable half, which outlives this chart:* **an escape hatch that
+silently drops a constraint is a second failure mode hiding inside a
+workaround for the first.** The hatch was added to fix `ENOLCK`
+CrashLoopBackOff on NFS clusters and it does that correctly; nobody noticed
+it also removed a bound, because **the removal is invisible in the diff that
+adds the branch** — the new code is all additions, and the constraint that
+disappeared lived in the path not taken. Any conditional that substitutes
+one mechanism for another should be read for *what the replaced path was
+carrying*, not only for what the new path does.
+
 **UD-6 — Undetected-failure coverage is itself unaudited.** This register
 was assembled from known findings, not from a systematic pass over the
 component set. It is a starting inventory. *Per `PRINCIPLES.md`

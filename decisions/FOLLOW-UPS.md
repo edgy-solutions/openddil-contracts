@@ -35,7 +35,7 @@ comm -23 <(echo "$corpus") <(echo "$rows")   # in corpus, missing here
 comm -13 <(echo "$corpus") <(echo "$rows")   # here, but nowhere else
 ```
 
-Both must print nothing. **37 IDs as of this reconciliation.** A mismatch
+Both must print nothing. **38 IDs as of this reconciliation.** A mismatch
 means the corpus moved and this file did not — which is information, not an
 error.
 
@@ -54,6 +54,28 @@ error.
 still accurate — only a human reading the home document can — but it makes
 the *cheap* failure (a row that never got added) mechanical, and leaves only
 the expensive one to judgement.
+
+### Second check — is every document indexed at all?
+
+The ID check above is blind to a whole document going unlisted. That is a
+different drift, and when first run on 2026-08-12 it found **eleven**:
+
+```bash
+cd openddil-contracts/decisions
+for f in ADR-*.md AUDIT-*.md PLAN-*.md DESIGN-*.md BRIEF-*.md \
+         GENERALIZATION-DEBT.md PRINCIPLES.md FOLLOW-UPS.md EXCHANGE-LEDGER.md; do
+  grep -q "$f" README.md || echo "MISSING: $f"
+done
+```
+
+Must print nothing. The eleven included **`PRINCIPLES.md` and
+`GENERALIZATION-DEBT.md`** — the two most-cited documents in the corpus —
+and three of five audits. All are now listed.
+
+**Both checks belong in CI, and that is the actual conclusion.** Neither
+requires judgement, both take under a second, and both failed silently for
+weeks under a team that is demonstrably careful about exactly this class of
+error. See `PRINCIPLES.md` §*Indexes drift where the work is not*.
 
 ---
 
@@ -86,6 +108,7 @@ the expensive one to judgement.
 | UD-4 | Pre-sync zero, instrument-side *(see IH-1)* | open |
 | UD-5 | Middleware-participation health has no observable | open |
 | UD-6 | **The register itself is unaudited** | open |
+| UD-7 | Resource failure manifests on a component that did not cause it | open |
 
 ### VE — verification-evidence gaps (`ADR-0037`)
 
