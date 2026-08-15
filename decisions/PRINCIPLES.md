@@ -861,6 +861,42 @@ about who is sharing it.
 
 ---
 
+## Enter a sweep from the narrow end
+
+**Trace backward from the identifier, not forward from the producer.
+Forward tracing terminates at attention; backward tracing terminates at
+the field.**
+
+A forward sweep follows the data — producer, then persistence, then the
+consumers you find. Every consumer it finds is real, so it never feels
+wrong. It ends when the author stops finding new ones, and that is a fact
+about how long they kept looking, not about the consumer set. A backward
+sweep greps the identifier and enumerates readers: exhaustive,
+mechanical, and usually a minute's work.
+
+*Earned twice, both times a sweep under-reporting because of how it was
+entered rather than what it looked for:*
+
+- The capability-foreclosure audit traced forward from the discrepancy
+  analyzer and reported **two** advisory surfaces. There are three — a
+  regional roll-up was never opened. Found later by grepping
+  `recommended_action`.
+- Earlier, the same shape at the commit layer: reasoning forward from
+  what a change *was about* rather than backward from what the diff
+  *touched*.
+
+*Corollary — it is also the cheaper direction to state a limit in.* A
+backward sweep can say *"these are all the readers of this field"* and
+mean it. A forward sweep can only honestly say *"these are the readers I
+found"*, which is the sentence that should appear in any report that had
+to trace forward — and its presence is a good signal that the wrong
+direction was used.
+
+*Related:* `PRINCIPLES.md` §"Not found" is not "cleared" governs what a
+sweep says about its gaps; this governs whether it has them.
+
+---
+
 ## How to use this file
 
 - Add a principle when a *specific near-miss* produces a rule that would

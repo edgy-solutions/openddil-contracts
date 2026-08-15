@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted — 2026-05-14
+Accepted — 2026-05-14. **Amended 2026-08-15** — the deferral stands
+unchanged; one consequence it had no cause to flag is now stated, because
+it silently invalidates a natural way of changing this path. See
+[Amendment](#amendment-2026-08-15-the-proto-is-not-the-wire).
 
 ## Context
 
@@ -156,6 +159,119 @@ the regional hub work begins.
   revisit trigger.
 - ADR-0019 — Single Kafka→Postgres Projector. The Phase 4a service that
   absorbs this inconsistency via its `json` decoder mode.
+
+## Amendment 2026-08-15 — the proto is not the wire
+
+*Found by C4(a)'s pre-step, before any edit. Nothing here changes the
+deferral; it names a consequence of it.*
+
+### The statement
+
+**`discrepancy.proto` and `as_maintained.proto` are documentation for the
+`asset-cm-state` path, not its contract. The wire shape is the
+`AsMaintainedRecord` / `DiscrepancyRecord` dataclass pair, serialized by
+`dataclasses.asdict()` and `json.dumps()`.**
+
+The emission path is `_emit_asset_cm_state` → `_record_to_dict(record)` →
+`dataclasses.asdict(rec)` → `json.dumps`. **The proto is never
+constructed.** `MessageToDict` appears in `asset_cm.py` but is used for
+*decoding inbound* Silver telemetry, not for emitting CM state — which is
+exactly the kind of nearby-correct detail that makes a reader assume the
+opposite.
+
+### The consequence, which is why this is an amendment and not a footnote
+
+**A proto-only edit to this path ships a no-op that passes every check.**
+Add a field to `ConfigurationDiscrepancy`, regenerate, build, test — all
+green, contract updated, and **nothing changes on the wire, in Postgres,
+or on screen.** There is no error, no warning, and no failing test,
+because every one of those signals is answering *did the proto change?*
+rather than *did the payload change?*
+
+This is the ADR-0037 §1 family — evidence that proves less than the
+reader assumes — arriving at a wire format. It is also why the original
+ADR could not have caught it: in 2026-05 the divergence was a *shape*
+problem (integer enums, `*_ns` timestamps) and the projector's normaliser
+absorbed it. The *authority* problem — which artifact is canonical when
+you want to change the payload — only becomes visible when someone tries
+to add a field rather than read one.
+
+### What an edit to this path actually requires
+
+Five sites, and the proto is the least load-bearing of them:
+
+| # | Site | Why it is required |
+|---|---|---|
+| 1 | `discrepancy.proto` | Contract of record; read by humans and by any future protobuf migration |
+| 2 | `persistence_model.py :: DiscrepancyRecord` | **The actual wire shape** — `asdict` serializes this |
+| 3 | `store.py :: _disc_proto_to_record` / `_disc_record_to_proto` | Both directions of the proto↔record bridge |
+| 4 | `asset_cm.py :: _disc_record_to_proto_local` | A *duplicate* of (3), existing to dodge a private-name import |
+| 5 | `analyzer.py :: _make_discrepancy` + its construction sites | The producer |
+
+Only (2) affects the wire. Only (1) is what a contract-first engineer
+would think to change.
+
+### The one hard constraint: additive-only
+
+`_dict_to_record` reconstructs via `DiscrepancyRecord(**x)` against
+**Restate-durable state**, so previously-serialized dicts are replayed
+into today's dataclass.
+
+- **Adding** a field with a default is safe — old dicts lack the key and
+  take the default.
+- **Removing or renaming** a field is not — old dicts carry the key and
+  `DiscrepancyRecord(**x)` raises `TypeError` on an unexpected keyword,
+  at replay time, on durable state.
+
+This is a stronger constraint than the proto's own compatibility rules
+suggest, and it binds the dataclass rather than the proto.
+
+### Scope — which paths this applies to
+
+Stated explicitly so the boundary is not inferred from the one example.
+Four topics carry `decode_as: json` in `projector_config.yaml`:
+
+| Topic | Proto exists? | Hazard |
+|---|---|---|
+| `asset-cm-state` | **Yes** — `as_maintained.proto`, `discrepancy.proto` | **This amendment.** A canonical-looking proto that is not the wire |
+| `asset-capability-snapshot` | No | Different problem — no declared shape at all (GD-10) |
+| `asset-element-telemetry` | No | Same as above; producer is `logistics-sim` |
+| `asset-element-inventory` | No | Same. (`inventory_events.proto` is a **different** bounded context — CloudEvent payloads for edge/HQ allocation — and does not describe this topic) |
+
+**The hazard is unique to `asset-cm-state`**, and the reason is precise:
+it is the only JSON-path topic with a proto that *mirrors* it. The other
+three have nothing to mislead you — an engineer looking for their
+contract finds none and is correctly alarmed, which fails loudly. A proto
+that exists, compiles, and is wrong about its own authority fails
+quietly.
+
+`tactical-events` uses `decode_as: cloudevents.json` and is a separate
+case: the CloudEvents envelope *is* the intended wire format, not a
+divergence from one.
+
+### Migration trigger — fired, assessed, still deferred
+
+The original ADR lists *"a future phase modifies `openddil-cm-service`
+substantively for its own reasons (the producer is already open —
+migrate then)"* as a trigger. **C4(a) is such a phase**, so the trigger
+has fired and is recorded rather than passed over silently.
+
+*Assessment:* still deferred, and the reasoning is the trigger's own.
+C4(a) is **additive** — new fields, five sites, no consumer coordination,
+no migration window. The protobuf migration is a **coordinated
+producer + consumer change** (cm-service and logistics-fusion together,
+with a window), and folding it into an advisory-provenance change would
+make a small, reviewable, invisible-to-users change into a cross-service
+wire migration. That is the same scope-creep argument the original
+Decision made, and it has not weakened.
+
+*What has changed is the cost of waiting*, and it is worth stating: this
+amendment exists because the deferral now has a failure mode beyond the
+documented mapping tax — a plausible edit that silently does nothing. The
+trigger's second clause (*"a third consumer is proposed"*) remains unfired
+at the topic level: `asset-cm-state` still has exactly two direct
+consumers, the projector and fusion's Restate subscription. The three UI
+surfaces read Postgres, not the topic.
 
 ## Notes for future maintainers
 
