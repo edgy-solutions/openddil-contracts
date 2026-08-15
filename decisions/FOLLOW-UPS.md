@@ -26,25 +26,31 @@ trusted:
 ## How to check this index is current
 
 ```bash
-cd openddil-contracts/decisions
-corpus=$(grep -ohE "\b(GD|UD|VE|IH|AE)-[0-9]{1,2}\b" \
-           $(ls *.md | grep -v '^FOLLOW-UPS.md$') | sort -u)
-rows=$(grep -ohE "^\| (GD|UD|VE|IH|AE)-[0-9]{1,2} " FOLLOW-UPS.md \
-         | tr -d '| ' | sort -u)
-comm -23 <(echo "$corpus") <(echo "$rows")   # in corpus, missing here
-comm -13 <(echo "$corpus") <(echo "$rows")   # here, but nowhere else
+./scripts/check-decision-indexes.sh      # exit 0 = clean
 ```
 
-Both must print nothing. **38 IDs as of this reconciliation.** A mismatch
-means the corpus moved and this file did not — which is information, not an
-error.
+**Run in CI** on every change to `decisions/` — `.github/workflows/
+decision-indexes.yml`. **38 IDs as of this reconciliation.**
 
-> **Note the `grep -v FOLLOW-UPS.md`, which is load-bearing.** The obvious
-> form of this check scans `*.md`, which includes *this file* — so every ID
-> written here would appear in its own "corpus" and the second comparison
-> **could never fail**. A phantom row, or an ID surviving here after being
-> renamed at home, would pass silently. The first draft of this check had
-> exactly that flaw.
+*The commands are not repeated here on purpose.* A copy in this file and a
+copy in the workflow are two things to keep in sync, and keeping two copies
+of a drift-detector in sync is the drift it was written to detect. The
+script is the single copy; this section points at it.
+
+It runs **two** checks — every ID has a row and every row is a real ID; and
+every document is referenced by `README.md`. Failure prints the specific IDs
+or filenames. A mismatch means the corpus moved and this file did not, which
+is information, not an error.
+
+*Both were verified by being made to fail* — a deleted row, an unindexed
+document, and a phantom ID each produce the expected message and exit 1. A
+check never seen red proves nothing about what it would catch.
+
+> **The script's `grep -v FOLLOW-UPS.md` is load-bearing, not tidiness.**
+> The obvious form scans `*.md`, which includes *this file* — so every ID
+> written here would appear in its own "corpus", every row would vouch for
+> itself, and the phantom-row direction **could never fail**. A renamed or
+> deleted ID would pass silently. The first draft had exactly that flaw.
 >
 > *A verification that includes its own subject in its evidence is not a
 > verification* — the same shape as a guard that has never been seen to
@@ -55,27 +61,17 @@ still accurate — only a human reading the home document can — but it makes
 the *cheap* failure (a row that never got added) mechanical, and leaves only
 the expensive one to judgement.
 
-### Second check — is every document indexed at all?
+### The second check exists because the first is blind to it
 
-The ID check above is blind to a whole document going unlisted. That is a
-different drift, and when first run on 2026-08-12 it found **eleven**:
-
-```bash
-cd openddil-contracts/decisions
-for f in ADR-*.md AUDIT-*.md PLAN-*.md DESIGN-*.md BRIEF-*.md \
-         GENERALIZATION-DEBT.md PRINCIPLES.md FOLLOW-UPS.md EXCHANGE-LEDGER.md; do
-  grep -q "$f" README.md || echo "MISSING: $f"
-done
-```
-
-Must print nothing. The eleven included **`PRINCIPLES.md` and
+An entire document can go unlisted without affecting any ID. When first run
+on 2026-08-12 that check found **eleven**, including **`PRINCIPLES.md` and
 `GENERALIZATION-DEBT.md`** — the two most-cited documents in the corpus —
 and three of five audits. All are now listed.
 
-**Both checks belong in CI, and that is the actual conclusion.** Neither
-requires judgement, both take under a second, and both failed silently for
-weeks under a team that is demonstrably careful about exactly this class of
-error. See `PRINCIPLES.md` §*Indexes drift where the work is not*.
+**Both are in CI, which was the actual conclusion.** Neither requires
+judgement, both run in under a second, and both failed silently for weeks
+under a team that is demonstrably careful about exactly this class of error.
+See `PRINCIPLES.md` §*Indexes drift where the work is not*.
 
 ### The third check does not exist, and that is a finding
 

@@ -1,0 +1,40 @@
+name: Decision indexes
+
+# Catches index drift in decisions/ — a register ID with no row in
+# FOLLOW-UPS.md, a row whose ID no longer exists, or a document missing from
+# README.md.
+#
+# WHY THIS IS CI AND NOT A HABIT. Propagation succeeds toward attention and
+# fails away from it, and an index is by definition where attention is not.
+# The first run of check 2 found ELEVEN unindexed documents, including the
+# two most-cited files in the corpus. Asking for more diligence asks for more
+# of the resource whose uneven distribution IS the problem; these checks need
+# no judgement and run in under a second.
+# See PRINCIPLES.md §"Indexes drift where the work is not".
+#
+# The logic lives in scripts/check-decision-indexes.sh, deliberately NOT
+# inlined here — a copy in the workflow and a copy in the docs are two things
+# to keep in sync, which is the drift this job exists to catch.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'decisions/**'
+      - 'scripts/check-decision-indexes.sh'
+      - '.github/workflows/decision-indexes.yml'
+  pull_request:
+    paths:
+      - 'decisions/**'
+      - 'scripts/check-decision-indexes.sh'
+      - '.github/workflows/decision-indexes.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check decision indexes
+        run: ./scripts/check-decision-indexes.sh

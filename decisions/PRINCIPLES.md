@@ -642,6 +642,58 @@ feed's behaviour become the model.
 
 ---
 
+## A check tuned until it passes is a check whose green means nothing
+
+**When a check's accuracy depends on a parameter you are free to adjust,
+adjusting it until the output looks right is not calibration — it is
+choosing the answer.** The check still runs, still prints green, and now
+certifies whatever the parameter was set to.
+
+*Earned 2026-08-12, and the reason to trust it is that the failure is
+structural rather than a tuning miss.* An attempt to detect **status** drift
+— rows marked `open` in the index whose home document says `FIXED` — was
+built, tested, and **deliberately not shipped**:
+
+- windowing from any *mention* of an ID → **false positives**. A summary
+  file mentions `AE-2` and `VE-7` a few lines from a `RESOLVED 2026-08-12`
+  belonging to `AE-1`.
+- tightening to definition sites with a 16-line window → **false
+  negatives**. It caught `IH-6` and missed `IH-5`, whose `FIXED` marker sits
+  25 lines under its heading.
+
+**There is no correct window, because register blocks vary in length.** No
+value of the parameter is right; each merely relocates the error. A version
+tuned until the output matched what was already known would have been
+*fitted to the answer*, and its green would have meant "the window happens
+to suit today's documents" — indistinguishable, on screen, from "no drift
+exists".
+
+*The test:* ask what the check would report **if the thing it looks for were
+somewhere it usually is not**. If the honest answer is "depends where", the
+check measures its own configuration.
+
+*The fix is never a better regex — it is to make the property explicit at
+the source.* Status is currently prose, so it is being *reconstructed
+downstream from a correlate that mostly works*. Declared, it becomes an
+exact comparison and the heuristic disappears (`PLAN-register-status-
+tokens.md`).
+
+*Note where this one appeared.* It is the **fourth** instance of the
+declared-vs-inferred family — after class inferred from publishing
+behaviour (**GD-11**), absence inferred from a zero (**GD-12**), and
+national origin inferred from a naming habit (**X-4**) — and the first
+inside *this project's own tooling*, written by the people who named the
+disease. That is evidence it is structural rather than a run of oversights:
+**at the moment of writing, inference is always cheaper than declaration,
+and it usually works.**
+
+*Related:* *a guard is not evidence until it has been seen to fail*, and its
+limiting case *a verification that includes its own subject in its evidence
+is not a verification*. Three ways a check can be green and empty — never
+exercised, self-satisfying, or fitted.
+
+---
+
 ## Indexes drift where the work is not
 
 **Propagation succeeds toward attention and fails away from it. An index is
