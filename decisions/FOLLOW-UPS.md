@@ -77,6 +77,45 @@ requires judgement, both take under a second, and both failed silently for
 weeks under a team that is demonstrably careful about exactly this class of
 error. See `PRINCIPLES.md` §*Indexes drift where the work is not*.
 
+### The third check does not exist, and that is a finding
+
+**Status drift is real and is NOT mechanically checkable as things stand.**
+
+This file shipped 2026-08-12 marking `IH-5` and `IH-6` **open**. Both had
+been **fixed the same day**, in a parallel session, and the index was built
+from a snapshot that predated it. The limitation documented below —
+*"a row marked open that was quietly fixed will not be caught by any command
+in this file"* — fired **within three days of being written**, which is the
+strongest possible argument that it was not a theoretical caveat.
+
+A heuristic was attempted and **deliberately not shipped**, because it does
+not work:
+
+- windowing from *any mention* of an ID gave **false positives** — `README`'s
+  dense summaries mention `AE-2` and `VE-7` within a few lines of an
+  unrelated *"RESOLVED 2026-08-12"* belonging to `AE-1`;
+- tightening to definition sites with a 16-line window then gave a **false
+  negative** — it caught `IH-6` and missed `IH-5`, whose `FIXED` marker sits
+  25 lines under its heading.
+
+**There is no correct window**, because register blocks vary in length. A
+check tuned until it passes is a check whose green means nothing — the
+decorative-guard failure, arriving in the third checker in three days.
+
+**The real fix is to stop inferring status from prose and declare it.** If
+every register row carried an explicit machine-readable token —
+`**Status:** open` / `fixed <date>` / `parked` — on its definition line, the
+comparison becomes exact and the heuristic disappears.
+
+*Note what that is:* inferring status by pattern-matching prose is the
+**same disease as inferring asset class from publishing behaviour**
+(**GD-11**) or absence from a zero (**GD-12**) — a property nothing
+declares, reconstructed downstream from a correlate that mostly works.
+Declared-vs-inferred, arriving in our own tooling. **Not done here** — it
+is a change to every register row and belongs to whoever schedules the CI
+work above, but it is the reason not to paper over this with a smarter
+regex.
+
 ---
 
 ## Registers
@@ -130,8 +169,8 @@ error. See `PRINCIPLES.md` §*Indexes drift where the work is not*.
 | IH-2 | Three of four CM/ops quadrants rendered distinctly | open |
 | IH-3 | `tactical_events.severity` mixes two vocabularies | open |
 | IH-4 | Tier identity answered by URL, not asserted | open |
-| IH-5 | Most-derived value carries weakest provenance | open |
-| IH-6 | Horizon renders as a bare duration, no basis | open |
+| IH-5 | Most-derived value carries weakest provenance | **fixed 2026-08-12** |
+| IH-6 | Horizon renders as a bare duration, no basis | **fixed 2026-08-12** |
 
 ### AE — capability-envelope gaps (`ADR-0038`)
 
@@ -191,9 +230,11 @@ mechanical check above, and the reason this file does not restate content.
   are indexed, because only they can be checked mechanically. Anything
   worth tracking should therefore *earn an ID in a register*, and this
   boundary is the incentive to give it one.
-- **Statuses are not verified here.** The check above proves a row exists,
-  not that `open` is still true. A row marked open that was quietly fixed
-  will not be caught by any command in this file.
+- **Statuses are not verified here.** The checks prove a row exists, not
+  that `open` is still true. A row marked open that was quietly fixed will
+  not be caught by any command in this file — **and this has already
+  happened once, to `IH-5`/`IH-6`, three days after the caveat was
+  written.** See §*The third check does not exist*.
 - **`PLAN-*` documents' open steps** — they carry their own sequencing and
   are not follow-ups in the register sense.
 - **Anything outside `openddil-contracts/decisions/`.** Follow-ups recorded
