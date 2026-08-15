@@ -27,6 +27,101 @@ enum Severity {
   SEVERITY_CRITICAL    = 4; // Grounds the asset; not mission capable
 }
 
+// =============================================================================
+// Advisory provenance — ADR-0038 C4
+// =============================================================================
+// `recommended_action` is an ADVISORY: a recommended action attached to an
+// assessed condition (ISO 13374 block 6). It shipped for a long time as a
+// bare string with no producer, version, or basis, which meant "why was this
+// advised?" was answerable only by reading the generating code at whichever
+// revision happened to be deployed.
+//
+// Advisories are a STRICTER provenance case than detections. A detection that
+// is wrong produces a misleading display, which display-honesty rules can
+// bound. An advisory that is wrong produces an ACTION. So this mirrors
+// ADR-0034's detection stamp {producer, version, config_hash,
+// model_artifact_hash} and adds what actionable output additionally needs:
+// what produced it, what it read, and — explicitly — WHAT IT DOES NOT CLAIM.
+
+// How the advisory was produced. Distinguishes machine-generated advice from
+// human-authored advice, which previously could only be inferred from which
+// list a discrepancy sat in (`discrepancies` vs `manual_discrepancies`).
+enum AdvisoryBasis {
+  ADVISORY_BASIS_UNSPECIFIED = 0; // No claim — pre-provenance rows decode here
+  ADVISORY_BASIS_RULE        = 1; // Deterministic rule over declared inputs
+  ADVISORY_BASIS_MODEL       = 2; // Statistical / ML inference
+  ADVISORY_BASIS_HUMAN       = 3; // Authored by a person
+}
+
+// What a confidence value MEANS. Carried alongside `confidence` because an
+// asserted floor, a regression fit quality and a calibrated probability are
+// different quantities on different scales — 0.2 means something different in
+// each, and a consumer comparing across producers would otherwise be
+// comparing incomparable numbers with no way to detect it.
+// See ADR-0020 §Confidence staircase. That ADR left the general home for this
+// concept open; this enum is advisory-scoped and is expected to generalize
+// (or be replaced by a shared one) when computed confidence lands.
+enum ConfidenceKind {
+  CONFIDENCE_KIND_UNSPECIFIED = 0; // No confidence claim is being made
+  CONFIDENCE_KIND_ASSERTED    = 1; // A floor chosen by an author, not computed
+  CONFIDENCE_KIND_FIT_QUALITY = 2; // Derived from a regression's own fit
+  CONFIDENCE_KIND_CALIBRATED  = 3; // Probability calibrated against outcomes
+}
+
+// What this advisory explicitly does NOT assert. Enumerated rather than free
+// text: a prose disclaimer is the same unprovenanced-string shape this
+// message exists to replace, and cannot be reasoned about by a consumer.
+enum AdvisoryLimitation {
+  ADVISORY_LIMITATION_UNSPECIFIED = 0;
+  // Not a safety-of-use judgment. Does not assert the asset is safe or
+  // unsafe to operate.
+  ADVISORY_LIMITATION_NOT_SAFETY_ASSESSED = 1;
+  // No claim about timing or priority relative to other outstanding work.
+  ADVISORY_LIMITATION_NOT_SCHEDULED = 2;
+  // Does not assert that required parts, tooling or personnel are available.
+  ADVISORY_LIMITATION_NOT_PARTS_CHECKED = 3;
+  // Not an order. The external maintenance system of record creates,
+  // assigns, schedules and closes work; OpenDDIL proposes (ADR-0038 §3).
+  ADVISORY_LIMITATION_NOT_AUTHORITATIVE_ORDER = 4;
+  // Produced from a model or coefficients that have not been validated
+  // against ground truth.
+  ADVISORY_LIMITATION_UNVALIDATED_MODEL = 5;
+}
+
+// Provenance for an advisory. Every field is optional by proto3 default, and
+// an all-zero AdvisoryProvenance is the honest decoding of a pre-provenance
+// row: it claims nothing rather than claiming a default.
+message AdvisoryProvenance {
+  AdvisoryBasis basis = 1;
+
+  // Component or registered unit that produced the advisory, and enough to
+  // identify exactly which logic ran. `producer_version` is the code/rule
+  // revision; `config_hash` covers the configuration it was bound to.
+  string producer         = 2;
+  string producer_version = 3;
+  string config_hash      = 4;
+  // ML advisories only. Mandatory for ADVISORY_BASIS_MODEL — "which weights
+  // produced this" is unanswerable retroactively if not stamped at emission.
+  string model_artifact_hash = 5;
+
+  // The specific rule that fired, where the producer evaluates several.
+  string rule_id = 6;
+  // What the advisory read, as stable identifiers (baseline id, CI slot,
+  // mod id). Not a copy of the values — a pointer at what to re-examine.
+  repeated string inputs = 7;
+
+  // Paired deliberately: a value without its kind is not interpretable.
+  float          confidence      = 8;
+  ConfidenceKind confidence_kind = 9;
+
+  // What this advisory does not claim. Empty means no limitations were
+  // declared — which is itself a weaker statement than an explicit list,
+  // not a claim that none apply.
+  repeated AdvisoryLimitation limitations = 10;
+
+  google.protobuf.Timestamp generated_at = 11;
+}
+
 // A computed gap between the as-maintained and authorized configuration.
 // Discrepancies are recomputed each time AsMaintainedConfiguration is updated.
 // Stable discrepancy_id allows deduplication and tracking across updates.
@@ -42,4 +137,15 @@ message ConfigurationDiscrepancy {
   string related_mod_id = 7;
 
   google.protobuf.Timestamp detected_at = 8;
+
+  // Provenance for `recommended_action` (ADR-0038 C4). Absent on rows
+  // written before this field existed; absence means "no claim", never
+  // "human-authored" or "trusted".
+  //
+  // NOTE FOR ANYONE EDITING THIS MESSAGE: this proto DOCUMENTS the
+  // asset-cm-state path, it is not that path's contract. The wire shape is
+  // cm-service's DiscrepancyRecord dataclass via dataclasses.asdict. A
+  // proto-only change here ships a no-op that passes every check. See
+  // ADR-0018 §Amendment 2026-08-15 for the five sites an edit requires.
+  AdvisoryProvenance advisory_provenance = 9;
 }

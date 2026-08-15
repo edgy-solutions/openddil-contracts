@@ -105,6 +105,34 @@ check that was skipped.
   every case passes. State the medium a suite exercises next to its pass
   count.
 
+- **A suite you have not watched START is not a suite.** Clause 3 says a
+  guard is not evidence until it has been seen to *fail*. This is the
+  weaker precondition it assumed: seen to **run**. *Earned 2026-08-15:*
+  `openddil-cm-service/src/tests/test_baselines.py` declared
+  `def test_customer-overlay_...`. A hyphen is illegal in a Python
+  identifier, so the module raised `SyntaxError` **at collection** — and
+  pytest **aborts the entire run** on a collection error rather than
+  skipping the file. Committed 2026-06-04, found only because C4(a)
+  required running the suite to verify a change.
+  **Scope, established rather than assumed:** all **four** files under
+  `src/tests` (`test_analyzer`, `test_asset_cm`, `test_baselines`,
+  `test_persistence_model`) had not executed via the documented command —
+  `pytest` from the repo root, per that repo's own `AGENTS.md` — for over
+  two months. Not one file: the suite. **And no CI job invokes them.**
+  cm-service's only workflow is a 57-line build-and-publish
+  (`docker-build.yml`: checkout, buildx, login, tags, build), the
+  Dockerfile has no test stage, and the two sibling Python services carry
+  the same single workflow. Sibling suites collect cleanly, so the defect
+  was local; the *exposure* was not.
+  **The precise failure mode is worth separating from the obvious one.**
+  There was no false green — there was **no signal at all**. Nothing was
+  relying on a passing CI run of a suite that could not start, because
+  nothing ran it. The failure was that the only thing standing between a
+  dead suite and a human was a human doing the documented thing and
+  reading an unfamiliar collection error as environmental. *Enforcement:
+  a suite's pass count is part of its result — "67 passed" is evidence,
+  "tests pass" is not, because the second is equally true of zero tests.*
+
 *The shared shape is this ADR's own thesis turned on verification
 itself:* both are instruments whose failure reading is indistinguishable
 from their success reading, which is why they belong here rather than in
