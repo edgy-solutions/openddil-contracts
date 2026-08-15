@@ -372,6 +372,57 @@ established and predates this ADR. The gap is the absence of a **gate** —
 a named point where it is applied to this artifact class — not the
 absence of the rule.
 
+**VE-8 — No CI job runs any Python test suite.** *(Logged 2026-08-15,
+the condition behind the dead-suite named limit above. Not fixed — it
+touches three repos' CI and sits outside C4's box.)*
+
+The four dead files in cm-service were the **symptom**; the missing test
+step is the **condition**. All three Python service repos —
+`openddil-cm-service`, `openddil-logistics-fusion-service`,
+`openddil-projector` — carry exactly one workflow, `docker-build.yml`
+(56–58 lines: checkout, buildx, login, compute tags, build). No test
+step, and no test stage in any of the three Dockerfiles. Their suites run
+only when a human runs them.
+
+**The sharp part is that the pattern already exists in this project.**
+This is not a repo-wide absence of CI discipline that would need
+inventing:
+
+| Repo | Checks workflow | Runs |
+|---|---|---|
+| `openddil-demo` | `frontend-checks.yml` | `tsc --noEmit`, `npm test`, `npm run lint` in separate jobs |
+| `openddil-demo` | `playwright-integration.yml` | integration suite |
+| `openddil-contracts` | `contract-injection.yml`, `decision-indexes.yml` | contract + index checks |
+| `openddil-stack` | `schema-checks.yml` | schema checks |
+
+So the frontend cannot merge a type error or a failing unit test, and the
+Python services — which hold the fusion evaluators, the CM analyzer, and
+the projector handlers — can. **Three repos were never brought into a
+discipline the project already practises**, which is a narrower and more
+fixable statement than "the project lacks CI tests."
+
+*Consequence, stated precisely:* today this produces **no false green** —
+nothing claims those suites pass, because nothing runs them. The exposure
+is that a collection error, a broken import, or a genuinely failing test
+in any of the three is invisible until a human happens to run pytest, and
+the cm-service instance shows that gap can stay open for **two months**.
+Sibling suites collect cleanly today (projector 63 collected, fusion 76
+passing), so this is a latent exposure rather than a live defect.
+
+*Fix shape:* a `python-checks.yml` per service mirroring
+`frontend-checks.yml` — `pytest` with the pass count visible in the log,
+plus whatever lint the repo already declares. A test stage in the
+Dockerfile is the alternative and is worse for this purpose: it couples
+test results to image builds and hides the pass count inside build
+output. Each repo needs its `PYTHONPATH` for the generated contracts
+stubs, which is the only non-trivial part and is already solved in the
+services' own docs.
+
+*Related:* VE-2 (the suite emits no durable artifact) is the same
+material one step further on — even once CI runs these, a passing run
+still produces only console output. Fixing VE-8 without VE-2 gives a
+signal that exists but cannot be cited.
+
 ## Consequences
 
 **Pros**
