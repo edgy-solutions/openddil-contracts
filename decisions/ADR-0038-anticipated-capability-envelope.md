@@ -327,6 +327,8 @@ machinery to do it accidentally is being built.
 
 ## 7. Registered gaps — where the architecture is already awkward
 
+`Status: fixed 2026-08-12`
+
 **AE-1 — ADR-0011 claimed a capability the system does not have.**
 **RESOLVED 2026-08-12 — both halves.** The row is kept rather than
 deleted, per the registry discipline: the record of what *was* claimed is
@@ -362,6 +364,8 @@ feedback vector were never affected.
 anticipated (§3) and constrained (C1, C2, C4), which is a different
 status from claimed.
 
+`Status: open`
+
 **AE-2 — Machine-generated advisories already ship with no provenance.**
 **CORRECTED 2026-08-12 by AUDIT-2026-08-12 F1.** As first published this
 row said the only recommendation-shaped field was
@@ -393,8 +397,12 @@ units make advisory production configurable.
 string that already means the right thing in English is a strong
 attractor. It attracted before this ADR was written.
 
+`Status: open`
+
 **AE-3 — Supply-only.** No demand model of any kind exists, named in §4,
 deliberately not designed.
+
+`Status: open`
 
 **AE-4 — The horizon exists; the uncertainty band does not.**
 **CORRECTED 2026-08-12 by AUDIT-2026-08-12 F2/F3.** As first published
@@ -423,12 +431,16 @@ a validity claim unvalidated coefficients cannot support. That argument
 now applies to something already on screen rather than to something
 anticipated, which makes it more urgent rather than less.
 
+`Status: open`
+
 **AE-5 — GD-10 is a prerequisite for §4 as well as for munitions work.**
 The capability-item shape is undeclared, defined de facto by whichever
 deployment integrated first. A feasibility answer counts consumables;
 counting on an unowned shape inherits its fragility. GD-10 already names
 itself a hard prerequisite of stockpile work; this records a second
 dependent.
+
+`Status: open`
 
 **AE-6 — Diagnosis is absent and is not on this list.** Block 4 is partial
 for want of fault-cause attribution, and no anticipated-capability entry

@@ -213,6 +213,8 @@ Per this project's discipline, positions the system does **not** yet
 hold are registered here rather than written as if they were true.
 Each is a real, currently-open divergence from the rule above.
 
+`Status: open`
+
 **IH-1 — Pre-sync buffer tile renders a plausible zero.**
 `Header.tsx:112` (and its `HqHeader` / `RegionalHeader` twins) computes
 `const lag = status?.bridge_group_lag ?? 0`. Before the first Electric
@@ -223,6 +225,8 @@ is precisely class 2, in the same component whose sentinel handling is
 otherwise correct. *Fix shape: a third render state for "no reading
 yet", distinct from both `—` (probe down) and a number.* Not fixed here.
 
+`Status: open`
+
 **IH-2 — The CM-red / ops-green quadrant has no first-class rendering.**
 The `DEGRADED` cap in `rules.py` (2026-07-14) is an interim measure that
 keeps the CM factor from overclaiming, at the cost of collapsing
@@ -232,6 +236,8 @@ domain and has no enum value; the follow-up is an explicit
 `OPERATING_WITH_CM_WAIVER` value so the quadrant is first-class at every
 tier. **This ADR does not claim the four quadrants are rendered
 distinctly today. Three of four are.**
+
+`Status: open`
 
 **IH-3 — `tactical_events.severity` mixes two vocabularies in one
 column.** `handlers/tactical_events.py::_SEVERITY_KEYS` extracts, in
@@ -245,6 +251,8 @@ compare. This is class 6 at the storage layer rather than the render
 layer, which is why it survived a render-layer sweep. *Fix shape: carry
 the producing axis alongside the value, or normalize at extraction.*
 Not fixed here.
+
+`Status: fixed 2026-08-12`
 
 **IH-5 — The most-derived value in the system carries the weakest
 provenance.** *(AUDIT-2026-08-12 F4. Producer-side; distinct from IH-6,
@@ -287,6 +295,8 @@ on `origin == 0` vs `ORIGIN_DERIVED == 2`, which is precisely the state it
 exists to prevent recurring. `origin` is asserted by identity rather than
 truthiness, since `ORIGIN_UNSPECIFIED` is `0` and a truthiness check would
 fail open on exactly the case that matters. 76 tests pass.
+
+`Status: fixed 2026-08-12`
 
 **IH-6 — A horizon renders as a bare duration with no basis.**
 *(AUDIT-2026-08-12 F3. Render-side; the consequence of IH-5.)*
@@ -335,6 +345,8 @@ person to touch the badge will meet it.
 *Also confirmed:* `constraining_factors` persists as JSONB, so the stamp
 reaches the UI with **no projector or schema change** — the fix is one
 producer line, one helper, one badge.
+
+`Status: open`
 
 **IH-4 — "Which tier am I looking at?" is answered by the URL, not by
 the surface.** With three fixed views (GD-04) and the tier-presentation

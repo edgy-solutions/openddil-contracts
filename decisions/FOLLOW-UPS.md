@@ -37,14 +37,22 @@ copy in the workflow are two things to keep in sync, and keeping two copies
 of a drift-detector in sync is the drift it was written to detect. The
 script is the single copy; this section points at it.
 
-It runs **two** checks — every ID has a row and every row is a real ID; and
-every document is referenced by `README.md`. Failure prints the specific IDs
-or filenames. A mismatch means the corpus moved and this file did not, which
-is information, not an error.
+It runs **four** checks:
 
-*Both were verified by being made to fail* — a deleted row, an unindexed
-document, and a phantom ID each produce the expected message and exit 1. A
-check never seen red proves nothing about what it would catch.
+1. every register ID has a row here, and every row is a real ID;
+2. every document in `decisions/` is referenced by `README.md`;
+3. every row's status **matches its home document's declared token**, by
+   exact string;
+4. every row's home **has** a token — so a missing one fails loudly instead
+   of dropping out of check 3.
+
+Failure prints the specific IDs or filenames. A mismatch means the corpus
+moved and this file did not, which is information, not an error.
+
+*All four were verified by being made to fail* — a deleted row, an unindexed
+document, a phantom ID, a disagreeing status in each register shape, and a
+deleted token each produce the expected message and exit 1. A check never
+seen red proves nothing about what it would catch.
 
 > **The script's `grep -v FOLLOW-UPS.md` is load-bearing, not tidiness.**
 > The obvious form scans `*.md`, which includes *this file* — so every ID
@@ -73,9 +81,22 @@ judgement, both run in under a second, and both failed silently for weeks
 under a team that is demonstrably careful about exactly this class of error.
 See `PRINCIPLES.md` §*Indexes drift where the work is not*.
 
-### The third check does not exist, and that is a finding
+### Checks 3 and 4 — status, and why they took a detour
 
-**Status drift is real and is NOT mechanically checkable as things stand.**
+**Status drift is now checked exactly**, because status is **declared**
+rather than inferred. Every row carries a token — the Status *column* in the
+`GD` table, a `` `Status: …` `` line above the heading in the prose registers
+— and the script compares index against home by exact string. Check 4 exists
+so a row with **no** token cannot drop out of that comparison silently;
+absence answering as agreement is the disease this tooling exists to fight,
+and it would have been an ignominious way to reintroduce it.
+
+**A green status check means the index AGREES with the home. It does not
+mean either is true.** The script prints that line itself, every run, so the
+distinction survives being read by someone in a hurry.
+
+The route here is the part worth keeping, because the first two attempts
+both *looked* like they worked:
 
 This file shipped 2026-08-12 marking `IH-5` and `IH-6` **open**. Both had
 been **fixed the same day**, in a parallel session, and the index was built
@@ -94,23 +115,25 @@ not work:
   negative** — it caught `IH-6` and missed `IH-5`, whose `FIXED` marker sits
   25 lines under its heading.
 
-**There is no correct window**, because register blocks vary in length. A
+**There was no correct window**, because register blocks vary in length. A
 check tuned until it passes is a check whose green means nothing — the
-decorative-guard failure, arriving in the third checker in three days.
+decorative-guard failure, arriving in the third checker in three days. So
+the heuristic was **rejected rather than improved**, and the property it was
+trying to reconstruct was declared instead.
 
-**The real fix is to stop inferring status from prose and declare it.** If
-every register row carried an explicit machine-readable token —
-`**Status:** open` / `fixed <date>` / `parked` — on its definition line, the
-comparison becomes exact and the heuristic disappears.
-
-*Note what that is:* inferring status by pattern-matching prose is the
-**same disease as inferring asset class from publishing behaviour**
+*Note what the detour was:* inferring status by pattern-matching prose is
+the **same disease as inferring asset class from publishing behaviour**
 (**GD-11**) or absence from a zero (**GD-12**) — a property nothing
-declares, reconstructed downstream from a correlate that mostly works.
-Declared-vs-inferred, arriving in our own tooling. **Not done here** — it
-is a change to every register row and belongs to whoever schedules the CI
-work above, but it is the reason not to paper over this with a smarter
-regex.
+declares, reconstructed downstream from a correlate that mostly works. It is
+the family's fourth instance and its first inside this project's own
+tooling. The fix is the one those rows also demand: **declare the property.**
+
+*One implementation note that nearly went wrong.* The tokens were first
+inserted *after* each row's bolded heading, which split sentences wherever
+prose continued on the heading's closing line — the anchor was structurally
+wrong, not merely misplaced. They now sit on their own line **above** the
+heading, where nothing can be split. Verified by diffing: the change is
+**purely additive**, no existing line altered.
 
 ---
 
@@ -127,8 +150,8 @@ regex.
 | GD-05 | `region_top_factors` is non-composable (top-N truncation) | open |
 | GD-06 | Tree-only data flow; no lateral peer links | open |
 | GD-07 | All three analytics planes hardcoded | open |
-| GD-08 | Detection centralized at root, reaching downward | **in-arc (Arc 1)** |
-| GD-09 | Bare-name alias Services | **resolved (0.1.40)** |
+| GD-08 | Detection centralized at root, reaching downward | in-arc Arc 1 |
+| GD-09 | Bare-name alias Services | fixed 2026-08-08 |
 | GD-10 | Capability-item shape undeclared | open |
 | GD-11 | Asset class inferred from one feed's behaviour | open |
 | GD-12 | Absence conventions declared only in the consumer | open |
@@ -165,14 +188,14 @@ regex.
 | IH-2 | Three of four CM/ops quadrants rendered distinctly | open |
 | IH-3 | `tactical_events.severity` mixes two vocabularies | open |
 | IH-4 | Tier identity answered by URL, not asserted | open |
-| IH-5 | Most-derived value carries weakest provenance | **fixed 2026-08-12** |
-| IH-6 | Horizon renders as a bare duration, no basis | **fixed 2026-08-12** |
+| IH-5 | Most-derived value carries weakest provenance | fixed 2026-08-12 |
+| IH-6 | Horizon renders as a bare duration, no basis | fixed 2026-08-12 |
 
 ### AE — capability-envelope gaps (`ADR-0038`)
 
 | ID | Subject | Status |
 |---|---|---|
-| AE-1 | ADR-0011 claimed work-order generation | **resolved 2026-08-12** |
+| AE-1 | ADR-0011 claimed work-order generation | fixed 2026-08-12 |
 | AE-2 | Machine advisories ship with no provenance | open |
 | AE-3 | Supply-only — no demand model | open |
 | AE-4 | Horizon exists; uncertainty band does not | open |

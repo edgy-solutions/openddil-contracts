@@ -172,6 +172,8 @@ unusual level of rigour.
 Open rows. Each is a mode that would currently pass unnoticed, or whose
 detection is weaker than the claim it supports.
 
+`Status: open`
+
 **UD-1 — The severance detector depends on the uplink whose loss it
 detects.** `edge_buffer_monitor._probe_hq_link_severed` reads the
 toxiproxy API at a **root-tier** service. Its companion lag probe reads
@@ -186,6 +188,8 @@ as an open failure mode. *Fix shape: derive the severed state from local
 observables (bridge produce failures, lag derivative) rather than from a
 remote control-plane read.*
 
+`Status: open`
+
 **UD-2 — No classification in the severance inventory has been observed
 under an actual sever.** The `TBC`/`TBB`/`NT` table is a reading of
 charts and source. It is almost certainly right and it is not evidence.
@@ -193,6 +197,8 @@ The pilot runbook's rung (iii) produces the first real observation, for
 **one** service set at **one** site. *Closing shape: fleet rollout
 re-runs the ladder per site; until then the table's status is "derived",
 and it says so.*
+
+`Status: open`
 
 **UD-3 — Egress and overlay components are outside every tolerance
 sweep.** Deployment-overlay components are not core chart, were excluded
@@ -202,10 +208,14 @@ currently unknown rather than known-good. *Closing shape: the same table,
 run over the overlay's component classes via the public manifest, so the
 sweep is expressible without naming private material.*
 
+`Status: open`
+
 **UD-4 — A pre-sync zero on the buffer tile.** ADR-0035 IH-1, restated
 here because its *cause* is instrument-side: the surface has no way to
 distinguish "no reading yet" from "a reading of zero" because nothing
 distinguishes them in what it receives before the first shape sync.
+
+`Status: open`
 
 **UD-5 — Middleware-participation health has no observable yet.**
 ADR-0030 records the DDS class's characteristic trap as an architectural
@@ -215,6 +225,8 @@ data flow alone is not a health signal. The requirement is recorded; the
 observable does not exist, because the participation sidecar does not
 exist. Registered so the sidecar cannot ship without it and call the
 silence nominal.
+
+`Status: open`
 
 **UD-7 — A resource failure can manifest on a component that did not cause
 it.** *(Found 2026-08-12; the chart instance is fixed, the class is not.)*
@@ -254,6 +266,8 @@ adds the branch** — the new code is all additions, and the constraint that
 disappeared lived in the path not taken. Any conditional that substitutes
 one mechanism for another should be read for *what the replaced path was
 carrying*, not only for what the new path does.
+
+`Status: open`
 
 **UD-6 — Undetected-failure coverage is itself unaudited.** This register
 was assembled from known findings, not from a systematic pass over the

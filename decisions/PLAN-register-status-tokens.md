@@ -1,9 +1,22 @@
 # Plan — declared status tokens on register rows
 
-**Date:** 2026-08-15 · **Status: SCHEDULED, boxed, not started.** Mechanical
-work with a known shape and a known size. Boxed rather than left as a
-register row because **it has a decay term**: every row added before the
-tokens exist is another row to retrofit.
+**Date:** 2026-08-15 · **Status: EXECUTED 2026-08-15.** All 38 rows carry a
+token; checks 3 and 4 are live in `check-decision-indexes.sh` and CI. Kept
+rather than deleted — the record of why the heuristic was rejected is the
+useful part, and the grammar below is the reference for every row added
+from now on.
+
+> ### Acceptance criterion, and the thing not to over-read
+>
+> **A green status check means the index AGREES with its home. It does not
+> mean either is true.** The script prints that sentence on every clean run,
+> deliberately, so the distinction survives a hurried reader.
+>
+> The only pass that touched reality was step 1 — reading all 38 blocks to
+> determine each status from the home document rather than copying the
+> index's view. That pass **re-established the home as authority**, which
+> mattered because the index had already been wrong once (`IH-5`/`IH-6`).
+> Nothing in CI can repeat it, and nothing in CI claims to.
 
 ## The problem, stated once
 
@@ -66,21 +79,37 @@ follow-ups, and they have no status axis), and `X-1..X-8` in the exchange
 ledger (already a table with a status column; revisit only if a check ever
 needs to consume it).
 
-## Steps
+## Steps — all executed 2026-08-15
 
-1. **Add the token to all 38 rows**, reading each block to determine its
-   current status rather than copying `FOLLOW-UPS.md`'s view. *The index is
-   a pointer and has already been wrong once; the home document is the
-   authority and this is the pass that re-establishes it.*
-2. **Extend `check-decision-indexes.sh`** with check 3: for every row, the
-   index's status must equal the home's token. Exact string comparison — no
-   window, no heuristic.
-3. **Verify by making it fail** — flip one token, confirm the specific row
-   is named and the exit code is 1, restore. Per ADR-0037 clause 3.
-4. **Add a fourth check**: every register ID *has* a token. Without it, a
-   new row with no token is invisible to check 3 — absence answering as
-   agreement, which is the whole silent-absence family and would be an
-   embarrassing way to reintroduce it here.
+1. ✅ **Token on all 38 rows**, each status read from its home block rather
+   than copied from `FOLLOW-UPS.md`. Result: 33 `open`, 3 `fixed 2026-08-12`
+   (`IH-5`, `IH-6`, `AE-1`), 1 `fixed 2026-08-08` (`GD-09`), 1 `in-arc Arc 1`
+   (`GD-08`).
+2. ✅ **Checks 3 and 4 in `check-decision-indexes.sh`** — exact string
+   comparison over two extractors (GD table column; prose `Status:` line),
+   no window, nothing to tune.
+3. ✅ **Verified by making each fail**: a prose-register disagreement, a GD
+   table disagreement, a deleted token, and two simultaneous disagreements.
+   Each names the specific row and exits 1; the tree was restored clean
+   after each.
+4. ✅ Check 4 shipped with 3, not after — see the acceptance note above.
+
+### Two things that went wrong, kept because they are the useful part
+
+**The token's anchor was structurally wrong on the first attempt.** Inserting
+*after* each bolded heading split sentences wherever prose continued on the
+heading's closing line — `UD-1` and `IH-5` both broke mid-clause. Reverted
+and re-anchored **above** the heading, where nothing can be split, then
+confirmed by diff that the change is **purely additive**: no pre-existing
+line altered anywhere in four documents. *A "mechanical" edit across 26
+prose blocks is only mechanical if the anchor holds for every block shape,
+and headings that wrap are a different shape.*
+
+**`grep -P` is unavailable in this environment's locale**, so the first
+implementation of checks 3–4 emitted a `-P supports only unibyte and UTF-8
+locales` error **on every line** while still reporting failures — noise that
+looked like the check working. Replaced with a single `awk` pass doing exact
+field comparison, which is both portable and simpler than what it replaced.
 
 ## Cost, and what makes it worth a box
 

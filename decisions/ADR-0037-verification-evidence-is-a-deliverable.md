@@ -236,6 +236,8 @@ write-side rule that prevents the misread.
 
 Where the position above is not yet the practice.
 
+`Status: open`
+
 **VE-1 — There is no index of evidence.** Findings live in
 `decisions/`, procedures in the helm repo, test suites per service,
 measured pairs inline in whatever document happened to record them, and
@@ -247,6 +249,8 @@ was created to solve one layer over. *Fix shape: one index in
 `decisions/`, one row per artifact, pointing outward — not a copy of the
 evidence.*
 
+`Status: open`
+
 **VE-2 — The test suite produces no durable artifact.**
 `tests/hero_scenario_v3/run_all.py` invokes each test as a subprocess,
 prints a summary, and exits 0/1. There is no written report: no per-test
@@ -257,6 +261,8 @@ document cites nothing. *Fix shape: emit a structured run record —
 per-test outcome, duration, skip reason, chart/image versions — as a file
 the run's report can point at.*
 
+`Status: open`
+
 **VE-3 — Recordings have no declared home.** The pilot runbook makes the
 rung (iii) recording a deliverable and §6 asks the operator to return it,
 but nothing states where it lives afterwards, how it is named, or what it
@@ -265,6 +271,8 @@ retention policy of "whoever has the file". *Fix shape: name the location
 and the naming convention in the runbook itself, so the step that
 produces the artifact also places it.*
 
+`Status: open`
+
 **VE-4 — Chart self-description is checked by hand.** The enforcement
 `PRINCIPLES.md` names — diff **rendered object names** against the
 template's stated inventory — is standing practice and is manual. It
@@ -272,6 +280,8 @@ caught two missing components once; nothing prevents the next omission
 except someone remembering to run the diff. *Fix shape: the diff as a
 check that fails loudly, which is also the cheapest instance of clause 3
 (it can be seen red against the known-bad template).*
+
+`Status: open`
 
 **VE-5 — Single-site evidence, fleet-shaped claims.** The severance
 ladder proves one site's behaviour on one chart version. Rollout claims
@@ -283,11 +293,15 @@ its correctly-identified twin. *Fix shape: the ladder is per-site and its
 per-site records are the evidence; the fleet claim is the conjunction of
 them, not an inference from one.*
 
+`Status: open`
+
 **VE-6 — No stated retention or supersession rule.** Findings accumulate;
 none has been superseded yet. When the first one is, there is no
 convention for whether it is amended in place (as ADR-0032 and GD-09
 were) or replaced. The amend-in-place precedent is good and is currently
 a habit rather than a rule.
+
+`Status: open`
 
 **VE-7 — Evidence artifacts have no sanitization gate.** This is the row
 the Consequences section below gestures at, and it is the one gap this
