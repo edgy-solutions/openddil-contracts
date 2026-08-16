@@ -133,6 +133,17 @@ check that was skipped.
   a suite's pass count is part of its result — "67 passed" is evidence,
   "tests pass" is not, because the second is equally true of zero tests.*
 
+- **A green mutation run proves nothing about the guard.** The fourth way
+  a check reads green and is empty, and the only one where the emptiness
+  is in the *verification of the verification*. The three above are
+  checks that ran and proved less than assumed; this is a **red-check
+  that failed to be a check**, and it is more dangerous because it is
+  performed by someone deliberately being rigorous. *Earned 2026-08-15:*
+  a mutation intended to break an integer-enum decoder left all 18 tests
+  green, because the mutated form fell through the lookup to `null` —
+  the right answer for the wrong reason. Full case and the enforcement
+  rule in **clause 3**, which this entry points at rather than restates.
+
 *The shared shape is this ADR's own thesis turned on verification
 itself:* both are instruments whose failure reading is indistinguishable
 from their success reading, which is why they belong here rather than in
@@ -163,6 +174,34 @@ checks share an author and a vocabulary, the check inherits the author's
 blind spot — so prefer a second check written against a **different
 representation** (parse vs. text, count vs. presence) over a more careful
 version of the same one.
+
+**The rule as stated is incomplete, and the missing half is the injected
+fault.** *"Run it red"* silently assumes the failure you inject is the
+failure you fear. It often is not, and then **a green run is evidence
+about the mutation before it is evidence about the guard.** Stated as a
+rule: a red run proves something only if the injected fault *models the
+defect*; a green run means either the guard is weak **or the mutation was
+wrong**, and those are not distinguishable without looking.
+
+*Earned 2026-08-15, applying this very clause.* The C4(b) guard asserts
+that a badge decodes an **integer** enum, because the JSON path carries
+`basis: 1` while the protobuf path carries string names — comparing the
+two is silently falsy and the badge would vanish for every real row. To
+red-check it, the guard clause was swapped for a truthiness test. **All
+18 tests stayed green** — not because the guard was weak, but because a
+string key misses the lookup table and falls through to `null` anyway:
+*right answer, wrong reason*. The mutation that actually models the
+defect is keying the lookup table by string names, and against that
+**six tests fail.**
+
+Had the first result been accepted, the conclusion would have been
+"verified" and the reasoning would have been backwards.
+
+*Enforcement:* name the defect first, then write the mutation that
+produces it, then check the mutation actually produces it. A mutation
+that leaves everything green has failed to be a test of the guard and
+must be replaced before any conclusion is drawn from it. **A green
+mutation run is not a weak signal about the guard; it is no signal.**
 
 **The limiting case — a verification that includes its own subject in its
 evidence is not a verification.** Where the check *cannot* be seen red by

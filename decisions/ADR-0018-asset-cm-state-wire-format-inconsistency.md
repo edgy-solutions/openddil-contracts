@@ -249,6 +249,48 @@ quietly.
 case: the CloudEvents envelope *is* the intended wire format, not a
 divergence from one.
 
+### It reaches the presentation layer too — the reader split
+
+*Added 2026-08-15, from ADR-0038 C4(b). The amendment above anticipated
+this deferral costing an **editor** of the proto; it also costs a
+**consumer**, one layer further out than expected.*
+
+The same conceptual question — *"what produced this value?"* — now needs
+**two different readers in the frontend**, and the difference is entirely
+an artifact of this ADR's deferral:
+
+| Path | Field | Wire form | Why |
+|---|---|---|---|
+| `asset-logistics-status` | `origin` | **string name** (`ORIGIN_DERIVED`) | projector decodes protobuf; enum names survive |
+| `asset-cm-state` | `basis` | **integer** (`1`) | JSON from `dataclasses.asdict`; projector stores nested lists as JSONB **verbatim**, and only *top-level* enum columns are mapped back to names |
+
+So `lib/valueBasis.ts` carries `describeBasis()` for the first and
+`describeAdvisory()` for the second. They answer the same question about
+the same class of thing and cannot share an implementation.
+
+**The failure mode is silent, which is why it belongs in this record
+rather than in a code comment.** Comparing `basis: 1` against
+`'ADVISORY_BASIS_RULE'` is simply falsy — no error, no warning, no type
+complaint at the JSONB boundary where everything is `any`. The badge
+would render for zero rows and the panel would look exactly like a panel
+whose data has no provenance yet, which is the state it was in the day
+before. **A regression here is indistinguishable from the pre-feature
+state**, so it would have been found by someone wondering why a feature
+they remembered shipping was not visible.
+
+Guarded by an explicit test asserting integer decoding *and* asserting
+that a string name does **not** decode — the second half being the one
+that catches a future author reasonably assuming both paths behave alike.
+
+*The generalizable point, and the reason to record it here:* a deferred
+wire-format inconsistency does not stay at the wire. It propagates to
+every layer that has to read both paths, and it arrives there **as an
+asymmetry with no local explanation** — a frontend author sees two enum
+representations and no reason for either. Each layer it reaches pays a
+small tax and, more expensively, acquires a place where the obvious
+assumption is wrong. That cost is not visible from the topic, which is
+where the deferral was decided.
+
 ### Migration trigger — fired, assessed, still deferred
 
 The original ADR lists *"a future phase modifies `openddil-cm-service`
