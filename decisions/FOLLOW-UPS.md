@@ -179,6 +179,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | VE-5 | Single-site evidence behind fleet-shaped claims | open |
 | VE-6 | No supersession rule | open |
 | VE-7 | Evidence artifacts have no sanitization gate | open |
+| VE-8 | No CI job runs any Python test suite | open |
 
 ### IH — information-honesty divergences (`ADR-0035`)
 

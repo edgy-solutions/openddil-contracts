@@ -1,8 +1,23 @@
 # ADR-0011: Strategic Sustainment Tool Positioning
 
 ## Status
-Accepted. **Amended 2026-08-12** — one capability claim corrected; the
-positioning decision is unchanged. See [Amendment](#amendment-2026-08-12).
+Accepted, **narrowed**. **Amended 2026-08-12** — one capability claim
+corrected; the positioning decision is unchanged. See
+[Amendment](#amendment-2026-08-12).
+
+**Superseded as the primary positioning statement 2026-08-15 by
+[ADR-0039](ADR-0039-bridging-tactical-and-sustainment-planes.md).** This
+ADR remains valid and in force on its own narrower question — *how does
+OpenDDIL relate to commercial strategic sustainment modelling tools* —
+and its answer (Position B, adjacent/complementary) is unchanged. It is
+no longer the document that answers *what is OpenDDIL for*. Read ADR-0039
+first; this one for the strategic-tools question specifically.
+
+*Why the split rather than an expansion:* this ADR was written to settle
+a competitive-positioning question against one class of tool. Stretching
+it to carry the project's primary thesis is what produced the capability
+claim retracted above — a positioning document accumulating assertions it
+was never scoped to support.
 
 ## Context
 The customer is currently using or evaluating commercial off-the-shelf (COTS) strategic sustainment modeling tools for long-term strategic analysis. A clear positioning strategy is needed to define how OpenDDIL relates to these classes of tools in the commercial portfolio, both competitively and architecturally.

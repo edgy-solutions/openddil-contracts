@@ -372,6 +372,8 @@ established and predates this ADR. The gap is the absence of a **gate** —
 a named point where it is applied to this artifact class — not the
 absence of the rule.
 
+`Status: open`
+
 **VE-8 — No CI job runs any Python test suite.** *(Logged 2026-08-15,
 the condition behind the dead-suite named limit above. Not fixed — it
 touches three repos' CI and sits outside C4's box.)*
