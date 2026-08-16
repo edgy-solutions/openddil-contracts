@@ -13,25 +13,62 @@
 # WHAT THESE PROVE, AND WHAT THEY DO NOT
 #   check 1  every register ID has an index row, and every row is a real ID
 #   check 2  every decisions/ document is referenced by README.md
-#   NOT checked: whether a row's STATUS is still true. That is deliberate and
-#   is not an oversight — see PLAN-register-status-tokens.md. Status is
-#   currently prose, and every attempt to infer it by pattern produced both
-#   false positives and false negatives, because register blocks vary in
-#   length so no context window is correct. A check tuned until it passes is
-#   a check whose green means nothing.
+#   check 3  every row's status equals its home's declared token, exactly
+#   check 4  every row's home HAS a token (so check 3 cannot be skipped by
+#            absence — absence answering as agreement is the disease this
+#            tooling exists to fight)
+#
+#   NOT checked: whether a status is TRUE. Check 3 proves the index AGREES
+#   with the home; both can be wrong together. Only a human reading the home
+#   document establishes truth, and the clean-run output says so out loud.
+#
+#   Status is compared, not inferred. It used to be prose, and every attempt
+#   to pattern-match it produced both false positives and false negatives —
+#   register blocks vary in length, so no context window is correct. A check
+#   tuned until it passes is a check whose green means nothing. The fix was
+#   to declare the property, not to write a better regex.
+#   See PLAN-register-status-tokens.md.
 set -uo pipefail
 
 cd "$(dirname "$0")/../decisions" || exit 2
 fail=0
+
+# --- scope, derived rather than listed --------------------------------------
+# REGISTER HOMES are enumerated from the directory. An earlier version named
+# ADR-0035..0038 literally, so a register introduced in ADR-0039+ was invisible
+# to checks 3 and 4 — the third instance in this repo of scope-as-literal-list,
+# after the §7 completeness gate hardcoding its table set and the migration's
+# scope comment. Same fix each time: ASK THE DIRECTORY, not the author's memory
+# of it.
+homes_files=$(ls ADR-*.md GENERALIZATION-DEBT.md 2>/dev/null)
+
+# REGISTER PREFIXES are derived from declaration sites in those homes — both
+# shapes: a bolded heading (`**UD-7 — …`) and a table row (`| **GD-01** |`).
+#
+# Deliberately NOT a generic [A-Z]{2}-[0-9]+ scan over prose. In this domain
+# that pattern also matches platform designations — UH-60, CH-47, AH-64, MQ-9 —
+# and a check that demands an index row for "AH-64" is a false-positive
+# generator whose failures teach people to ignore it. None appear in decisions/
+# today; the point is that they legitimately could.
+#
+# Also deliberately not scanned from PLAN-*/README: PLAN-register-status-
+# tokens.md contains an EXAMPLE row, and an example is not a declaration.
+prefixes=$( { grep -ohE "^\*\*[A-Z]{2}-[0-9]{1,2} —" $homes_files
+              grep -ohE "^\| \*\*[A-Z]{2}-[0-9]{1,2}\*\* \|" $homes_files
+            } 2>/dev/null | grep -oE "[A-Z]{2}" | sort -u | paste -sd'|' -)
+if [ -z "$prefixes" ]; then
+  echo "FAIL: no register prefixes found — the derivation is broken, not the corpus"
+  exit 1
+fi
 
 # --- check 1: IDs <-> index rows -------------------------------------------
 # The `grep -v FOLLOW-UPS.md` is LOAD-BEARING, not tidiness. Scanning *.md
 # would include the index in its own corpus, so every row would vouch for
 # itself and the phantom-row direction could never fail. A verification that
 # includes its own subject in its evidence is not a verification.
-corpus=$(grep -ohE "\b(GD|UD|VE|IH|AE)-[0-9]{1,2}\b" \
+corpus=$(grep -ohE "\b($prefixes)-[0-9]{1,2}\b" \
            $(ls *.md | grep -v '^FOLLOW-UPS.md$') | sort -u)
-rows=$(grep -ohE "^\| (GD|UD|VE|IH|AE)-[0-9]{1,2} " FOLLOW-UPS.md \
+rows=$(grep -ohE "^\| ($prefixes)-[0-9]{1,2} " FOLLOW-UPS.md \
          | tr -d '| ' | sort -u)
 
 missing=$(comm -23 <(echo "$corpus") <(echo "$rows"))
@@ -77,24 +114,27 @@ fi
 #         token. A second token there would be two truths.
 #   others — a `Status: …` line immediately above the row's **ID — heading.
 home_status() {
-  # GD rows: | **GD-01** | … | … | open |
-  sed -nE 's/^\| \*\*(GD-[0-9]{2})\*\* \|.*\| ([^|]*) \|$/\1\t\2/p' GENERALIZATION-DEBT.md \
+  # table-shaped rows: | **GD-01** | … | … | open |
+  sed -nE "s/^\| \*\*(($prefixes)-[0-9]{1,2})\*\* \|.*\| ([^|]*) \|\$/\1\t\3/p" $homes_files \
     | sed -E 's/[[:space:]]+$//'
-  # prose rows: a Status line, then (blank lines), then the heading it labels
-  awk '
+  # prose rows: a `Status: …` line, then the **ID — heading it labels.
+  # `prefixes` is passed in with -v; awk is single-quoted, so a shell variable
+  # written inline here would silently be the literal string '$prefixes' and
+  # match nothing — a scope bug that would look exactly like "no rows found".
+  awk -v pre="$prefixes" '
     /^`Status: / { s=$0; sub(/^`Status: /,"",s); sub(/`$/,"",s); pending=s; next }
-    /^\*\*(UD|VE|IH|AE)-[0-9]+ —/ {
+    $0 ~ "^\\*\\*(" pre ")-[0-9]+ —" {
       if (pending != "") {
-        match($0,/(UD|VE|IH|AE)-[0-9]+/)
+        match($0, "(" pre ")-[0-9]+")
         print substr($0,RSTART,RLENGTH) "\t" pending
         pending=""
       }
     }
-  ' ADR-0035-*.md ADR-0036-*.md ADR-0037-*.md ADR-0038-*.md
+  ' $homes_files
 }
 
 index_status() {
-  sed -nE 's/^\| ((GD|UD|VE|IH|AE)-[0-9]{1,2}) \|.*\| ([^|]*) \|$/\1\t\3/p' FOLLOW-UPS.md \
+  sed -nE "s/^\| (($prefixes)-[0-9]{1,2}) \|.*\| ([^|]*) \|\$/\1\t\3/p" FOLLOW-UPS.md \
     | sed -E 's/[[:space:]]+$//'
 }
 
