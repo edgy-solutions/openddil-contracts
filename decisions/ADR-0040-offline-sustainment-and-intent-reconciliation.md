@@ -163,17 +163,49 @@ system of record.
 
 ## Limits registered rather than assumed
 
-**Intent replay requires a transactional interface on the receiving
-side.** Replaying operations needs the authority to expose operations —
-*consume*, *requisition*, *record maintenance*. Where only database-level
-integration is available, **their model is inherited whatever this ADR
-says**: writing rows is writing rows, and the intent is lost at the
-boundary regardless of how carefully it was preserved up to it. This is a
-**per-system integration constraint, not a design choice**, and it must
-be established per target before the reconciliation design is committed.
-Where it binds, the honest fallback is to keep intent locally for
-diagnosis while accepting row semantics on the wire — worse, but honest
-about being worse.
+**The operations intent replay requires are a declared contract that
+integrators build toward — not a precondition to be discovered.**
+
+*This was first written the other way round, and the framing was wrong.*
+The original text treated "does the receiving system expose a
+transactional interface?" as the open question deciding whether intent
+replay is achievable per target. That assumes OpenDDIL is a passive
+consumer of whatever surface happens to exist. **It is not.** An
+integrator adopting OpenDDIL owns their materiel system and has a reason
+to expose the operations it needs; in practice they will build an
+interface *because* they are integrating, whether or not one existed
+first. **The interface is a deliverable of the integration, not a
+constraint on it.**
+
+So the design question inverts. Rather than *what will they let us call*,
+OpenDDIL **declares the operations intent replay requires** — *consume*,
+*requisition*, *record maintenance*, and whatever else the action
+vocabulary turns out to include — and that declared surface is what
+integrators build toward. Same move this project keeps making: **declared,
+not inferred**, and the declaring side is the one that knows what the
+semantics need to be.
+
+It is also the stronger position. A published intent-replay contract means
+**the reconciliation semantics survive the integration** rather than being
+lost at a boundary someone else shaped. And it is *easier* for the
+integrator: building three or four operation endpoints against a
+documented contract is a smaller, clearer task than being asked to
+reverse-engineer what a correlation layer wants out of row semantics.
+
+**The contract must be modest.** The fewer operations it requires, the
+more systems can implement it — which argues for a small verb set
+**discovered from the action vocabulary** rather than a rich API designed
+up front. A large contract is a large adoption barrier, and this is the
+layer where adoption is the whole point (ADR-0039).
+
+**Degraded mode, not the default case.** Systems where an integrator
+genuinely cannot expose operations do exist — sufficiently legacy, or
+sufficiently locked. Where that binds, the honest fallback is to keep
+intent locally for diagnosis while accepting row semantics on the wire,
+**explicitly labelled as worse**: the conflict-evaporation property of §4
+is lost, and collisions return. Recorded as a degraded mode so a
+deployment can choose it knowingly, rather than as the expected case that
+sets the ceiling for everyone.
 
 **Reconciliation outcomes persist on the intent permanently.** An intent
 that reconciles successfully **keeps its outcome record**; it is not
@@ -225,10 +257,14 @@ Per ADR-0037 §6.
 - **The action vocabulary.** §5's three classes are a shape, not a
   taxonomy. Which actions exist and how each classifies is unexamined and
   requires the operator conversation.
-- **Any receiving system's interface.** Whether a transactional interface
-  exists for any specific target is **the** open question, and it decides
-  whether §4 is achievable or aspirational for that target. Not answerable
-  from this repository.
+- **The contract's verb set is undefined**, pending the action vocabulary.
+  This is the same dependency §5's taxonomy has, on the same conversation:
+  both the classes and the operations are *derived from* the action
+  vocabulary, so neither can be designed before it exists — and once it
+  does, both follow. **Note what this is not:** it is no longer a
+  dependency on anyone's permission or on a survey of existing
+  interfaces. The intent-replay design is not waiting on a system's
+  current shape.
 - **Storage, retention and queue mechanics.** Where intent lives at a
   tier, how long it is kept, and what happens when a site is severed
   longer than retention are all unaddressed.
