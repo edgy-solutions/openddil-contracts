@@ -30,7 +30,7 @@ trusted:
 ```
 
 **Run in CI** on every change to `decisions/` — `.github/workflows/
-decision-indexes.yml`. **38 IDs as of this reconciliation.**
+decision-indexes.yml`. **40 IDs as of this reconciliation.**
 
 *The commands are not repeated here on purpose.* A copy in this file and a
 copy in the workflow are two things to keep in sync, and keeping two copies
@@ -155,6 +155,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | GD-10 | Capability-item shape undeclared | open |
 | GD-11 | Asset class inferred from one feed's behaviour | open |
 | GD-12 | Absence conventions declared only in the consumer | open |
+| GD-13 | Generated protos are not a package; every consumer invents a path | open |
 
 ### UD — undetected failure modes (`ADR-0036`)
 

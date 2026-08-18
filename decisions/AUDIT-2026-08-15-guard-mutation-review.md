@@ -113,3 +113,56 @@ rather than built.
 - `PRINCIPLES.md` §*A guard is not evidence until it has been seen to fail*
   and its limiting case §*a verification that includes its own subject…*
 - **VE-4** — chart self-description checked by hand; F2 widens it.
+
+---
+
+## Update 2026-08-16 — the three unknowns are settled
+
+Each was given a mutation modelling its own defect. **Two guard; one was
+never a guard.**
+
+| Guard | Mutation | Result |
+|---|---|---|
+| `test_persistence_model.py` (cm-service) | Dropped `lifecycle` from `record_to_proto` — silent field loss on the way back to the wire | **Red.** `test_round_trip_preserves_full_state` fails, and only it |
+| `edge_assignment.py` (projector) | Discarded the strategy result so every lookup falls back | **Red.** `test_resolve_for_uses_strategy_then_fallback` fails, and only it |
+| `munitionType.ts` (frontend) | — | **No guard exists.** See F4 |
+
+Both reds name exactly one test and restore clean (67 / 63 passed), which is
+the property that distinguishes a guard from a tripwire: it should fail *for
+its own reason*, not take the suite with it.
+
+## F4 — `munitionType.ts` has no test at all
+
+It was carried in the original table as a *wire-shape guard whose red-check
+was unknown*. That framing was wrong: **there is nothing to red-check.**
+`src/lib/__tests__/` holds nine test files and none imports it, and no test
+anywhere in `src/` references it.
+
+It is not unused code. `extractMunitionType` and `displayMunitionType` are
+imported by **four** components — `HqDigitalTwin`, `MunitionsInventory`,
+`MunitionsLoadoutCard`, `useMunitionsStockpile` — so it is parsing
+producer-supplied strings on four operator-facing surfaces with no coverage.
+
+*Worth separating from the obvious reading:* this is not "someone forgot a
+test." **The unknown was mis-typed as a verification gap when it was a
+coverage gap**, and the two need different responses — one is answered by
+running a mutation, the other by writing the test that the mutation would
+have needed. An audit that asks *"was this red-checked?"* cannot see the
+difference, because both answer "no evidence found".
+
+**Fix shape, not applied:** the same treatment `operationalStatePills.test.ts`
+already gives its enum — pin every input class the parser claims to handle,
+including the unrecognised one, which is where this file's family of defects
+has landed all week.
+
+## The revised distribution
+
+- **Eleven** guards with a defect-modelling red-check (was nine).
+- **One** known-no (C4 badge), unchanged.
+- **Two** that do not exist: the chart acceptance checks (**F2 — now
+  built**, `check-chart-render.sh`) and `munitionType.ts` (**F4 — open**).
+- **Zero** unknowns remaining.
+
+The pattern holds and sharpens: **every gap was something remembered as a
+guard rather than something built as one.** Not one guard that actually
+existed turned out to be weak.
