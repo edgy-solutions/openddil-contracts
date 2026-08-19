@@ -211,11 +211,43 @@ something else — a producer allow-list, an explicit "this feed populates
 appearance" declaration, or a non-zero sentinel bit. Choosing that mechanism
 is part of the work and is **not** decided here.
 
+### The zero-sentinel is valid only for DECLARED sources — required before build
+
+**Recorded 2026-08-19; one paragraph, no build.** The power-plant sentinel
+above (a claim-making entity is never all-zero) works for `dis-sim` **only
+because we control the generator**. It does not generalise, and the reason
+matters:
+
+**The sentinel discriminates among entities that made *some* claim. It
+cannot detect a feed-wide silence.** A third-party DIS producer that
+legitimately never populates appearance is indistinguishable, on the wire,
+from one that set every bit to zero — every entity reads *powered off,
+undamaged*, and nothing in the bits says which situation you are in.
+
+So the mapping requires a **per-source declaration**: *"this feed populates
+appearance."* It is **overlay configuration**, and the asset-class ladder
+applies verbatim:
+
+1. the feed declares it (rare);
+2. the overlay states it as a **deployment assumption with an author and a
+   date** (the normal case);
+3. otherwise the mapping **does not read the bits at all**, and the axis
+   stays honestly `UNSPECIFIED`.
+
+**Absent the declaration, the bits are not read.** That is the gate made
+permanent rather than a one-time measurement — the measurement answered
+*today's* question about *our* generator; the declaration answers it for
+every source, including ones nobody has integrated yet.
+
 *Note the shape.* This is `GD-12` again, one layer out: the wire cannot
 express the difference between "damage: none" and "field not set", so the
 distinction has to be **declared** somewhere rather than inferred from the
 value. Fourth field type to need that, after `Quantity`, `ConsumableState`
-and the operational-state enums.
+and the operational-state enums. **The fourth instance is where a pattern
+stops being a coincidence** — in all four, a wire that cannot distinguish
+*absent* from *a legitimate value* forced the distinction to be declared
+somewhere else, and in all four the cheap local answer was to read the value
+and hope.
 
 *Note what that gate protects against.* Without it, this design would close
 a gap by introducing the exact defect the ADR-0026 amendment was written to

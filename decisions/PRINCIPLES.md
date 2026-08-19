@@ -200,6 +200,40 @@ wearing a table. State the after.
 
 ---
 
+## The sentence that reads most virtuous gets read least critically
+
+**A change that cites the rule it is violating is safer from review than one
+that cites nothing.** A reviewer who sees the citation checks the
+*reasoning* — and the reasoning is usually fine. What goes unchecked is
+whether the **data** the reasoning assumes is actually there.
+
+*Earned 2026-08-19, and only by a measurement that could have been skipped.*
+A DIS appearance-bits mapping was designed against ADR-0026's absence
+convention, correctly, and would have been committed quoting that
+amendment as its authority. The generator hardcodes the appearance field to
+zero, and bits 3–4 of zero decode as *damage: none* → `NOMINAL`. So the
+change would have **manufactured a positive health claim out of a field
+nobody populates — the exact defect the quoted amendment forbids** — and it
+would have arrived wearing the amendment's own words.
+
+**Design correctness and data readiness are independent**, and a citation
+speaks only to the first. The commit message would have been true in every
+sentence and the change still wrong.
+
+*This is the proximity rule inverted.* There, nearness to a claim dulls
+scrutiny of it; here **righteousness** does. Both work by making a reader
+feel the checking has already happened.
+
+*Enforcement:* when a change cites a principle, audit the **inputs** the
+principle assumes, not the argument connecting them. The argument is the
+part the author already checked — it is why they wrote the citation.
+*Related:* §*Narrate what you aligned to, never what you removed* — the kin
+rule, and the reason this one is easy to miss: we already train ourselves to
+write the virtuous-sounding sentence, so we have made the camouflage
+standard practice.
+
+---
+
 ## Similarity is a code claim, not a deployment claim
 
 **Structural similarity verifies at the code layer. Deployment surfaces
