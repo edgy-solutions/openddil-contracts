@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted (2026-05-27).
+Accepted (2026-05-27). **Amended 2026-08-18 — absence is not a factor;
+see §Amendment.** The axes' unspecified value now has a stated
+convention, earned by a field failure and by two components arriving at
+the same wrong default independently.
 
 ## Context
 
@@ -156,6 +159,146 @@ not via a separate FacilityMessage. The customer sim's `Node.type` ==
 discriminator; the Unit-message Bloblang branch handles them
 unchanged. Facility-specific operational state arrives via the same
 3-axis OperationalState block when the source populates it.
+
+## Amendment 2026-08-18 — what an axis means when it says nothing
+
+**The convention, stated once so both consumers can cite it rather than
+re-derive it:**
+
+> **`UNSPECIFIED` on any axis means the source made no claim. It is not a
+> value on that axis — it is the absence of one.**
+>
+> 1. **It never becomes a `ConstrainingFactor`.** Absence does not
+>    constrain the asset; it constrains our knowledge of the asset.
+> 2. **It never folds into an operational category** — not `NOMINAL`, not
+>    `FAULT`, not `DEGRADED`, not any future member. Every one of those is
+>    a claim about the equipment, and there is no claim to make.
+> 3. **A consumer that cannot express "no claim" must not invent one.** It
+>    passes the absence through and lets the layer that *can* express it do
+>    so — today, presentation (clause 4 below).
+> 4. **`NOMINAL` is a positive assertion and must be reached deliberately**,
+>    never by falling through every other branch. A code path where absence
+>    and health share an exit is the defect this amendment names.
+
+### Why clause 1 is settled and not a preference
+
+`_eval_operational_state` emitting **no factor** for `UNSPECIFIED` is
+correct, and the reason is a field failure with a date rather than an
+argument.
+
+`logistics-sim`'s `element_gen.severity_tier()` once treated
+`UNSPECIFIED` health together with `tx_off`/`rx_off` as `FAULT`. On
+**2026-06-24, on the work cluster**, a live feed left `operational_state`
+absent — proto3 gives an unset enum the zero value and unset bools
+`false`, so *every* asset matched — and **every MRAD lit up yellow**. The
+rule was gated on an explicit `NOMINAL` and the behaviour backed out. Its
+docstring still carries the account.
+
+So the question *"what happens if absence is scored as impairment?"* has
+been answered empirically, at scale, in front of an operator: **a
+false-positive wave across the entire fleet**, produced not by a wrong
+threshold but by the wire's inability to distinguish *unset* from *false*.
+
+**What failed was conflation, not distinction.** Absence was routed into
+`FAULT` — an existing operational meaning that an operator correctly reads
+as *"this equipment is impaired."* The experiment says nothing against a
+treatment no operator would read that way, which is why clause 2 forbids
+folding rather than forbidding expression, and why the open question below
+survives it.
+
+### The argument for stating it at all — two independent re-derivations
+
+The convention exists because **two components reached the same wrong
+default without consulting each other**:
+
+| component | site | behaviour |
+|---|---|---|
+| `logistics-fusion` | `_eval_operational_state` | no branch for `UNSPECIFIED`, none for `NOMINAL`; both fall through, `_max_severity` returns `OK` |
+| `logistics-sim` | `element_gen.severity_tier()` rule 7 | *"anything else (NOMINAL, UNSPECIFIED, ON, …) → NOMINAL"*, with a test whose comment reads **"UNSPECIFIED is treated as healthy"** |
+
+Two authors, two files, two repositories, one identical collapse — and in
+the sim's case written down approvingly, as though it were the decision.
+
+That is what an **uncited convention** looks like from the inside. Nobody
+was careless: *"treat silence as fine"* is the locally cheapest branch
+every time, because the alternative requires knowing something the local
+file cannot see. **A convention that is not stated somewhere both
+consumers cite does not govern them** — it gets re-derived, and it gets
+re-derived the same wrong way, because the wrong way is the one the
+language makes free. (**GD-12**, now with its cross-component instance.)
+
+### The one question left open, stated precisely
+
+**Is observed-ness a fourth thing the axis model expresses?**
+
+The three axes answer *what posture is this asset in*. Whether the source
+*said anything at all* is a different question, and it currently has no
+home: it is neither an axis value nor a provenance field. The options, and
+what each would cost:
+
+| | says | cost |
+|---|---|---|
+| a fourth expression (coverage / observed-axes) | *this axis was never observed* — true | a declared field with no consumer today |
+| provenance carries it | *this producer reports these axes* | provenance is per-event; observed-ness is per-axis |
+| presentation only | *render the unknown distinctly* | rollups and counts still read `OK` |
+
+**Deferred to demand, deliberately.** A declared field nothing reads is the
+`cm_schema: "generic-v1"` shape this corpus closed in August — honest-looking,
+unresolvable, and inherited by the next reader as intentional. **When it is
+taken up, the consumer is named in the same change or it is not taken up.**
+
+*What is no longer open:* whether absence may be scored as impairment. It
+may not (clauses 1–2), and that half needed the evidence above rather than
+a preference.
+
+### Scheduled: presentation treatment
+
+**When the frontend is next touched in this area**, *not reported* renders
+distinguishably from *nominal*, per ADR-0035 class 2 (never observed). The
+raw `OperationalState` block already reaches the UI, so this needs no
+contract change and no producer change.
+
+Stated honestly: this addresses the **pixel**, not the **aggregate**.
+`overall_severity` continues to read `OK` for an unobserved axis, so
+rollups, counts and tier aggregates still treat it as fine. That is a known
+and accepted gap until the open question above is answered — recorded so
+nobody mistakes the render fix for a complete one.
+
+### Measured blast radius, so the amendment is not read as urgent
+
+Queried on 2026-08-16: **14 of 14** lab assets carry unspecified axes, and
+**14 of 14** are already `CRITICAL` from other factors, so **zero would
+change today**. The defect is latent in this deployment and live in a
+healthy one — a quiet fleet with unspecified health reads `OK`.
+
+Two consequences worth carrying: nothing on screen moves when this is
+implemented, and **this deployment cannot demonstrate the fix**, so a test
+is the entire verification story (ADR-0037 clause 3).
+
+### Follow-up work this creates — scoped, not scheduled
+
+- **`logistics-sim` rule 7** collapses `UNSPECIFIED → NOMINAL` and must be
+  fixed **in line with clause 4** rather than locally patched — the local
+  patch is what produced two divergent answers in the first place. Its test
+  comment (*"UNSPECIFIED is treated as healthy"*) is part of the change.
+- **A deliberate `UNSPECIFIED`-emission control in the sim.** Unspecified
+  health is the *normal* state for DIS-sourced assets, so the sim must be
+  able to reproduce it on purpose; a generator that always emits a definite
+  value cannot exercise the honest-absence path this amendment schedules.
+- **The tactical-damage constraint set** (destroyed → not healthy,
+  mobility-kill → propulsion, firepower-kill → weapons, fire events →
+  stockpile decrement). **Gated on an open question:** whether the DIS
+  mapping reads entity-appearance damage bits at all.
+
+  *Why that gate matters more than it looks.* The sim already consumes
+  `telemetry-latest-state` and constrains its synthesis from reported
+  health — the correlation mechanism exists. But **DIS never populates
+  health** (the 14-of-14 measurement above), so for every DIS-sourced asset
+  that correlation is **inert**: consistency in the demo has come from the
+  two sims sharing a scenario, not from one constraining the other.
+  Consistency by shared input and consistency by constraint look identical
+  until the inputs diverge. The damage constraints are what convert the
+  first into the second.
 
 ## Consequences
 

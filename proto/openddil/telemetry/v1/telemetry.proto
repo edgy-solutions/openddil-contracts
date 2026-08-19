@@ -428,6 +428,42 @@ message OperationalState {
   bool actively_transmitting = 5;
 }
 
+// =============================================================================
+// WHAT *_UNSPECIFIED MEANS ON THESE AXES — ADR-0026 §Amendment 2026-08-18
+// =============================================================================
+// Stated here, next to the type, because both consumers import this file and
+// neither could see the other's choice: logistics-fusion and logistics-sim
+// independently arrived at the SAME wrong default, and one of them wrote it
+// down approvingly. A convention that is not stated where consumers cite it
+// does not govern them — it gets re-derived, the same wrong way, because
+// "treat silence as fine" is the branch the language makes free.
+//
+//   UNSPECIFIED means THE SOURCE MADE NO CLAIM. It is not a value on the
+//   axis; it is the absence of one.
+//
+//   1. It never becomes a ConstrainingFactor. Absence does not constrain the
+//      ASSET, it constrains our KNOWLEDGE of the asset.
+//   2. It never folds into an operational category — not NOMINAL, not FAULT,
+//      not DEGRADED, not any future member. Each is a claim about equipment
+//      and there is no claim to make.
+//   3. A consumer that cannot express "no claim" must not invent one.
+//   4. NOMINAL is a POSITIVE ASSERTION and must be reached deliberately,
+//      never by falling through every other branch. A code path where
+//      absence and health share an exit is the defect this convention names.
+//
+// Clause 2 is not a preference. On 2026-06-24 a live feed left
+// operational_state absent; proto3 gives an unset enum the zero value and
+// unset bools false, so a rule scoring UNSPECIFIED-plus-quiet as FAULT
+// matched EVERY asset and the whole fleet lit up. It was backed out. What
+// failed was CONFLATION, not distinction — routing absence into an existing
+// operational meaning an operator reads as "impaired."
+//
+// Note the proto3 constraint that makes this a convention rather than a type:
+// an unset enum is indistinguishable from an explicitly-set zero on the wire.
+// UNSPECIFIED is therefore the only absence signal these axes have, which is
+// exactly why it must not be spent on an operational meaning.
+// =============================================================================
+
 // PowerState — coarse availability. Every operational source can populate
 // at least this axis.
 enum PowerState {
