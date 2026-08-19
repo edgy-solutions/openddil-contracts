@@ -202,6 +202,23 @@ rather than by effect.
 > completion **observable rather than asserted** — which is the property
 > §2 shows P1 lacked, and the reason P1 could report done while inert.
 > Build the stage as part of P0, not after it.
+>
+> **The specimen now has TWO independent encode defects, found on separate
+> days by separate work** — which strengthens the case for running the
+> conformance stage against it as P0's first acceptance:
+>
+> 1. `provenance.originator_nation` / `releasable_to` — fields the proto
+>    does not declare; the encoder rejects the message outright.
+> 2. `kinematics.position.wgs84.lat` / `lon` set as **bare numbers** where
+>    `Wgs84Position` declares `Quantity` messages (ADR-0013's unit
+>    discipline). Found 2026-08-19 while building the ASTERIX CAT062
+>    mapping, which hit the identical defect and was caught by an encode
+>    check the specimen has never had.
+>
+> Two unrelated causes, one file, both invisible to a JSON-only suite. The
+> second is the more instructive: it is **not** a *pending contract* like
+> the releasability fields — it is simply wrong today, against a contract
+> that has not changed.
 
 **Step 2 — decide, explicitly, what stamps them.** ADR-0029 says labels are
 "stamped at ingress"; the specimen parses nation from an id convention and

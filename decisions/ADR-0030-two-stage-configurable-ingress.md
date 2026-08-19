@@ -303,6 +303,41 @@ Category definitions mount as configuration (hot-addable). Same
 deployment seat as the existing DIS mapper — this is a second tenant of
 a proven pattern, not new infrastructure.
 
+#### Decoder choice is a licensing decision *(added 2026-08-19, Phase 2 build)*
+
+"Wrap an existing open, definition-driven decoder" silently assumed **open
+means compatible**. It does not.
+
+The obvious ASTERIX choice — `asterix-decoder`, the CroatiaControl
+python-asterix — is **GPL v2 and a C extension**. OpenDDIL is MIT across
+every repository, and importing a GPL C extension into a service raises
+combined-work questions nobody wants to answer at integration time.
+`asterix4py` is **MIT, pure Python, driven by the same category-XML model**,
+and ships definitions for all three scoped categories — so it satisfies this
+ADR's actual requirement (declarative definitions, zero engine code per
+format) without the entanglement.
+
+**The rule this generalizes to:** a format decoder is selected on licence
+*and* definition-drivenness, in that order, because the second is
+negotiable and the first is not.
+
+> **THE SIDECAR BOUNDARY IS A LICENSING PROPERTY, not only an engineering
+> one.** A decoder in its own process, communicating over a topic, is
+> **aggregation rather than linking** — so this architecture would have
+> contained even the GPL decoder safely, where importing it into an existing
+> service would not. That is a dividend nobody claimed for the pattern when
+> it was written: **decode-at-the-edge keeps incompatible licences at the
+> edge too.**
+>
+> It also matters for the case §Context already anticipated — a format whose
+> specification cannot be redistributed. The same boundary that keeps a
+> grammar out of Bloblang keeps an unredistributable definition out of the
+> OSS repository: it is mounted as configuration into a process that is not
+> ours to publish.
+
+*Corollary for the Phase-5 datalink work:* the licence question is asked
+**before** the decoder is chosen, not after it is wrapped.
+
 ### Phase 3 — Bloblang mappings (~1–2 days)
 
 - **CAT048 / CAT062** (target reports, system tracks) →

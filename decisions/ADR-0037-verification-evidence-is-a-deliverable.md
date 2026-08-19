@@ -144,6 +144,17 @@ check that was skipped.
   the right answer for the wrong reason. Full case and the enforcement
   rule in **clause 3**, which this entry points at rather than restates.
 
+- **A mutation review cannot tell a verification gap from a coverage gap.**
+  Asking *"was this guard red-checked?"* has three possible answers and the
+  instrument returns two: yes, and *no evidence found*. **A guard that was
+  never red-checked and a thing that was never a guard both answer the
+  second**, and they need opposite responses — one is closed by running a
+  mutation, the other by writing the test the mutation would have needed.
+  *Earned 2026-08-15:* `munitionType.ts` was carried through a whole review
+  as *red-check unknown* when in fact **nothing tests it at all**, while
+  four operator-facing components import it. *Enforcement: before recording
+  a guard as unverified, confirm it exists.*
+
 *The shared shape is this ADR's own thesis turned on verification
 itself:* both are instruments whose failure reading is indistinguishable
 from their success reading, which is why they belong here rather than in
@@ -319,6 +330,41 @@ caught two missing components once; nothing prevents the next omission
 except someone remembering to run the diff. *Fix shape: the diff as a
 check that fails loudly, which is also the cheapest instance of clause 3
 (it can be seen red against the known-bad template).*
+
+**RE-SCOPED 2026-08-19 — half built, half closed, and the closed half is a
+decision rather than a deferral.** The row conflated two checks with very
+different feasibility.
+
+**Built** (`openddil-helm` `2ceee1b`): render integrity as a persisted
+guard, in CI. Parsed-document count against `kind:` occurrences catches an
+object swallowed by a missing loop-boundary separator; a second check
+catches duplicate or unnamed object identities from a different
+representation. Both red-checked against mutations modelling the original
+defect. **The demonstration worth keeping: under a deleted separator,
+`helm lint` reports "0 chart(s) failed" and `helm template` exits 0 while
+an object has vanished from the release** — which is why this sits beside
+lint rather than inside it.
+
+**Closed as unbuildable in its stated form:** diffing rendered objects
+against *the template header's stated inventory*. Template headers are
+prose bullets — *"One redpanda-edge StatefulSet + Service per entry in
+`.Values.edges`"* — so any check would match names out of English. That is
+fuzzy matching, and its threshold would be tuned until it passed, which
+makes its green meaningless (`PRINCIPLES.md` §*A check tuned until it
+passes*). **A check that cannot fail for the right reason is worse than the
+manual practice it replaces, because it also retires the human who was
+doing it.**
+
+**The one buildable form, recorded and not built:** make the claim
+machine-readable — headers declare their inventory as a structured list the
+guard compares exactly. That is a *form change across every template*, the
+same shape as the register status tokens, and it converts the check from
+fuzzy to exact by fixing the input rather than the matcher. Worth doing when
+templates are next touched wholesale; not worth a dedicated pass.
+
+*The distinction the original row missed:* "checked by hand" implied one
+gap. There were two — one mechanisable, one requiring a convention change
+first — and only the second was ever hard.
 
 `Status: open`
 
