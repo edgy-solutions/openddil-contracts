@@ -176,6 +176,47 @@ place, and it is why the next step is a measurement rather than a build.
 unpopulated and the mapping would manufacture health out of silence. Any
 variation means the producer is really setting it.
 
+### MEASURED 2026-08-19 — the gate fires. Do not build the mapping yet.
+
+**Source side.** `dis_sim.py:171` sets `pdu.entityAppearance = 0` as a
+literal. The lab's only DIS producer never populates the field.
+
+**Wire side**, sampled from `ingress-dis-raw` on the lab:
+
+```
+records sampled   : 3000
+distinct entities : 8   (both edges: NORTHPO, CAPEVER, ATLAS, BEDROCK, SYLVAN)
+appearance values : {0: 3000}
+```
+
+**Zero, universally.** So under the mapping designed above, bits 3-4 of `0`
+decode as damage `NONE`, which maps to `HEALTH_STATE_NOMINAL` — a positive
+assertion of health. **Every synthetic asset in the lab would be declared
+healthy on the strength of a field its generator never sets.**
+
+That is the defect the ADR-0026 amendment forbids, and building this mapping
+today would commit it *while citing the amendment as authority*. The gate
+existed for exactly this outcome and it fired on the first run.
+
+**What must come first: a damage-emission control in `dis-sim`**, the
+sibling of `AssetState.as_unclaimed()` just added to logistics-sim. Until
+the generator can set appearance deliberately, the lab cannot exercise the
+mapping *or* its guard — a red-check would be impossible, because no input
+distinguishes "no damage" from "no claim".
+
+**And the guard that must ship with the mapping, whenever it does:** an
+all-zero appearance field is treated as **unpopulated, not as undamaged**.
+The two are indistinguishable in the bits and must be distinguished by
+something else — a producer allow-list, an explicit "this feed populates
+appearance" declaration, or a non-zero sentinel bit. Choosing that mechanism
+is part of the work and is **not** decided here.
+
+*Note the shape.* This is `GD-12` again, one layer out: the wire cannot
+express the difference between "damage: none" and "field not set", so the
+distinction has to be **declared** somewhere rather than inferred from the
+value. Fourth field type to need that, after `Quantity`, `ConsumableState`
+and the operational-state enums.
+
 *Note what that gate protects against.* Without it, this design would close
 a gap by introducing the exact defect the ADR-0026 amendment was written to
 prevent — and it would do so while citing that amendment approvingly.

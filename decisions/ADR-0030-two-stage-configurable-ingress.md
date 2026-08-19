@@ -338,6 +338,35 @@ negotiable and the first is not.
 *Corollary for the Phase-5 datalink work:* the licence question is asked
 **before** the decoder is chosen, not after it is wrapped.
 
+#### The incompatible decoder is kept, as a reference *(2026-08-19)*
+
+Choosing the MIT decoder did not mean discarding the GPL one. It ships as a
+**separate, opt-in image** (`asterix-reference/`) whose purpose is
+verification: two decoders sharing nothing but the specification, compared
+over identical frames. **Agreement between independent implementations is
+evidence; a decoder checked only against the definitions it reads is close
+to none.**
+
+First run: 6 synthetic CAT062 frames — ordinary, null island, antimeridian,
+near-pole, both hemispheres, maximum track number — **zero disagreements**
+across the five fields the Silver mapping consumes.
+
+The comparison is deliberately scoped to *those* fields. The two produce
+different shapes by design, and chasing full-output equality would mean
+tuning the comparison until it passed — the fitted-check failure, mirrored.
+Disagreement inside the consumed set is a **finding**; difference outside it
+is an **observation**.
+
+*And it settled the question the licence choice raised:* a pure-Python
+decoder picked for licence reasons could have cost throughput. Measured, it
+does not — 7096 frames/s MIT in-process against 1732 frames/s for the C
+extension including container invocation.
+
+**This is the boundary paying a second dividend.** The same separation that
+keeps an incompatible licence out of the MIT service is what makes it
+*usable* as a reference at all: a GPL implementation we cannot link against
+is still one we can run beside, compare to, and benchmark against.
+
 ### Phase 3 — Bloblang mappings (~1–2 days)
 
 - **CAT048 / CAT062** (target reports, system tracks) →

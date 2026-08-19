@@ -144,6 +144,26 @@ check that was skipped.
   the right answer for the wrong reason. Full case and the enforcement
   rule in **clause 3**, which this entry points at rather than restates.
 
+- **A measurement of absence localizes nothing.** A reading of "the field is
+  empty" is true at the reader. It says nothing about *where* between source
+  and reader the emptiness begins — and the candidates are not
+  interchangeable: an upstream that never sent it, a decoder that dropped
+  it, a mapping never written, a column nothing writes. **Each implies a
+  different fix and a different conversation**, and the measurement cannot
+  distinguish them.
+  *Earned 2026-08-19, the inverse of the schema limit above.* There, a
+  schema proved nothing about a producer; here a **design** proved nothing
+  about an implementation. ADR-0026's adapter list specified
+  `appearance.damage → health_state` on 2026-05-27, the DIS sidecar has
+  published `appearance_bits` to Bronze ever since, and Stage 2 was never
+  written. The 14-of-14 `health_state IS NULL` reading was then registered
+  as *"no DIS source for the health axis"* — **the record diagnosed its own
+  unbuilt design as an external absence**, and the ask that followed would
+  have gone to a producer already sending the data.
+  *Enforcement: before attributing an absence to a source, walk the path.*
+  A specified mapping nobody built is indistinguishable, from the reader's
+  end, from a source that does not exist.
+
 - **A mutation review cannot tell a verification gap from a coverage gap.**
   Asking *"was this guard red-checked?"* has three possible answers and the
   instrument returns two: yes, and *no evidence found*. **A guard that was
