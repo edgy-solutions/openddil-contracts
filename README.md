@@ -97,6 +97,13 @@ gen/
 3. **Version via packages**: Breaking changes → new package version (`v1` → `v2`).
 4. **Backward compatible**: Old consumers must be able to deserialize new messages (unknown fields ignored).
 
+## Guides
+
+| Guide | Purpose |
+|---|---|
+| [`docs/algorithm-onboarding-guide.md`](docs/algorithm-onboarding-guide.md) | Landing an existing algorithm implementation (C, Fortran, vendor binary) in the analytics planes — which seam, how to wrap it, what ADR-0034 obliges |
+| [`openddil-demo/docs/protocol-onboarding-guide.md`](../openddil-demo/docs/protocol-onboarding-guide.md) | The ingress equivalent — generating a new protocol mapping onto Silver |
+
 ## AI Documentation
 
 | File | Purpose |

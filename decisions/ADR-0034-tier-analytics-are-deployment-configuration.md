@@ -435,3 +435,7 @@ with Arcs 2/3 by bandwidth.
 - ADR-0031 — provenance carrying the decisions that gated an answer.
 - `PRINCIPLES.md` — §Framework vs. instantiation (the invariant this
   applies), §Claims vs. sources (why provenance stamps are mandatory).
+- [`docs/algorithm-onboarding-guide.md`](../docs/algorithm-onboarding-guide.md)
+  — the practitioner-facing companion: how a team lands an existing
+  algorithm implementation (C or otherwise) at one of the pure seams
+  while the engine is fenced, and which constraints above bind it.
