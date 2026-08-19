@@ -287,8 +287,34 @@ is the entire verification story (ADR-0037 clause 3).
   value cannot exercise the honest-absence path this amendment schedules.
 - **The tactical-damage constraint set** (destroyed → not healthy,
   mobility-kill → propulsion, firepower-kill → weapons, fire events →
-  stockpile decrement). **Gated on an open question:** whether the DIS
-  mapping reads entity-appearance damage bits at all.
+  stockpile decrement). ~~**Gated on an open question:** whether the DIS
+  mapping reads entity-appearance damage bits at all.~~
+
+  **ANSWERED 2026-08-19, and this ADR was wrong about its own gap in a way
+  worth recording.** The DIS sidecar has extracted `appearance_bits` and
+  published them to `ingress-dis-raw` since it was written;
+  `sim-dis-mapping.yaml` has **zero** references to the field. So the
+  condition is not *"no DIS source for the health axis"* — it is **a
+  partial source arriving on Bronze that Stage 2 never learned to read.**
+
+  That changes the size of the work: "no source" implies an upstream ask,
+  "present and unmapped" is a change we can make alone, against data
+  already in the topic, with no producer conversation and no wire change.
+
+  **Sharper still: this ADR SPECIFIED the mapping.** Its own adapter list
+  above says *`EntityState.appearance.power_plant_on` → `power_state`;
+  `appearance.damage` / `firepower_kill` → `health_state`.* The decision
+  was made on 2026-05-27, the sidecar carried the data, and Stage 2 was
+  never written. **A specified mapping that nobody built is
+  indistinguishable, from the outside, from a source that does not exist** —
+  and this ADR then registered it as the latter, citing its own unbuilt
+  design as a missing feed.
+
+  Design, bit layout and the gating measurement:
+  `DESIGN-2026-08-19-dis-appearance-bits.md`. That measurement is
+  load-bearing — an all-zero appearance field would let the mapping
+  manufacture `NOMINAL` out of silence, which is the defect this amendment
+  exists to prevent.
 
   *Why that gate matters more than it looks.* The sim already consumes
   `telemetry-latest-state` and constrains its synthesis from reported
