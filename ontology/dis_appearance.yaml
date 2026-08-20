@@ -1,0 +1,82 @@
+# =============================================================================
+# DIS Entity Appearance interpretation — ADR-0026 / ADR-0030 / ADR-0016
+# =============================================================================
+# The DIS EntityState `entityAppearance` field is 32 bits whose meaning is
+# defined PER ENTITY KIND AND DOMAIN. The same bit position carries different
+# facts for a land platform and an air platform, so there is no single layout
+# and a decoder that ignores domain will assert nonsense confidently.
+#
+# That is why this lives in the ontology rather than in a service: it is a
+# curated, standards-cited lookup changed by PR, exactly as platform-variant
+# resolution is (ADR-0016). A bit layout hardcoded in a mapping or a sidecar
+# would need editing per domain and would silently mis-decode the ones it was
+# not written for.
+#
+# CURATION RULES (treat this file as code):
+#   - Changes require a PR with a domain expert reviewer.
+#   - No entry without a verified SISO-REF-010 / IEEE 1278.1 citation.
+#   - A field ABSENT from a domain block means that domain has no such bit.
+#     The decoder MUST emit nothing for it rather than defaulting — absence
+#     here is meaningful (ADR-0026 amendment, clause 3).
+#
+# IMPORTANT — the values below are structurally correct per IEEE 1278.1
+# conventions and MUST be verified against the current publication before
+# use against a live DIS network. Same standing caveat as dis_entity_types.
+#
+# =============================================================================
+
+# Sources that are DECLARED to populate the appearance field.
+#
+# WHY A DECLARATION IS REQUIRED, and why the decoder refuses without one:
+# an all-zero appearance field is indistinguishable, on the wire, from a
+# producer that never sets it. Bits 3-4 of zero read as damage NONE, which is
+# a POSITIVE claim of health. So reading the bits from an undeclared source
+# would manufacture "healthy" out of silence — the defect ADR-0026's
+# amendment exists to forbid.
+#
+# Keyed by DIS site id. The ladder (per DESIGN-2026-08-11-declared-asset-class):
+#   1. the producer declares it        (rare; DIS has no such field)
+#   2. the overlay states it here      (the normal case: an assumption with
+#                                       an author and a date)
+#   3. otherwise the bits are NOT READ and the axis stays UNSPECIFIED
+populating_sources:
+  # dis-sim, the synthetic tactical generator. Declared because WE control it
+  # and it emits appearance only when instructed (`--damage`); absent that
+  # flag it sends zero and means nothing by it.
+  # Declared 2026-08-19, openddil overnight run. Site 1 is dis-sim's default.
+  "1":
+    declared_by: "openddil (synthetic source, dis-sim)"
+    declared_on: "2026-08-19"
+    note: >-
+      Synthetic generator under our control. Emits appearance only with
+      --damage; a zero field from this source means no claim, not no damage.
+
+# Bit interpretation, keyed "<kind>_<domain>". Only Platform (kind 1) is
+# defined, matching the entity kinds dis_entity_types recognises.
+appearance:
+  "1_1":
+    _comment: "Platform / Land"
+    siso_ref: "IEEE 1278.1 Entity Appearance, Land Platform"
+    damage:
+      bits: [3, 4]
+      values: { 0: NONE, 1: SLIGHT, 2: MODERATE, 3: DESTROYED }
+    mobility_kill:  { bit: 1 }
+    firepower_kill: { bit: 2 }
+    power_plant:    { bit: 21 }
+    deactivated:    { bit: 22 }
+
+  "1_2":
+    _comment: "Platform / Air"
+    siso_ref: "IEEE 1278.1 Entity Appearance, Air Platform"
+    damage:
+      bits: [3, 4]
+      values: { 0: NONE, 1: SLIGHT, 2: MODERATE, 3: DESTROYED }
+    # Bit 1 is PROPULSION kill in this domain — the same bit as land's
+    # mobility kill, a different name for the same idea, so it maps to the
+    # same output field.
+    mobility_kill:  { bit: 1 }
+    # NO firepower_kill entry. Bit 2 carries an unrelated meaning for air
+    # platforms, and a decoder that read it here would assert firepower kills
+    # on aircraft. Its ABSENCE is the instruction.
+    power_plant:    { bit: 21 }
+    deactivated:    { bit: 22 }
