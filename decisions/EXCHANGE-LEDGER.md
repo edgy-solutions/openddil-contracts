@@ -51,6 +51,19 @@ declare, versus what are we inferring from its behaviour?**
 | **X-3** | Does the feed **declare asset class**, or an attribute from which class is derivable *by declaration* rather than by publishing behaviour? | **GD-11**; retiring the inferred classifier | `DESIGN-2026-08-11-declared-asset-class.md` |
 | **X-4** | For each producer: **what declares national origin?** Not "can we derive one" — what *states* it. | ADR-0029 Phase 0/1; the §7 gate | `PLAN-arc2-slice1-opening-package.md` §5 step 2 |
 
+**X-4's sibling left this list entirely on 2026-08-19, and the reason is
+worth keeping.** A *"does your feed carry entity health?"* question was
+being drafted for the same conversation. It turned out the feed already
+does — DIS entity appearance has been arriving on Bronze since the sidecar
+was written, and the mapping was never built (ADR-0026 §Amendment). **The
+ask would have gone to a producer already sending the data.**
+
+*Standing check before anything joins this list:* walk the path from
+producer to reader first. An absence measured at the reader localizes
+nothing (ADR-0037 §Named limits), and this ledger is the most expensive
+place to be wrong about where a gap lives — a question asked of a
+counterparty cannot be quietly withdrawn.
+
 **X-2 has a stronger framing than "better outcome attribution", and it is
 worth using.** End of life is currently inferred from a track
 disappearing, which cannot distinguish success from miss, dud or
@@ -79,6 +92,31 @@ Grouping them is the whole point of writing them down together — each is
 individually too small to schedule and collectively they are one sitting.
 
 ---
+
+## Reconciliation — 2026-08-19
+
+**Closed by work rather than by answer:**
+
+- **The health-axis question, never asked.** See above. The source existed;
+  the mapping did not.
+- **X-5 / X-6 remain open but their public twin is now clean.** The
+  fallback-honesty fixes (`efef7a6`) and the ASTERIX mapping both landed
+  with encode verification, so a private overlay copying either specimen
+  today inherits corrected constructions. The check is still needed — the
+  fixes do not propagate — but its urgency dropped from *"an overlay may be
+  silently defaulting fuel"* to *"an overlay may be an old copy."*
+
+**Unchanged and still outbound:** X-1 (stockpile/capacity), X-2 (termination
+events), X-3 (asset class declaration), X-4 (national origin). These are one
+conversation and none moved this week.
+
+**X-7 (the pilot-cluster §7 gate) gained a second reason to run.** The
+upgrade rehearsal found the lab's images on a rolling tag with two digests
+live in one release. The pilot cluster is digest-pinned, so the same query
+that answers X-7 should also confirm that pinning holds — one session, two
+answers.
+
+**X-8 unchanged**, still a verify-first question.
 
 ## What this ledger is not
 

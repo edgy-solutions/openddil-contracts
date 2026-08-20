@@ -245,6 +245,47 @@ mechanical check above, and the reason this file does not restate content.
 - **AUDIT-2026-08-12 (capability foreclosure) F1–F4 remain open** and are
   the reason `AE-2`, `AE-4`, `IH-5`, `IH-6` and `C4` read as they do.
 
+## Reconciliation — 2026-08-19
+
+A week of closures, checked against the registers rather than recalled.
+
+**Statuses that moved**, all verified in their home documents:
+
+| row | now | by |
+|---|---|---|
+| `IH-5`, `IH-6` | fixed 2026-08-12 | caught by *this file being wrong*, three days after the caveat was written |
+| `AE-1` | fixed 2026-08-12 | ADR-0011 amended |
+| `GD-09` | fixed 2026-08-08 | chart 0.1.40 |
+
+**New rows this week:** `UD-7` (resource failure manifests away from its
+cause), `GD-12` (absence conventions undeclared), `GD-13` (generated protos
+are not a package), `VE-8` (no CI ran any Python suite), `IH-5`/`IH-6`.
+**Six rows added, three closed** — the register grew, which is what a week
+of looking produces and not a sign of decay.
+
+**Rows whose scope changed without their status changing:**
+
+- **`VE-4`** — split. The rendered-object half is **built and in CI**
+  (`openddil-helm` `2ceee1b`); the header self-description half is **closed
+  as unbuildable in its stated form**, with the structural alternative
+  recorded. The row is smaller than it was, not closer to done.
+- **`GD-12`** — surveyed (`AUDIT-2026-08-15`), and its fourth instance found
+  in our own tooling. Still open; the *convention* is now stated in
+  `telemetry.proto` for the operational axes only.
+- **`GD-13`** — design landed (`DESIGN-2026-08-19-gen-python-packaging`),
+  and the survey found **five** mechanisms rather than the three the row
+  claims. Row text is now an undercount.
+
+**What did not move, and should be read as deliberate:** `VE-1` (no index of
+evidence), `VE-2`, `VE-3`, `VE-5`, `VE-6`, `VE-7`, `UD-1`..`UD-6`,
+`GD-01`..`GD-08`, `GD-10`, `GD-11`, `IH-1`..`IH-4`, `AE-2`..`AE-6`. None was
+worked; none is blocked on anything a night can fix.
+
+*One honest note about this pass:* it reconciles **statuses and scope**, not
+**truth**. Check 3 proves the index agrees with each home document; nobody
+re-derived whether the homes are still right. A row that quietly became
+irrelevant would survive this reconciliation intact.
+
 ## What this index does not cover
 
 - **Prose follow-ups in audits and plans** — deliberately. Only ID'd rows
