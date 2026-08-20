@@ -182,6 +182,18 @@ destination — *"aligned to DIS / AFSim / Link 16 conventions"*,
 This applies to code, comments, commit messages, ADRs, and PR
 descriptions equally, because all of them are public and permanent.
 
+> **Paired rule, and the pairing is the point.** This rule deliberately
+> trains the virtuous-sounding sentence — which is exactly the sentence
+> §*The sentence that reads most virtuous gets read least critically* says
+> gets reviewed least. The two pull against each other and both are right;
+> weakening either gives you removal narratives on one side or unexamined
+> citations on the other.
+>
+> The resolution is that **this rule carries the other's enforcement
+> clause**: *a cited principle in a commit message is a claim about inputs,
+> and claims about inputs get measured.* Align the narration, then check
+> the data the narration assumes.
+
 *Earned the hard way:* a commit message describing a cleanup **became
 the leak**. The artifact was clean; the sentence explaining why it had
 been cleaned disclosed that something proprietary had been displaced —
