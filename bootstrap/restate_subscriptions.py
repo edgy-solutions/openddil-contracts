@@ -216,6 +216,121 @@ def create_subscription(sub: Subscription,
 
 
 # ---------------------------------------------------------------------------
+# Pruning — the half that was missing (UD-12)
+# ---------------------------------------------------------------------------
+# `create_subscription` above answers "what should exist that does not?".
+# Nothing answered "what exists that should not?", and the two are not the
+# same question. Registration alone can only ever grow the set, so a
+# subscription retired from the desired list — an edge that gained a tier
+# node, say — simply stayed, and kept consuming.
+#
+# At the root that was invisible: `hook-restate-wipe.yaml` deletes the
+# Restate PVC on every upgrade when `restate.ephemeralOnUpgrade` is true, so
+# the set was rebuilt from empty each time and retirement appeared to work.
+# It was wipe-and-recreate doing the job, under a flag that knows nothing
+# about tiers and which the chart documents as `false` for prod-like use.
+# Set it false and retirement silently stops.
+#
+# Two distinct things get pruned, and the second was the observed defect:
+#   STRAYS     — owned by this bootstrap, absent from its desired set.
+#   DUPLICATES — the same (source, sink, group) present more than once.
+# ---------------------------------------------------------------------------
+def _existing_key(s: dict) -> tuple:
+    """Identity of an existing subscription, matching create's pre-check."""
+    return (s.get("source"),
+            s.get("sink"),
+            (s.get("options") or {}).get("group.id"))
+
+
+def group_prefix_owner(*prefixes: str):
+    """Ownership predicate: this bootstrap owns a subscription if its
+    consumer group starts with one of `prefixes`.
+
+    Ownership has to be NARROWER than "everything on this Restate", because
+    cm-service and logistics-fusion bootstrap independently against the same
+    root Restate. An owner of "everything" would have each delete the
+    other's subscriptions on every upgrade, alternately.
+
+    Group prefix is the right scope precisely because it does NOT mention
+    the cluster: a subscription left behind on a retired edge cluster is
+    exactly what must be prunable, and a cluster-scoped owner could never
+    see it — the bootstrap no longer has that cluster in its list.
+    """
+    def _owns(s: dict) -> bool:
+        gid = (s.get("options") or {}).get("group.id") or ""
+        return any(gid.startswith(pfx) for pfx in prefixes)
+    return _owns
+
+
+def delete_subscription(sub_id: str, *, restate_admin_url: str) -> bool:
+    url = f"{restate_admin_url}/subscriptions/{sub_id}"
+    code, payload = _http_request("DELETE", url, timeout=10)
+    if code in (200, 202, 204, 404):
+        return True
+    logger.warning("Failed to delete subscription %s (HTTP %d): %s",
+                    sub_id, code, payload.decode(errors="replace")[:200])
+    return False
+
+
+def prune_subscriptions(*, restate_admin_url: str,
+                          desired: list[tuple[str, "Subscription"]],
+                          owns,
+                          scope_label: str) -> int:
+    """Delete owned subscriptions that are strays or duplicates.
+
+    `desired` is the COMPLETE set for this bootstrap as (cluster_name, sub)
+    pairs — complete, because anything owned and not named here is deleted.
+    Call it once, after every cluster has been registered; calling it inside
+    a per-cluster loop would delete the clusters not yet processed.
+
+    Returns the number deleted. Never raises: a failed prune leaves a
+    duplicate, which is the condition we are already in, whereas raising
+    would fail a bootstrap whose registrations all succeeded.
+    """
+    want = {
+        (f"kafka://{cluster}/{sub.topic}",
+         f"service://{sub.handler}",
+         sub.consumer_group)
+        for cluster, sub in desired
+    }
+    existing = list_existing_subscriptions(restate_admin_url=restate_admin_url)
+    if not existing:
+        # Either genuinely empty or the list call failed (it warns and
+        # returns []). Pruning nothing is the safe reading of both.
+        logger.info("[%s] prune: nothing to examine", scope_label)
+        return 0
+
+    seen: dict[tuple, str] = {}
+    strays: list[tuple[str, str, str]] = []   # (id, key-ish, reason)
+    for s in existing:
+        if not owns(s):
+            continue
+        key = _existing_key(s)
+        sid = s.get("id") or ""
+        if key not in want:
+            strays.append((sid, str(key[0]), "retired from the desired set"))
+        elif key in seen:
+            strays.append((sid, str(key[0]), f"duplicate of {seen[key]}"))
+        else:
+            seen[key] = sid
+
+    if not strays:
+        logger.info("[%s] prune: %d owned subscription(s), all desired and "
+                    "unique — nothing to remove", scope_label, len(seen))
+        return 0
+
+    deleted = 0
+    for sid, source, reason in strays:
+        logger.warning("[%s] prune: deleting %s (%s) — %s",
+                        scope_label, sid, source, reason)
+        if delete_subscription(sid, restate_admin_url=restate_admin_url):
+            deleted += 1
+    logger.info("[%s] prune: removed %d of %d candidate(s); %d kept",
+                scope_label, deleted, len(strays), len(seen))
+    return deleted
+
+
+# ---------------------------------------------------------------------------
 # Top-level: bootstrap one Restate service end-to-end.
 # ---------------------------------------------------------------------------
 def bootstrap_restate_service(
