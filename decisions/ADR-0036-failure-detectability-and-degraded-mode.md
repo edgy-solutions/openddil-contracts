@@ -346,6 +346,86 @@ absence means "unstamped"). So `CopyFrom` is right for a hop that is
 and telling those apart is a per-site judgement rather than a mechanical
 edit.
 
+`Status: open`
+
+**UD-9 — A configuration setting whose consumer does not exist fails
+silently, and the comment beside it is the only thing asserting it works.**
+*(Found 2026-09-05 while inventorying the frontend for the tier-presentation
+arc. Three instances; one is live-when-enabled and unfixed.)*
+
+A setting that nothing reads produces no error at any layer. The template
+renders, the container starts, the pod is Ready, and the behaviour is
+whatever the default was. Every individual fact along the way is true.
+
+**The instance that matters.** `tier-node.yaml` sets, on every tier's
+frontend:
+
+```yaml
+env:
+  # Targets THIS tier's Electric. No parent-hosted asset on the
+  # critical path — the ADR-0032 §e corollary.
+  - name: ELECTRIC_URL
+    value: "<release>-tier-electric-<tier>:3000"
+```
+
+Nothing reads it. The application's `ELECTRIC_URL` is a TypeScript export
+derived from `import.meta.env.VITE_ELECTRIC_URL` — a **Vite build-time**
+value baked into the bundle by the Dockerfile — and a container env var
+cannot reach a value that was compiled in. nginx proxies `/electric/` to its
+own placeholder, which defaults to `electric-sync`: the ROOT's unprefixed
+alias Service.
+
+So a tier node's UI would read the **root's** store while the comment
+asserts tier-locality, and the ADR-0032 §e corollary it cites would be
+violated by the data path itself. Under severance it would keep showing the
+root's data, because it was never reading the tier's.
+
+**Blast radius is zero today** (`tierNode.enabled: false`) and becomes real
+the moment Phase 3 turns it on — the same "real, inert, waiting for the
+phase that enables it" shape as the reference specimen that could not
+encode.
+
+**Two prior instances, which is what makes this a class rather than a bug:**
+
+- **GD-09's edit trap** — per-edge connect configs shipped in the bundle and
+  read by nothing after the chart began generating them. The hazard recorded
+  there was that the obvious repair is to edit the file you can see, which
+  has no effect and no error.
+- **VE-9's path filters** — notify triggers naming paths the bundle no longer
+  carried, alongside paths it did carry that were not named. Incomplete and
+  over-broad simultaneously, while reading as authoritative.
+
+**Why detection is hard, and where it is not.** The general case is hard: a
+setting is data, its consumer may be in another repository or another
+language, and "is this read?" is a whole-system question. But the specific
+case here is nearly free and was found by asking it once —
+
+> **for each configuration value a template sets, name the file that reads
+> it.**
+
+An answer of "the application" is not an answer. `ELECTRIC_URL` had a
+plausible-looking consumer (`ELECTRIC_URL` in the frontend source) that was a
+DIFFERENT VARIABLE WITH THE SAME NAME, resolved at build time from a
+different one. A grep for the name found it and confirmed nothing.
+
+**Candidate mechanisms, none built:**
+
+- A render-time check that every `env:` name in the chart appears in the
+  corresponding image's source or entrypoint. Cross-repository, so it needs
+  the sibling paths at CI time — the same constraint VE-9's candidate hit.
+- A start-up assertion in the consumer: the frontend's entrypoint already
+  fails on an unsubstituted placeholder (added 2026-09-05). The inverse —
+  fail on an env var the entrypoint does not recognise — would have caught
+  this one, and is a few lines. It has a false-positive cost (env vars set
+  for other reasons) that needs thinking about before it is worth doing.
+- Nothing, plus the discipline of naming the reader. Honest, and it is what
+  found this — but it is a habit, and ADR-0036 exists to distrust habits.
+
+**The asymmetry worth remembering:** a MISSPELLED setting and an UNREAD
+setting are indistinguishable from the template's side, and both look
+exactly like a correctly-wired one. The only difference is at the consumer,
+which is where nobody is looking when they write the template.
+
 ## Consequences
 
 **Pros**
