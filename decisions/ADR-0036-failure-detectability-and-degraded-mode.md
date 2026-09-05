@@ -470,6 +470,88 @@ human with the screen in front of them, and the screen looks right.
 Both rungs now carry a warning citing this row, so the ladder cannot be
 walked into innocently before the tier-presentation arc lands.
 
+`Status: open`
+
+**UD-10 — A tier node and the root share consumer-group names on a shared
+broker, so the tier's detection plane goes silent after one burst and looks
+perfectly healthy doing it.** *(Found 2026-09-05 by enabling one tier node
+on the lab to red-check per-tier authorization. Pre-existing; not introduced
+by that work. **Blocks the severance capstone.**)*
+
+The tier's Restate registers its subscriptions against the **root-managed
+edge broker** using the **same `group.id` the root's Restate already uses**:
+
+```
+root Restate:  kafka://openddil-edge-01/raw-sensor-stream
+               group.id = cm-service-silver-edge-01
+tier Restate:  kafka://openddil-edge-01/raw-sensor-stream
+               group.id = cm-service-silver-edge-01      <-- identical
+```
+
+Observed on the running group:
+
+```
+GROUP    cm-service-silver-edge-01
+STATE    Stable      MEMBERS  2
+TOPIC              PARTITION  LAG  MEMBER-ID
+raw-sensor-stream  0          6    restate-728a82bb…   <- one member holds it
+```
+
+**Two consumers, one group, one partition.** Kafka assigns the partition to
+exactly one member; the other is a silent standby. Every tier subscription
+collides the same way — `fusion-service-silver-*`,
+`fusion-service-derived-*`, `cm-service-cm-events-*`.
+
+**What it looks like from outside, which is the point.** The tier's
+cm-service is `1/1 Running`. It logged a normal startup, processed a burst
+during the rebalance, registered every asset it saw, and then received
+nothing further. Its store holds **plausible, complete-looking, frozen
+data**: 8 assets, correct edge attribution, sensible values — a snapshot of
+the moment it briefly held the partition. Nothing errors. Nothing restarts.
+No probe in the ladder distinguishes "this tier is processing" from "this
+tier processed once."
+
+**How it surfaced, which is an argument for the instrument.** The per-tier
+completeness gate (`--tier`) reported **3 unlabelled `asset_cm_state` rows
+at the tier while the root store was fully labelled**. Chasing those three
+led here. Without a gate that asks each store its own question, the tier
+would have read as healthy: its telemetry and logistics tables were fully
+labelled, because those had been written during the same burst.
+
+*That is the gate earning itself on its first run against a real tier, and
+it is worth noting the shape:* **the three unlabelled rows were not the
+defect — they were the only externally visible trace of it.**
+
+**The naming collision is a symptom; the question underneath is
+architectural.** ADR-0032 §a says a severance-tolerant tier requires **that
+tier's own broker**. This tier consumes a broker the ROOT owns and the root
+also consumes. So the choice is not merely "add a tier suffix to the group
+id":
+
+- **If both are meant to consume**, the groups must be distinct — and then
+  two independent consumers process the same stream into two stores, which
+  is intended (root rolls up, tier presents locally) and needs saying.
+- **If the tier is meant to own that broker**, the collision disappears and
+  ADR-0032 §a is satisfied properly — but the root then needs its input from
+  the tier's rollup rather than from the edge stream directly.
+
+A group-suffix patch would make the symptom go away and leave that
+undecided, which is how a deployment shortcut becomes a design (ADR-0033's
+own opening argument).
+
+**Consequence for the capstone, stated plainly.** A severance recording made
+against a tier in this state would show the UI serving data while severed —
+and the data would be a frozen snapshot that was never going to change,
+severed or not. **It would pass for the same reason UD-9's version passed:
+the thing being severed was not the thing the screen depended on.** The
+severance capstone is blocked on this, not on the per-tier PDP work, which
+is complete and verified as far as the decision path goes.
+
+**Detection shapes, none built.** The honest one is cheap: a tier's
+projector or cm-service reporting *time since last processed message*, and
+the ladder asserting it advances. Liveness of a stream is not liveness of a
+pod, and every probe currently in the ladder measures the second.
+
 ## Consequences
 
 **Pros**

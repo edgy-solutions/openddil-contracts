@@ -30,7 +30,7 @@ trusted:
 ```
 
 **Run in CI** on every change to `decisions/` — `.github/workflows/
-decision-indexes.yml`. **43 IDs as of 2026-09-05.**
+decision-indexes.yml`. **44 IDs as of 2026-09-05.**
 
 *The commands are not repeated here on purpose.* A copy in this file and a
 copy in the workflow are two things to keep in sync, and keeping two copies
@@ -170,6 +170,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | UD-7 | Resource failure manifests on a component that did not cause it | open |
 | UD-8 | Field-by-field message copy drops what it was not told to carry | open |
 | UD-9 | A configuration setting whose consumer does not exist fails silently | open |
+| UD-10 | Tier and root share consumer groups; the tier goes silent looking healthy | open |
 
 ### VE — verification-evidence gaps (`ADR-0037`)
 

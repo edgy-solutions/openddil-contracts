@@ -726,10 +726,34 @@ corpus distributed to it, so an edge does decide for itself. Taken as its
 own increment ahead of the tier-bridge slice because it was fixing a
 regression rather than adding a feature.
 
-**Still not proven on hardware:** the lab runs `tierNode.enabled: false`,
-so this is verified by render and by reasoning, not by a severed tier. The
-capstone remains a recording nobody has made. What HAS changed is that it
-is now possible to make honestly.
+**Verified on hardware as far as the DECISION PATH goes, 2026-09-05.** One
+tier node was enabled on the lab. Its authorizer came up carrying real
+policy — `/policy/releasability.rego` plus `/policy/openddil/data.yaml` from
+the runtime bundle — and answered a full decision for a real subject,
+including `corpus_version`, from the tier's own instance:
+
+```
+allowed_nations: ["ATL"]   role: regional-operator
+policy_version: arc2-slice1-v1   corpus_version: users-2026-09-05
+```
+
+**The severance red-check was NOT completed, and deliberately so.** The
+per-tier completeness gate found 3 unlabelled rows in the tier's
+`asset_cm_state` while the root store was clean, and chasing them found
+**UD-10**: the tier's Restate subscribes to the root-managed edge broker
+using the SAME consumer-group ids the root's Restate uses, so the two are
+two members of one group on a one-partition topic. The tier processed one
+burst during the rebalance and then received nothing, while reporting
+`1/1 Running` and holding plausible, complete-looking, frozen data.
+
+A severance recording against a tier in that state would show the UI serving
+data while severed — **and it would pass for exactly the reason UD-9's
+version passed: the thing being severed is not the thing the screen depends
+on.** So the check was stopped rather than run to a meaningless green.
+
+**The capstone is therefore blocked on UD-10, not on this work.** The
+decision path is local and verified; the tier's ingest is not alive long
+enough for severance to mean anything.
 
 ### Two defects worth keeping, both found by asking the running system
 
