@@ -995,6 +995,76 @@ sweep says about its gaps; this governs whether it has them.
 
 ---
 
+## Enumerating the domain does not validate the range
+
+A `match` that covers every input it can receive still says nothing about
+whether the values it produces exist.
+
+**Earned 2026-09-05.** A fix three weeks earlier had emptied the reference
+mapping's catch-alls by enumerating all ten declared source modes — a good
+fix, and the right instinct. Three of those ten arms named enum values the
+contract has never declared: `FUNCTIONAL_MODE_STANDBY`,
+`FUNCTIONAL_MODE_MAINTENANCE` and `POWER_STATE_STARTING`. The first two were
+borrowed from the *other* axis, which does declare them; the third has no
+counterpart anywhere.
+
+Nothing caught it because the suite compared JSON to JSON. **The domain was
+audited and the range was assumed**, and a mapping is exactly the artifact
+where those are separate questions — its whole job is to move values from
+one vocabulary into another.
+
+Two smaller lessons ride along:
+
+- **Coverage of the domain and coverage by tests are different numbers.**
+  All ten modes were enumerated in the mapping; only seven had cases. The
+  three invented targets hid in precisely the three that were never run.
+- The instinct that produced the invented names is worth naming too:
+  **a value that belongs on another axis will suggest itself by name.**
+  `MAINTENANCE` is a real state, it is just a *power* state, and writing
+  `FUNCTIONAL_MODE_MAINTENANCE` felt like completeness rather than like
+  crossing an axis.
+
+*Related:* §*A probe must fail distinguishably from its own zero* — this is
+its sibling for translations rather than for measurements.
+
+---
+
+## An automatic serialiser with a hand-written inverse loses new fields in one direction only
+
+When one half of a round trip is total and free (`dataclasses.asdict`,
+`CopyFrom`, reflection) and the other half is a hand-written constructor, a
+newly added field **serialises out correctly and vanishes on the way back
+in.** Nothing errors. Reading the automatic half tells you nothing about its
+inverse, and the automatic half is the one people read, because it is the
+one that looks like the mechanism.
+
+**Earned 2026-09-05**, three times in one night while adding releasability
+labels to the wire: a derivation engine that rebuilt a message field by
+field, a `_dict_to_record` whose partner was `asdict`, and a preservation
+block around a `record → proto → record` round trip. All three dropped the
+new field. None logged anything.
+
+**The delay is what makes it expensive.** The loss only shows on the SECOND
+event for a given key — the first still has the object in memory — so the
+symptom arrives detached from the change that caused it, and often on a
+different component from the one that dropped it.
+
+*The asymmetry that makes it invisible to review:* a field-by-field copy
+reads as **exhaustive and careful**. Nothing about it says "incomplete"; it
+says the opposite. So the tell is not in the code, it is in the shape:
+**wherever a total mechanism faces a manual one, count the fields on both
+sides.**
+
+*Corollary for provenance specifically:* invert the default. Copy the whole
+block and overwrite what this hop genuinely owns, rather than assigning a
+chosen subset — which turns *forget* into *carry*. But only for a hop that
+is **passing provenance through**; a hop that ORIGINATES it has the opposite
+hazard (ADR-0038 C4(a): an all-default stamp asserts "stamped with nothing"
+where absence means "unstamped"). Telling those two apart is a judgement per
+site, which is why this is a principle and not a sweep.
+
+---
+
 ## How to use this file
 
 - Add a principle when a *specific near-miss* produces a rule that would

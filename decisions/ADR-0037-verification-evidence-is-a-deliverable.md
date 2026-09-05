@@ -530,6 +530,81 @@ material one step further on — even once CI runs these, a passing run
 still produces only console output. Fixing VE-8 without VE-2 gives a
 signal that exists but cannot be cited.
 
+`Status: open`
+
+**VE-9 — A deploy can report success while running the previous artifact,
+because two repositories hold two copies of one fact and nothing compares
+them.** *(Found 2026-09-05 on the authorization policy itself. The instance
+is fixed; the mechanism that allowed it is not.)*
+
+The runtime-bundle image is built from four sibling repositories. Which
+subtrees it carries is declared in `openddil-helm/bundle/Dockerfile` as
+`COPY` lines. Which changes should TRIGGER a rebuild is declared separately,
+in each source repo's `notify-bundle-rebuild.yml` `paths:` filter.
+
+**Those two lists must agree, they live in different repositories, and
+nothing checks them.** A directory added to the bundle but not to the filter
+produces this sequence:
+
+1. the edit is committed and pushed;
+2. CI runs and is green — the repo's own tests pass, because they test the
+   source, not the bundle;
+3. no rebuild fires, because no watched path changed;
+4. the pod is restarted and its init container pulls the bundle — with
+   `imagePullPolicy: Always`, correctly, and gets the LAST BUILT image;
+5. the old content runs.
+
+**There is no error at any step.** `helm upgrade` reports success, the pod
+reports Ready, the image digest is current for the tag, and the tag is
+current for the last build — every individual fact is true.
+
+**The instance:** `policy/` and `gateway/` — the Rego policy and the read-path
+PEP's source — were added to the bundle without the filter. An authorization
+component silently running the previous policy is the worst available
+instance of this, and it did not present as a stale artifact. It presented as
+**the PDP rejecting every request**, which sent the investigation toward the
+API contract rather than toward the delivery chain.
+
+`ontology/` had the identical gap and was masked by luck: its first change
+happened to share a commit with a `dynamic-mappings/` edit, so the rebuild
+fired for the other path. **A gap masked by coincidence is still a gap**, and
+it would have surfaced on the first ontology-only commit.
+
+**Why this is a verification-evidence row and not a CI bug.** The evidence a
+deploy currently produces — green CI, a successful upgrade, a Ready pod — is
+**consistent with both outcomes**. Nothing in the artifact chain asserts
+*"the thing now running contains the change I just made."* That assertion is
+cheap and was made by hand here, once, after the fact:
+
+```
+docker run --rm --entrypoint sh <bundle-image> -c 'grep -c <marker> <path>'
+kubectl exec <pod> -- <read the file the process actually loaded>
+```
+
+Both were run and both were decisive. Neither is automated, and the second
+matters more than the first: the bundle being correct does not prove the pod
+loaded it.
+
+**Third recorded instance of schema-of-record versus deployed-state drift**
+after the Atlas checksum divergence and chart-version / bundle-version
+independence — and the first where the drifting artifact was a *policy*. The
+standing rule those three share applies unchanged: **ask the running
+system.** Repository artifacts describe what should be deployed; only the
+deployment knows what is.
+
+**Candidate mechanisms, none built:**
+
+- A build-time assertion in the bundle image: bake a manifest of source
+  commit SHAs per subtree, and have the init container log it. Turns "which
+  bundle is this?" into a readable fact rather than a digest.
+- A cross-repo lint: parse the Dockerfile's `COPY openddil-<repo>/...` lines
+  and fail if any is absent from that repo's notify filter. Cheap, and it is
+  the check that would have caught this exact defect — but it runs in the
+  helm repo and must read the other four, so it needs their paths at CI time.
+- Nothing at all, plus the discipline of verifying content in the pod after
+  any bundle-carried change. Honest, and it is what happened here — but it is
+  a habit, not a mechanism, and habits are what this ADR exists to distrust.
+
 ## Consequences
 
 **Pros**

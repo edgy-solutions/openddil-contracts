@@ -275,6 +275,77 @@ component set. It is a starting inventory. *Per `PRINCIPLES.md`
 §"Not found" is not "cleared": the absence of a row is not evidence that
 a component has no undetected failure modes.*
 
+`Status: open`
+
+**UD-8 — A message rebuilt field by field drops what it was never told to
+carry, and the loss is invisible at the seam.** *(Found 2026-09-05, three
+times in one night, in three separate components. All three instances fixed;
+the class is not.)*
+
+Adding coalition releasability labels to the wire (ADR-0029 P0/P1) required
+every hop to carry them. Three hops did not, for the same reason and with
+the same signature:
+
+| Component | Site | What it drops |
+|---|---|---|
+| prognostics derivation | builds a fresh `EntityTelemetryEvent` field by field | anything not explicitly assigned |
+| cm-service | `_dict_to_record` — a hand-written constructor whose inverse is `dataclasses.asdict` | any dataclass field added later |
+| cm-service | `_recompute`'s preservation block, around a `record → proto → record` round-trip | any field the proto does not carry |
+
+**None of the three produced an error, a warning, or a log line.** The
+consumer receives a message with no label and **cannot distinguish "the
+source had none" from "a hop lost it"** — which is exactly the distinction
+the ADR-0029 §7 completeness gate exists to make one layer down, and exactly
+the distinction the gate cannot make when the loss happens upstream of it.
+
+**What makes this a detectability problem rather than a bug report:** the
+symptom appears on the WRONG COMPONENT. With ingress, projector, fusion and
+cm-service all correct, `telemetry_latest_state` and `asset_cm_state` went
+fully labelled while `asset_logistics_status` sat at zero. Every instinct
+points at fusion — it owns that table — and fusion was already fixed. The
+actual gap was two hops upstream, in a derivation engine nobody had listed
+as a participant, because **fusion does not consume `raw-sensor-stream` at
+all**: its inbound handlers are `derived-sustainment`, `asset-cm-state` and
+`asset-capability-snapshot`.
+
+Same family as UD-7: the failing component is not the one to instrument.
+
+**Two asymmetries are the deep cause, and both look like good code:**
+
+1. **An automatic serialiser paired with a manual deserialiser.**
+   `dataclasses.asdict` is total and free; its hand-written inverse is
+   neither. A new field therefore serialises out correctly and vanishes on
+   the way back in — and the round-trip only fails on the SECOND event for a
+   given key, because the first is still in memory. Reading the serialiser
+   tells you nothing about its inverse.
+2. **A field-by-field copy reads as exhaustive and careful.** Nothing about
+   the code says "incomplete"; it says the opposite. That is why review does
+   not catch it and why the three instances were found by running a pipeline
+   and noticing one table out of three.
+
+**Detection shapes worth considering** (none built; recording the options is
+the point of the row):
+
+- A **conservation check** at each hop: assert the output carries every
+  provenance field the input carried, generically, rather than per field.
+  Cheap, and it fails on the hop that dropped rather than at the reader.
+- A **proto-level round-trip test** per converter — cm-service has one for
+  full state (`test_round_trip_preserves_full_state`), and it is exactly the
+  right instrument; the gap is that nothing obliges a new converter to have
+  one.
+- **Making the copy exhaustive by construction** — `CopyFrom` the provenance
+  submessage and then overwrite the fields the hop genuinely owns, rather
+  than assigning a chosen subset. Inverts the default from *forget* to
+  *carry*, which is the correct direction for provenance specifically.
+
+The third is the real fix and is not a sweep: each site has a reason it
+chose the subset, and ADR-0038 C4(a) already records the *opposite* hazard
+for submessages (an all-default stamp asserts "stamped with nothing" where
+absence means "unstamped"). So `CopyFrom` is right for a hop that is
+**passing provenance through** and wrong for one that is **originating** it,
+and telling those apart is a per-site judgement rather than a mechanical
+edit.
+
 ## Consequences
 
 **Pros**

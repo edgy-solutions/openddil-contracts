@@ -118,6 +118,67 @@ answers.
 
 **X-8 unchanged**, still a verify-first question.
 
+## Reconciliation — 2026-09-05 (Arc 2 Slice 1)
+
+**X-4 did not close, and it is worth being precise about why, because the
+work that just landed could easily be mistaken for closing it.**
+
+Arc 2 Slice 1 shipped a deployment that DECLARES national origin per asset,
+in a reviewed file, attributable to a commit — the strongest rung of the
+provenance ladder reachable **without a producer that states it on the
+wire**. The read path now enforces against those labels end to end.
+
+**That answers the question for one deployment's authored fiction. X-4 asks
+it of real producers, and no producer was contacted.** The distinction
+matters exactly as much as it did before: a declaration this project writes
+about someone else's data is still this project's assertion. What changed is
+that the *mechanism* is now proven and the remaining gap is purely the
+provenance of the values — which is a cleaner ask than it was, not a
+cancelled one.
+
+Two things now exist that make the ask cheaper to raise:
+
+- **A concrete shape to ask about.** `originator_nation` (ISO-3166 alpha-3)
+  and `releasable_to` are on the wire as `Provenance` fields 9 and 10,
+  aligned to STANAG 4774/4778 label concepts. The question is no longer
+  "could you tell us nationality somehow" but "does your feed carry a field
+  we can map to this one."
+- **A demonstrated consequence of not having it.** The deployment overlay
+  enumerates fourteen assets by hand. That does not scale, and it silently
+  stops being true the moment the fleet changes — which the completeness
+  gate WILL catch, but only after the fact.
+
+**X-1, X-2, X-3 unchanged.** Still one conversation, still not raised.
+
+**X-5 / X-6 gained weight.** The public specimen now carries a releasability
+stamp that ENCODES, where before it carried one that hard-failed. An overlay
+authored by copying today inherits a working construction — which is the
+improvement — but it also inherits an **id-parsing derivation** that is
+legitimate only as a stated local assumption. X-6's question ("does anything
+stamp releasability labels by a route the core cannot see?") now has a
+second half worth asking alongside it: *if something does, what does it
+derive them FROM?* An overlay that quietly parses a nation out of an
+identifier is producing exactly the "labelled by guess" state the §7 gate
+cannot distinguish from a real declaration.
+
+**X-7 is partially discharged, and only for the lab.** The §7 gate now
+exists as a script rather than a hand-run query
+(`openddil-helm/scripts/check-releasability-completeness.sh`), it enumerates
+its tables from `information_schema` as ADR-0029 requires, and on `edgy-lab`
+it **passes**: three populated tables, fourteen rows each, zero unlabelled.
+
+**None of that is a claim about the pilot cluster**, and the script says so
+in its own output for precisely this reason. The row stays open. What it
+costs to answer has dropped from "compose a careful query" to "run one
+script and read its last paragraph", and the second reason for running it —
+confirming digest pinning holds there — is untouched.
+
+**X-8 unchanged**, still a verify-first question. Worth noting that Slice 1
+built the positive-decision audit trail that question was about the absence
+of: every allow and every deny is recorded with subject, allowed nations,
+policy version, predicate and timestamp. That is a data point for the
+conversation, not an answer to it.
+
 ## What this ledger is not
 
 - **Not a commitment that any of these will be asked.** Raising X-1..X-4

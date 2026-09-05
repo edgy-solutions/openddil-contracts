@@ -601,6 +601,170 @@ Named so they are decisions rather than omissions:
   leaking it. That is the correct direction to fail, and it makes the
   Phase 2 gate load-bearing forever, not just at rollout.
 
+## Slice 1 status — executed 2026-09-05 on `edgy-lab`
+
+**Every line below was verified by running it against the lab. Nothing here
+is inferred from source.** The cluster is named because a claim about
+authorization is a claim about one deployment (EXCHANGE-LEDGER X-7).
+
+| Phase | Status | Evidence |
+|---|---|---|
+| **P0** proto captures | **DONE** | `originator_nation`=9, `releasable_to`=10, `reserved 11` on `Provenance`. Acceptance is the conformance stage, not the diff: `tests/bloblang/run.sh` encodes every case through the real ingress's `protobuf from_json`. Red-checked by dropping the capture — goldens stay 11/11 green, conformance goes 0/11 red |
+| **P1** labels queryable | **DONE** | Stamped at DIS ingress from a declared overlay; carried by the projector onto all five tables; propagated by fusion, cm-service and the prognostics derivation |
+| **P2** completeness gate | **PASSES** | 3 populated tables, 14 rows each, **zero** unlabelled on either column. 2 tables empty and reported as proving nothing |
+| **P3** Topaz + entitlements | **DONE** | One HQ Topaz on a local bundle; `users.yaml` asserted, 3 subjects, PR-reviewable |
+| **P4** gateway PEP | **DONE** | Fronts Electric's shape endpoint; owns the where-clause; fail-closed proven by scaling the PDP to zero |
+| **P5** decision log | **DONE** | Every decision, allow and deny, with subject, allowed nations, policy version, predicate, shape handle and timestamp |
+
+**Demo result, `demos/releasability-partition.sh`: 13 passed, 0 failed.**
+user-a 8 assets, user-b 6, disjoint, liaison 14, unlisted subject 403,
+anonymous 403, and a client where-clause asking for the other nation's rows
+narrowed to 0 against a control of 6.
+
+### Open question (b) is ANSWERED, affirmatively
+
+*"Whether the subscription filter grammar can express array containment"* —
+**it can.** Verified against live Electric: `releasable_to && ARRAY['BDR']::text[]`
+is accepted and, with one row seeded, returns exactly that row alongside the
+nation clause. `text[]` stands and needs no reshaping.
+
+Worth noting how nearly this was mis-answered. The first run returned **zero
+rows and HTTP 200**, which is indistinguishable from "the operator was parsed
+and ignored" — because every demo asset declares `releasable_to: []`. Seeding
+a single row is what turned a vacuous zero into a positive result.
+
+### The propagation graph had more producers in it than this ADR named
+
+§3 says labels are stamped at ingress and carried. In practice **four**
+components had to be changed to carry them, and the fourth was found only by
+running the pipeline:
+
+1. the ingress mapping (stamps),
+2. the projector (writes the columns),
+3. cm-service and fusion (derived rows),
+4. **the prognostics derivation** — which nothing had named, and which is
+   fusion's highest-volume inbound path.
+
+With the first three done, two tables went fully labelled and
+`asset_logistics_status` stayed at **zero**. Nothing errored. Fusion never
+receives `raw-sensor-stream` at all; its inbound handlers are
+`derived-sustainment`, `asset-cm-state` and `asset-capability-snapshot`.
+
+The mechanism appeared **three times in one night**, and is worth naming as
+one shape: *a message rebuilt field by field drops everything not explicitly
+listed, silently.* The prognostics agent's provenance copy, cm-service's
+`_dict_to_record`, and cm-service's `_recompute` preservation block are the
+three. In every case the loss is invisible at the seam — the consumer sees a
+message with no label and cannot tell *"the source had none"* from *"a hop
+lost it."*
+
+### Scope — what "PEP live" does NOT mean
+
+**This covers the USER READ PATH and nothing else.** Stated here because a
+reader will otherwise take "enforcement is live" for "all data paths
+enforced", and the two differ by the half that matters most in a shared
+fabric.
+
+- **Internal service reads** — fusion into edge brokers, Restate
+  subscriptions, the projector — are out of scope **by design** (§4): the
+  data has already been admitted to that tier.
+- **Egress is Slice 2 and is enforced by nothing here.** Connectors
+  publishing outward, tier bridges forwarding upward, peer links forwarding
+  laterally: all unguarded today.
+
+These are not two implementations of one gate. They are **two gates against
+two different adversaries**, and neither is sufficient alone:
+
+| | read gate (Slice 1) | egress gate (Slice 2) |
+|---|---|---|
+| protects against | the wrong **person** | the wrong **destination** |
+| enforcement subject | a subject | a link |
+| cadence | per shape (cheap, cacheable) | per message or per bridge |
+| placement | reverse proxy at the read surface | the bridge / connector boundary |
+| failure mode | a human sees a screen they should not | a system durably **holds** data it should not |
+
+The egress failure is worse in two ways: it is **durable** (the receiving
+system now has it) and there is **no human in the loop to notice**. Sharing
+the policy engine is what keeps the two from drifting into two truths;
+separating the enforcement points is what makes each complete for its own
+threat.
+
+Three things follow for Slice 2, recorded now while they are cheap:
+
+1. **The seams already exist.** Every hop out of a tier is a bridge
+   (edge→HQ), a peer link (ADR-0033), or a connector. Three chokepoints, all
+   already architectural objects carrying echelon context (ADR-0022 §4). The
+   egress PEP is a policy decision inserted into plumbing that exists, not
+   new plumbing.
+2. **Deny-unlabeled matters more there than here.** At the read surface an
+   unlabelled row rendering is a leak you revoke by fixing a screen. At
+   egress, an unlabelled message crossing to a partner's system is a leak
+   that has *happened*. The completeness gate is a harder precondition for
+   Slice 2 than it was for Slice 1.
+3. **Per-message Topaz calls will not scale, and the fix is a compile step,
+   not a cache.** A bridge carrying a mixed-nation topic to a single-nation
+   parent must decide per message or partition the stream. That is naturally
+   a predicate applied AT the bridge (Bloblang / Connect-level, keyed on the
+   label) — the same policy source compiled to a different enforcement form.
+   Worth designing before Slice 2 starts, because "call Topaz per Kafka
+   message" is the naive version and it does not work.
+
+### Severance — what was and was not shown
+
+With `hq-link` severed via toxiproxy, the partition **held: 13/13**.
+
+**What that proves:** the authorization decision path has no dependency on
+the inter-tier link. The PEP asks the tier's own Topaz against the tier's own
+bundle, and every component in that path is tier-local.
+
+**What it does NOT prove, and must not be reported as:** that an *edge*
+decides during severance. Slice 1 deploys **one** Topaz, at HQ (§6), and the
+per-tier locals land with the tier-bridge slice — which is the first slice
+where an edge must decide for itself. Severing the link below a tier whose
+decision path is entirely local is a weaker test than the capstone, and the
+capstone is still ahead.
+
+### Two defects worth keeping, both found by asking the running system
+
+**The decision rule was undefined for exactly the case it exists to deny.**
+`subject_record` is undefined for a subject absent from the corpus — correct
+Rego for absence — but `decision` was an object literal containing
+`subject_record != null`, and an expression over an undefined value is
+undefined, which made the whole object undefined. Topaz answered
+`{"response":{"result":[]}}`, and the gateway, unable to read a decision,
+reported the PDP as **unavailable**. Fail-closed either way, so the user was
+still refused; but the audit trail recorded an **outage** where the truth was
+an **unlisted subject**. Those call for different responses. Every field of
+`decision` now has an explicit default, and that totality is precisely the
+property that lets a PEP tell a deny from a broken PDP.
+
+**The bundle never rebuilt for the policy.** The notify workflow's path
+filter and the bundle Dockerfile's COPY list are two copies of one fact, in
+two repositories, with nothing enforcing their agreement. `policy/` and
+`gateway/` were added to the bundle and not to the filter, so the edit
+committed, CI went green, the pod restarted, and **the old policy kept
+running** — with no error anywhere in the sequence. An authorization
+component silently running last week's policy is the worst instance of this
+available, and it did not present as a stale artifact; it presented as the
+PDP rejecting every request.
+
+### Carried forward
+
+- **Multi-replica PEP needs shared shape-handle storage.** Bindings are
+  in-memory, so a second replica refuses valid resumptions. It fails closed,
+  which is the right direction, but the chart runs one replica and says so
+  rather than pretending the component is stateless.
+- **`asset_capability_state` and `asset_element_telemetry` are empty on this
+  lab**, so their zero proves nothing. logistics-sim is idle; the projector
+  half of its labelling is wired, its producer half is untested.
+- **Topaz's own decision logger remains unconfigurable** on 0.33.16. The
+  gateway record is the audit trail, not defence in depth alongside a second
+  independent one.
+- **Demo identity is a header.** `X-OpenDDIL-Subject` is the cheapest stable
+  form and is trusted because the PEP is the only route to the data. A real
+  deployment replaces it with an authenticated identity; the contract Topaz
+  sees — a subject name — does not change.
+
 ## Related
 
 - ADR-0021 — the edge→HQ topology is load-bearing (why decisions must be

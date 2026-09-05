@@ -30,7 +30,7 @@ trusted:
 ```
 
 **Run in CI** on every change to `decisions/` — `.github/workflows/
-decision-indexes.yml`. **40 IDs as of this reconciliation.**
+decision-indexes.yml`. **42 IDs as of 2026-09-05.**
 
 *The commands are not repeated here on purpose.* A copy in this file and a
 copy in the workflow are two things to keep in sync, and keeping two copies
@@ -168,6 +168,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | UD-5 | Middleware-participation health has no observable | open |
 | UD-6 | **The register itself is unaudited** | open |
 | UD-7 | Resource failure manifests on a component that did not cause it | open |
+| UD-8 | Field-by-field message copy drops what it was not told to carry | open |
 
 ### VE — verification-evidence gaps (`ADR-0037`)
 
@@ -181,6 +182,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | VE-6 | No supersession rule | open |
 | VE-7 | Evidence artifacts have no sanitization gate | open |
 | VE-8 | No CI job runs any Python test suite | open |
+| VE-9 | A deploy reports success while running the previous artifact | open |
 
 ### IH — information-honesty divergences (`ADR-0035`)
 
