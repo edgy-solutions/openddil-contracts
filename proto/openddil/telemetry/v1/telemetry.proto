@@ -373,6 +373,49 @@ message Provenance {
   // defaults — see openddil-projector/src/handlers/telemetry_latest.py.
   string edge_id = 7;
   string region_id = 8;
+
+  // ADR-0029 3 -- coalition releasability labels. Stamped at ingress by the
+  // adapter that knows the source's national origin; NEVER re-derived
+  // downstream. Same discipline as edge_id / region_id above: the earliest
+  // tier that knows the answer states it, and every later tier carries it.
+  //
+  // Aligned to STANAG 4774 (confidentiality label syntax) / 4778 (metadata
+  // binding) label CONCEPTS. OpenDDIL does not implement those STANAGs; it
+  // adopts the attribute shape so a deployment that does has somewhere to
+  // put the values.
+  //
+  // ABSENCE IS MEANINGFUL AND IS NOT THE SAME AS "RELEASABLE TO NOBODY".
+  // proto3 gives an unset string the empty value, so a consumer cannot tell
+  // "the producer declared nothing" from "the producer declared empty".
+  // Both must be treated as UNLABELLED -- which under the target
+  // deny-unlabeled policy (ADR-0029 7) means the row is releasable to no
+  // one. The policy is therefore safe under the ambiguity; what is NOT safe
+  // is enabling it before every row is labelled, because a legitimately-
+  // unlabelled row and a not-yet-labelled row are indistinguishable at the
+  // consumer. That is what the 7 completeness gate exists to rule out, and
+  // it is why the gate is a precondition of enforcement rather than a
+  // report about it.
+  //
+  // How the values are DERIVED is adapter- and deployment-specific and lives
+  // in the deployment's own bundle overlay. The OSS core defines the field
+  // and the discipline, not any particular naming convention. Parsing a
+  // nation out of an id prefix is inference from a naming habit, not a
+  // declaration by the producer; it is legitimate only as a stated local
+  // assumption of that deployment. See decisions/EXCHANGE-LEDGER.md X-4.
+  string          originator_nation = 9;   // e.g. ISO-3166 alpha-3, "ATL"
+
+  // Nations this event may be released to, beyond the originator. Empty and
+  // absent are indistinguishable on the wire (proto3 repeated) and both mean
+  // "no additional release" -- the originator's own access still derives
+  // from originator_nation, so an empty set is not a lockout.
+  repeated string releasable_to     = 10;
+
+  // policy_label -- a structured STANAG-4774-style confidentiality label, for
+  // deployments that need the full syntax. RESERVED, NOT DEFINED: shipping a
+  // guessed shape into the most permanent layer of the system is worse than
+  // shipping nothing, and the field number is the only part that is
+  // expensive to change later. (ADR-0029 3.)
+  reserved 11;
 }
 
 // =============================================================================
