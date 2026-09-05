@@ -1188,6 +1188,24 @@ like the failure being hunted**, and the tempting repair is to weaken the
 test. Write the exception down, keep it narrow, and state what it would
 mean if it were widened.
 
+**ADDENDUM, earned the same day, one layer down: applying the isolation is
+not performing it.** NetworkPolicy filters *connections*; conntrack lets
+*established* ones through. The default-deny policy went on, the two-sided
+control reported the site isolated, and the bridge kept publishing to HQ
+throughout — high-watermark 92 → 99 during "severance". Deleting the bridge
+pod, with the same policy still in place, froze it at 103 instantly.
+
+The control was not wrong; it was answering a different question. It opens
+a NEW connection, so it faithfully reported that the policy was live. **A
+control that tests the mechanism you installed is not a control on the
+outcome you wanted** — and the closer the mechanism sits to the outcome, the
+more completely the first stands in for the second in everyone's reading.
+
+So a policy-based isolation must force every flow to re-establish under it:
+restart the site. That also drops inbound sockets held by the far side,
+which nothing on the near side can otherwise close — the near pod is the
+server, and deleting it is the only lever it has.
+
 *Related:* §*A guard written alongside its fix inherits the fix's blind
 spot* — the sibling at the assertion layer · §*A probe must fail
 distinguishably from its own zero* · §*A documented hazard is not a
