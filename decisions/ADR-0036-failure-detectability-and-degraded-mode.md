@@ -426,6 +426,41 @@ setting are indistinguishable from the template's side, and both look
 exactly like a correctly-wired one. The only difference is at the consumer,
 which is where nobody is looking when they write the template.
 
+**ADDENDUM 2026-09-05 — the existing check for this would pass, and the
+proof artifact it guards would be false.** Checked after the row was
+written, on the theory that the pilot ladder already covered it.
+
+`PILOT-RUNBOOK.md` §4 rung **(i)** is headed *"The tier serves its own UI
+from its own store."* Its procedure opens the UI, confirms assets load, then
+runs `psql` **against the tier's postgres** and confirms one distinct
+`edge_id`. **It verifies two things separately and infers the join.** Under
+this row's defect the UI reads the root's Electric while the tier's store is
+independently perfect — so both steps pass and the heading is false. Nothing
+in the procedure observes what the UI is reading.
+
+Worse, rung **(iii)** is the arc's proof artifact, marked *RECORD THIS*, and
+its first capture is *"the UI stays live — reload the page while severed."*
+The sever is toxiproxy on `hq-link`, which sits on the **Kafka** path; the
+UI is reading the root's Electric over **HTTP**, which that sever does not
+touch. **The reload succeeds for the opposite of the stated reason** — the
+page survives because it never depended on the tier. A recording made today
+would show the right picture and prove the wrong thing.
+
+Captures 2–4 of that rung are `psql` and `rpk` queries and remain valid.
+**Only the visual capture is invalid, and it is the one that gets
+recorded.**
+
+*The generalizable point, and it is the reason this addendum is longer than
+the row it hangs off:* **a check that verifies A and verifies B and concludes
+"A is joined to B" is not a check on the join.** Both rungs are well
+constructed for what they measure. Neither measures the conjunction its
+heading claims, and the conjunction is the whole property. Same shape as the
+buffer probe recorded elsewhere in this ADR — except the observer here is a
+human with the screen in front of them, and the screen looks right.
+
+Both rungs now carry a warning citing this row, so the ladder cannot be
+walked into innocently before the tier-presentation arc lands.
+
 ## Consequences
 
 **Pros**

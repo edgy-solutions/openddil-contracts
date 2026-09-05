@@ -267,7 +267,13 @@ and they produce very different plans:
   what it needs, and GD-01 stays a separately-scheduled piece of work whose
   own forcing function is now sharper for having a named consumer.
 
-**Recommendation: block on it, and say so in GD-04.** The presentation work
+**RATIFIED 2026-09-05: block, do not own.** The recommendation below was
+taken. GD-04 records the dependency; the forcing-function acceptance stays
+recorded as *blocked on GD-01* rather than being restated as "no
+tier-specific branches" — which is achievable now and is a different claim.
+
+**Recommendation as written, kept for the reasoning:** block on it, and say
+so in GD-04. The presentation work
 is worth doing on its own merits — it removes a live mode-confusion hazard,
 it is small, and it unblocks a recording that is otherwise not worth making.
 Bundling it with the deepest change in the corpus would delay all of that
@@ -275,6 +281,117 @@ behind the most expensive thing in the register. But this is a scoping
 decision and it sits behind the go-signal like everything else here.
 
 ---
+
+## 6a. The deployment half — the chart delta
+
+*(Added 2026-09-05, from the relay. Each item verified against the templates
+rather than taken as given; the verification is the second column.)*
+
+**The binding has to happen in the chart, because the whole point is that the
+image knows nothing.** One bundle, zero tier knowledge at build time, tier
+identity supplied entirely at deploy time. UD-9 is the proof that the chart
+currently *believes* it does this and does not: it sets a per-tier env var
+against a value that was compiled in.
+
+The mechanism is the channel the app already has. `deployment.json` is
+fetched at startup and already carries the edge→region topology; tier
+identity, subtree definition and the data-source URL move into it, served
+from a per-tier ConfigMap. Then the same bundle renders the HQ instance or
+the edge instance depending on **which file it fetches** — which is exactly
+step 2's acceptance, and reachable today.
+
+| # | Delta | Verified state today |
+|---|---|---|
+| 1 | **Frontend ConfigMap per tier** — tier id, subtree scope, data-source URL. And **delete the dead env var**, citing UD-9 | `grep -c ConfigMap` over the tier frontend block: **0**. The only per-tier frontend config is the inert `ELECTRIC_URL` |
+| 2 | **nginx upstream per tier**, pointed at *the tier's PEP* — not `electric-sync`, not Electric directly | One baked config, one substitution, defaulting to `electric-sync`. Post-Slice 1 the browser must never reach Electric at all |
+| 3 | **PEP per tier + NetworkPolicy naming the tier's Electric** | One PEP at the root; the NetworkPolicy's `podSelector` names `component: electric-sync`. `tier-electric-<id>` is uncovered |
+| 4 | **Auth client per tier** — each tier's PEP its own confidential client, its own exact redirect URI | **One** `redirectUris` entry in the realm. Keycloak stays at HQ; per-tier realm replicas ride the tier-bridge slice |
+| 5 | **Ingress per tier host** — each tier is a URL | `grep -c "kind: Ingress"` in `tier-node.yaml`: **0**. Today a tier UI is reachable only by `port-forward`, which is what rung (i) does |
+
+**Items 2 and 3 land together or the tier is worse than before.** Pointing
+nginx at a tier PEP that does not exist breaks the UI; deploying a tier PEP
+without repointing nginx leaves the bypass open. Today a tier node's read
+path would be **unauthenticated and reading the root's store** — the two
+defects compose, which is the argument for one arc rather than two.
+
+**Item 5 is what "a tab per tier instantiation" meant.** Each tier being a
+URL is not packaging; it is the thing that makes the tab switcher
+unnecessary, and it is also what item 4 needs — a redirect URI is per host.
+
+---
+
+## 6b. The guard, and why the existing one would not have caught this
+
+**UD-9 is a class, and the durable check is not in the chart.** A misspelled
+setting and an unread setting are identical from the template's side. The
+check belongs where the claim is made: the tier's UI reporting **which tier
+it believes it is and which source it is reading**, verified against data
+only that tier's store has.
+
+**The pilot ladder already has that rung, and it would pass silently today.**
+This was checked rather than assumed, and the result is worse than expected.
+
+`PILOT-RUNBOOK.md` §4 rung **(i)** is headed *"The tier serves its own UI
+from its own store."* Its procedure is:
+
+1. `port-forward` to the tier frontend, open it, confirm the maintainer view
+   loads and shows assets;
+2. `psql` **against the tier's postgres**, confirm `count(DISTINCT edge_id) = 1`.
+
+**It verifies the two halves separately and infers the join.** Under UD-9 the
+UI is reading the ROOT's Electric while the tier's store is, independently,
+perfectly correct — so step 1 passes, step 2 passes, and the rung's heading
+is false. Nothing in the procedure observes what the UI is actually reading.
+
+*Same family as the buffer probe recorded two rungs later:* the healthy
+reading and the broken reading are byte-identical from the observer's
+position. The difference here is that the observer is a **human with the
+screen in front of them**, and the screen looks right.
+
+### And rung (iii) — the severance proof — is invalidated by the same defect
+
+Rung (iii) is the arc's proof artifact, the one marked **RECORD THIS**. Its
+first captured item is:
+
+> **The UI stays live.** Reload the page *while severed*. It must still
+> load — this is the point of serving the UI from the tier. A cached tab
+> surviving is not the proof; a **reload** is.
+
+The sever is `toxiproxy` on `hq-link`, which sits on the **Kafka** path
+between the edge-hq bridge and the root broker. Under UD-9 the UI is reading
+the root's Electric over **HTTP**, which that sever does not touch.
+
+**So the reload would succeed, and it would succeed for the opposite of the
+stated reason.** The page survives because it never depended on the tier —
+not because the tier is serving it. The recording would show the right
+picture and prove the wrong thing.
+
+Rung (iii)'s other three captures — telemetry advancing, severity computing,
+buffer climbing — are `psql` and `rpk` queries and remain valid: they do
+prove tier-local data and tier-local fusion. **Only the UI half is invalid,
+and the UI half is the half that gets recorded.**
+
+*This is the sharpest available argument for the recording waiting on this
+arc, and it is stronger than the one the arc was opened with.* The concern
+was that a recording would show the interim shape. The finding is that a
+recording made today would show a **false** claim — an artifact asserting
+tier-local presentation, produced by a UI that was reading the root
+throughout.
+
+### What the rung should become
+
+Not designed here — it is step 3's work, and the fix is small once the
+data-source URL is runtime config. The shape:
+
+- the UI **states** its tier and its data source, from the config it fetched
+  (a claim it can only make if something told it);
+- the check reads a value **only that tier's store holds** *through the UI's
+  own path*, not beside it;
+- and the severance rung reloads the page with the tier's own uplink cut,
+  which is only meaningful once the UI's read path is the one being cut.
+
+**A tier node showing the root's data under its own label is exactly what
+rung (i) exists to catch.** That it would not is the finding.
 
 ## 7. What this package did not establish
 
