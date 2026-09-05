@@ -748,6 +748,169 @@ component silently running last week's policy is the worst instance of this
 available, and it did not present as a stale artifact; it presented as the
 PDP rejecting every request.
 
+### Authentication — Keycloak, and why the browser holds no token
+
+*(Added 2026-09-05. Slice 1 shipped with a trusted-header subject; this is
+the decision that replaced it.)*
+
+**Keycloak answers *who is this*. Topaz answers *what may they see*.** The one
+value crossing that seam is a stable subject id, used as the join key into
+the git-asserted entitlements corpus. Keycloak may perfectly well carry group
+or role claims; nothing reads them, and nothing should start to — a
+deployment with entitlements in two places has two truths to keep in sync and
+no way to tell which one an operator's screen reflected.
+
+#### Backend-for-frontend, not the SPA pattern
+
+The gateway is a **confidential** OIDC client. It runs the authorization-code
+flow server-side and hands the browser an httpOnly, SameSite session cookie;
+tokens never reach JavaScript. An XSS in the frontend can ride a live session
+but cannot exfiltrate a credential, which is a strictly smaller blast radius
+than a page that holds its own tokens.
+
+This is a deliberate divergence from the co-located reasoning plane
+(ADR-0031), whose realm and gateway were **read before deciding** rather than
+assumed. Recorded in full because "how hardened is that?" deserves specifics,
+and because a vague worry attached to a sibling project is worse than an
+accurate one:
+
+**Its browser flow is authorization CODE, not implicit.** That part of the
+concern was unfounded and is worth saying plainly.
+
+**Inherited, because it is right:**
+
+- `PyJWKClient` with a cached JWKS — the primitive that makes
+  severance-tolerant validation possible at all;
+- `algorithms=["RS256"]` **pinned**, which closes algorithm confusion and the
+  `alg: none` family;
+- authorization identity kept separate from `email`, with email treated as
+  display/audit only and permitted to be absent;
+- **Topaz as the sole source of entitlements**, with no JWT-claim reads left.
+  That is the same seam this ADR keeps, and it is the strongest thing in
+  their implementation.
+
+**Declined, deliberately:**
+
+| Their setting | Why not here |
+|---|---|
+| `options={"verify_aud": False}` | The realm also holds **service clients**. Without an audience check, a token minted for any of them is accepted by the user-facing gateway. |
+| no `issuer=` on decode | A token from another realm, signed by a key this process trusts, would pass. |
+| `publicClient: true` for the UI | Puts tokens in the browser — the thing this design exists to avoid. |
+| `redirectUris: ["*"]` | A wildcard redirect is how an authorization code is delivered somewhere other than the gateway that asked for it. |
+| `directAccessGrantsEnabled: true` on the UI client | The resource-owner password grant, which OAuth 2.1 removes, sitting beside the browser flow as a second way in. |
+| no PKCE enforcement | A public client's intercepted code can be redeemed without a verifier. |
+
+None of that is a criticism of their shipped state — their gateway is a
+bearer-token API, where the SPA pattern is conventional. It is a record of
+which parts were copied and which were not, so neither answer has to be
+re-derived. **If this BFF proves out, the pattern is available to flow back
+the other way.**
+
+#### Signature verification is written out, and therefore tested hard
+
+The PEP runs stdlib-only in a stock python image (see the bundle Dockerfile:
+a component whose job is to *refuse* requests must not have a dependency that
+can fail to install). So RS256 verification is implemented rather than
+imported. That trade is only defensible if it is exercised against bad
+tokens, so it is: **16 tests, every negative case a token a lax verifier
+would accept** — tampered payload, wrong audience, wrong issuer, expired,
+`alg: none`, and HS256 signed with the RSA public key (assembled by hand,
+because PyJWT refuses to *mint* that one).
+
+Red-checked by mutating the verifier to match the sibling's posture: exactly
+the audience and issuer tests fail, and only those two.
+
+#### Two auth modes, chosen at boot — and why that is not `ALLOW_MOCK_AUTH`
+
+`oidc` and `header` are selected before the first request and are mutually
+exclusive. In `oidc` mode the trusted header is **never read**.
+
+The constraint this ADR inherited from `dag-tools` was about a branch **inside
+the real path** that converted an authorizer exception into allow-by-default
+— a request could take the bypass at runtime without anyone choosing it.
+Here there is no input a caller can supply that selects the other mode, and
+no failure that degrades into it: a half-configured OIDC **refuses to start**,
+because a gateway that silently fell back would be a fail-open wearing a
+configuration error as a disguise. Every decision record names the mode that
+produced its subject, so the audit trail can never be ambiguous about which
+was live.
+
+#### The subject is `sub`
+
+Never `email`, never `preferred_username`. Both are mutable and re-assignable
+in an identity provider: an address freed by one person and later handed to
+another would **silently inherit the first person's entitlements**, and
+nothing in the corpus would look wrong — the row would still name a plausible
+principal. `sub` is opaque and stable, so a re-issued username produces a
+subject nobody has entitled, which fails closed.
+
+The cost is readability, paid two ways: the demo realm **pins its user ids**
+so the corpus stays greppable across re-imports, and every row carries
+`username` and `display_name` for the human reading the diff. Those two
+fields are documentation; nothing reads them.
+
+*Unpinned ids are not a cosmetic problem.* Every realm re-import would issue
+fresh UUIDs, orphaning every entitlement — each user authenticating
+successfully and then being denied everything, which looks exactly like a
+policy bug and is not one.
+
+#### Two versions in every decision, not one
+
+`policy_version` versions the **rules**; `corpus_version` versions the
+**entitlements**. They move on completely different cadences — a promotion
+changes one list in one file and touches no rule — so a record carrying only
+the first cannot answer *"which entitlements were in force when this person
+was allowed?"*, which is the question an accreditor asks.
+
+Found by rehearsing the promotion beat and watching `policy_version`
+correctly **not** change.
+
+#### DDIL: what survives a severed link, and what does not
+
+Authentication has the same locality problem authorization does, and Slice 1
+answers it the same way — honestly, and not yet.
+
+- **Existing sessions survive.** Validation is against a locally cached JWKS
+  and a local session table; neither needs the identity provider. The JWKS
+  cache refreshes **only on an unknown key id**, never on a timer — a timer
+  would turn an unreachable IdP into an outage for sessions that were already
+  validated, which is precisely the behaviour this is trying to avoid.
+- **New logins do not.** The code exchange is a live call to the token
+  endpoint. A severed tier cannot mint a session.
+- **Session lifetime is therefore a DDIL parameter, not a security
+  constant**: long enough to outlast a plausible severance window, short
+  enough to bound a stolen cookie. It is a chart value for exactly that
+  reason.
+
+**Per-tier identity rides the same seam as per-tier Topaz** — a Keycloak
+replica or a local IdP — and lands with the tier-bridge slice. They are one
+passenger, not two, and should be designed together.
+
+#### Operational notes worth keeping
+
+- **`SameSite=Lax`, and that is a considered choice.** `Strict` is the
+  instinctive answer and it breaks the login round trip when the IdP is on a
+  different *site*: the post-callback navigation is attributed to the
+  cross-site initiator, the cookie is withheld, and the user lands logged out
+  — intermittent, and indistinguishable from a flaky login. The bundled
+  Keycloak is served under the app's own host, so the two are same-site and
+  `Strict` is available to a deployment that wants it.
+- **The identity provider has two addresses and they are not
+  interchangeable.** The browser arrives through the ingress; the gateway
+  goes straight to the Service. Conflating them fails in two shapes that both
+  look like something else — an internal issuer the browser can never reach,
+  or a pod hairpinning through its own ingress, which *sometimes* works and
+  therefore sometimes stops. `iss` is validated against the configured public
+  issuer; server-side calls are rewritten onto the internal base.
+- **Keycloak was OOMKilled at 1Gi and again at 2Gi.** Raising the limit alone
+  does not help: the JVM sizes its heap as a percentage of the limit it is
+  given, so a larger limit produces a proportionally larger heap and the same
+  overshoot. An absolute heap cap plus headroom is the fix. The symptom is a
+  CrashLoopBackOff whose container log ends mid-startup **with no error** —
+  the kill happens outside the JVM, so there is no `OutOfMemoryError` to
+  print, and the diagnosis lives in the pod's `lastState`, which is not where
+  anyone looks first.
+
 ### Carried forward
 
 - **Multi-replica PEP needs shared shape-handle storage.** Bindings are
@@ -760,10 +923,19 @@ PDP rejecting every request.
 - **Topaz's own decision logger remains unconfigurable** on 0.33.16. The
   gateway record is the audit trail, not defence in depth alongside a second
   independent one.
-- **Demo identity is a header.** `X-OpenDDIL-Subject` is the cheapest stable
-  form and is trusted because the PEP is the only route to the data. A real
-  deployment replaces it with an authenticated identity; the contract Topaz
-  sees — a subject name — does not change.
+- ~~**Demo identity is a header.**~~ **RESOLVED 2026-09-05** — replaced by a
+  Keycloak backend-for-frontend; see the authentication section above. The
+  header mode remains, selected at boot, for the headless suite and for a
+  gateway reachable only in-cluster. The prediction held: the contract Topaz
+  sees did not change, only what establishes the subject.
+- **A browser-readable decision feed was deliberately NOT built.** The demo
+  wants a pane showing every subject's decisions side by side; serving that
+  to a browser would create a new read surface with its own releasability
+  question, and inventing one to make a demo pane work is the wrong
+  instinct — it is the shape of the problem this whole arc exists to fix.
+  The pane stays a terminal tail of the gateway's log. A per-subject
+  endpoint (a user asking *"why can't I see X?"* about their OWN decisions)
+  is safe and worth building; a global one is a Slice-2-sized question.
 
 ## Related
 
