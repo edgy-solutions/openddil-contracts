@@ -350,6 +350,15 @@ edit.
 
 **UD-9 — A configuration setting whose consumer does not exist fails
 silently, and the comment beside it is the only thing asserting it works.**
+*(The tier-node INSTANCE was fixed 2026-09-05 — the dead `ELECTRIC_URL` and
+its false comment are gone, the read upstream is driven by names the
+entrypoint substitutes and fails on, and a cross-artifact check now asserts
+the chart emits a config the frontend accepts. **The row stays open**, for
+two reasons that are not the same as the instance: the CLASS has no
+mechanical detection, and the pilot rung that should have caught this one
+still verifies its two halves separately and infers the join. A fixed defect
+and a check that could not have detected it are different facts, and only one
+of them changed.)*
 *(Found 2026-09-05 while inventorying the frontend for the tier-presentation
 arc. Three instances; one is live-when-enabled and unfixed.)*
 

@@ -1,7 +1,10 @@
 # Plan — tier-parameterized presentation, opening package
 
-**Date:** 2026-09-05 · **Status: PLAN ONLY. Nothing built, nothing
-scheduled, go-signal reserved.** · **Method:** state verified by reading and
+**Date:** 2026-09-05 · **Status: GO-SIGNAL GIVEN 2026-09-05. Steps 1-6 shipped; step 7 blocked on
+GD-01 as ratified. See §Execution status.** *(Was: PLAN ONLY, go-signal
+reserved — kept visible because a package that quietly becomes a status
+report loses the thing that made it useful, which is that its findings were
+recorded BEFORE the work rather than after.)* · **Method:** state verified by reading and
 executing, not inferred from status text or from ADR-0033's own amendment.
 
 The arc is ADR-0033's amendment made real: *one UI, parameterized by tier,
@@ -392,6 +395,68 @@ data-source URL is runtime config. The shape:
 
 **A tier node showing the root's data under its own label is exactly what
 rung (i) exists to catch.** That it would not is the finding.
+
+---
+
+## Execution status — 2026-09-05, go-signal given
+
+**Steps 1–6 shipped. Step 7 remains blocked on GD-01, as ratified.**
+
+| Step | State | Evidence |
+|---|---|---|
+| **1** scope hooks collapse | **DONE** | `useFleetAssetsForTier(scope)`; the named wrappers survive because `useFleetAssetsForEdge` is a deployment-proof grep target |
+| **2** tier parameter | **DONE** | `TierConfig` in `deployment.json`, parsed by an exported `parseTier`; 14 tests |
+| **3** UD-9 fixed | **DONE** | Dead `ELECTRIC_URL` and its false comment deleted; upstream driven by names the entrypoint actually substitutes and fails on |
+| **4** per-tier PEP | **DONE** | `tier-pep-<id>` + a NetworkPolicy naming that tier's Electric + per-tier Ingress + per-tier OIDC client |
+| **5** role from Topaz | **PLUMBED, not consumed** | End to end and verified live: `"role": "regional-operator"` in `/auth/me`. **No panel gates on it yet** |
+| **6** shell as consumer | **DONE** | `Root.tsx` no longer references the three components; it hands `TierApp` a shape |
+| **7** fourth tier scoped | **BLOCKED on GD-01** | Renders a well-formed config; cannot be filtered — no left-hand side exists |
+
+**Acceptance for step 2, as stated, is met and mechanically checked.**
+`openddil-helm/scripts/check-tier-config.sh` renders the chart with a fourth
+tier supplied at render time — an intermediate under another intermediate,
+present in no committed values file — and asserts a well-formed config with
+no code change. Red-checked by removing `parent`: all three tiers fail by
+name.
+
+### What is NOT done, stated so it cannot be read as done
+
+**The three components are still three components.** `TierApp` selects
+between them BY SHAPE, which delivers what the arc needed first — no tab
+switcher, instance chosen by config, one bundle rendering different
+instances. The amendment asks for ONE component composing panels by shape,
+and that convergence has not happened. §5 of this package argues it is small
+(the rollup panel set is already shared between two of the three); that
+argument is untested until someone does it.
+
+**No panel consumes `role`.** The axis exists, is sourced from Topaz, is
+distinct from the tier axis, and is displayed. Nothing branches on it. The
+arc required the axes stay separate — they do — not that the second one be
+wired into panel selection, and pretending otherwise would be the
+self-description failure this corpus keeps recording.
+
+**The 3D scenes were never examined.** §7 said so before the work started
+and it is still true: they are the largest components and the most likely to
+carry a depth assumption in geometry rather than in a hook.
+
+**`ControllerApp` is still unclassified** and was deliberately left outside
+the shape switch. Giving it a shape to tidy the code would have been
+inventing an answer to a question §7 recorded as open.
+
+### The capstone recording is now possible, and is not yet made
+
+Pilot rung (i) and rung (iii)'s first capture both carry warnings against
+UD-9. **Those warnings are now stale in the good direction** — the defect
+they describe is fixed at the template level — but they must not be removed
+until the rung itself is repaired, because the rung still verifies the UI
+and the store SEPARATELY and infers the join. A fixed defect and a check
+that could not have detected it are two different facts, and only one of
+them changed.
+
+**Repairing the rung is the remaining prerequisite for the recording**, and
+it is small now that the tier states its identity and data source on screen:
+the check reads a value only that tier's store holds, THROUGH the UI's own
+path, rather than beside it.
 
 ## 7. What this package did not establish
 
