@@ -617,7 +617,7 @@ state whenever the root stops computing — *otherwise HQ loses that edge
 entirely, a silent hole in place of a duplicate one* — and with no tier node
 the root's list must be unchanged.
 
-`Status: open`
+`Status: fixed 2026-09-05`
 
 **UD-11 — The detection cutover retired the subscription and left the
 projector reaching down; a severance red-check found it, and the guard
@@ -655,15 +655,39 @@ blind spot; it can only fail if the fix regresses, never if the fix was
 incomplete.* That is a different property from being wrong, and it is why
 the live red-check is not redundant with the render-time guard.
 
-*Fix shape (its own increment, not a one-liner): retire the root's per-edge
-projector for tier-managed edges, and establish that HQ's read model for
-that edge is then written from the bridged derived state — which must be
-demonstrated, not assumed, since HQ tables for edge-01 presently have two
-writers. Re-run this red-check as the acceptance test; the assertion that
-matters is that the root's view goes **stale**, because a view that stays
-fresh under severance is a view fed by a path that was supposed to be gone.*
+**FIXED AND VERIFIED 2026-09-05.** The fix is a REPOINT, not a gate. Gating
+alone would have left HQ **empty**, because on the HQ broker
+`telemetry-latest-state` had a high-watermark of **0** — never produced to —
+so every row HQ held for this edge came from the downward projector. The
+bridge now carries that topic for tier-managed edges, which gives
+`projector-hq`'s existing and until-then idle subscription something to
+read. One writer per edge, and for a tier-managed edge it sits behind the
+bridge.
 
-`Status: open`
+Verified by `check-severance-acceptance.sh edge-01`, all four green:
+
+| | assertion | measured |
+|---|---|---|
+| (a) | tier serves its own fresh data | advanced `17:09:17` → `17:11:49` while isolated |
+| (b) | tier severity still computing | 3s old |
+| (c) | **HQ goes STALE, not empty, not fresh** | frozen at `17:09:21.822678`, **identical across two samples 40s apart**, 149s behind, 8 rows retained |
+| (d) | heal converges | `17:09:21` → `17:10:10`, drained in 6s |
+
+**(c) is also the exactly-one-writer proof, and it is stronger than the
+enumeration that preceded it.** An inventory of pods that read an edge
+broker and write the root store is a list of the reachbacks someone thought
+to look for; a frozen HQ under a complete cut is a statement about all of
+them. It settled an open question the enumeration could not: whether
+`asset-registry-service`, which carries an `ASSET_REGISTRY_EDGES` list of
+edge brokers while pointing `KAFKA_BROKERS` at HQ, was actually reaching
+down. If it had been, HQ could not have frozen.
+
+The control is what makes it evidence: **peer edge-02 stayed fresh at HQ
+(1s) throughout.** Without that, a stopped projector, a wedged HQ broker or
+a dead postgres would each present as "the severed edge went stale" and
+pass.
+
+`Status: fixed 2026-09-05`
 
 **UD-12 — Subscription bootstrap creates and never reconciles; the root
 hides it, the tier accumulates it.** `register_subscriptions.py` (both
@@ -690,10 +714,21 @@ rebuilds UD-10's own mechanism inside the tier** — a rebalance with a
 partition to hand around on every membership change — and it grows by one
 copy per upgrade with nothing that will ever report it.
 
-*Fix shape: make the bootstrap reconcile — delete subscriptions in its
-ownership scope that are absent from the desired set. That removes the
-root's dependence on `ephemeralOnUpgrade` and stops the tier's accumulation
-with one change, which is the sign the two halves are one defect.*
+**FIXED AND VERIFIED 2026-09-05.** `prune_subscriptions` deletes both
+strays (owned, not desired) and duplicates, scoped by consumer-group prefix
+so cm-service and fusion do not delete each other's. The tier's shell
+bootstrap is replaced by `register_tier_subscriptions.py` running the same
+library the root runs — *the tier is not a different kind of node, so its
+bootstrap is not a different kind of program*, and the divergence was never
+a decision, just a reimplementation in a language with no JSON parser to
+hand.
+
+Observed on the first run against the lab tier: **14 subscriptions in, 7
+duplicates deleted by id, 7 kept.** Six unit tests, most asserting what must
+SURVIVE — deleting too much is quieter than deleting too little, and the
+case that would hurt most is fusion's `fusion-service-cm-state-hq`, which
+shares the ownership prefix and carries every tier-managed edge's CM state
+INTO the root. Omitting it from the desired set would have pruned it.
 
 ## Consequences
 
