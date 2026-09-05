@@ -598,8 +598,15 @@ bridge's topic list — so the two cannot disagree about which edges those
 are.
 
 **The topic names at HQ do not change**, only the producer: the root's
-projector and its HQ-cluster fusion subscription needed no edit at all. The
-root reaching down became the tier publishing up.
+HQ-cluster fusion subscription needed no edit at all. The root reaching down
+became the tier publishing up.
+
+> **CORRECTION, 2026-09-05, from the severance red-check.** The sentence
+> above originally also claimed *"the root's projector ... needed no edit at
+> all."* **That was false, and it was the load-bearing error.** The root's
+> per-edge projector still reaches down. See **UD-11**. The cutover as
+> landed covers the DETECTION plane only; the PROJECTION plane was left
+> reaching into the edge, and this ADR asserted otherwise for a day.
 
 **Resolves GD-08 for tier-managed edges as a side effect**, which is a sign
 it is the right cut rather than a workaround for the symptom.
@@ -609,6 +616,84 @@ the root's list and the tier-managed set, the bridge must carry derived
 state whenever the root stops computing — *otherwise HQ loses that edge
 entirely, a silent hole in place of a duplicate one* — and with no tier node
 the root's list must be unchanged.
+
+`Status: open`
+
+**UD-11 — The detection cutover retired the subscription and left the
+projector reaching down; a severance red-check found it, and the guard
+written for the cutover could not.** The root stops *detecting* for a
+tier-managed edge (`$cmEdgeClusters` excludes it, Restate holds no
+`cm-service-silver-edge-01`), and this was verified live. But
+`openddil-projector-edge-01` — a **root-owned** Deployment writing the
+**root's** store — still runs, still points `KAFKA_BROKERS` at
+`openddil-redpanda-edge-01:9092`, and reaches it **directly, bypassing
+toxiproxy**. `openddil.isTierManaged` is consulted in exactly two places,
+the bridge's topic list and the subscription list. The per-edge projector
+Deployment is not one of them.
+
+**How it was caught, and why nothing else would have caught it.** With
+`hq-link` severed the tier's `telemetry_latest_state` advanced — 15:43:11 →
+15:44:34, tier severity still computing at 1–3s lag — and **the root's view
+of edge-01 advanced with it, matching to the microsecond.** The root was not
+holding stale data through the cut; it was being fed live through a path the
+cut does not touch.
+
+Before the sever, the root's edge-01 rows read `lag_s = 0` with no Restate
+subscription, and **I read that as proof the bridge was carrying them.** It
+was not proof. It was consistent with the bridge, and equally consistent
+with a second feed nobody had retired. *Freshness identifies no provenance —
+it is exactly the observation that cannot distinguish two live sources.*
+Severance is what separates them, which is the whole reason this check was
+demanded before the recordings rather than after.
+
+**The guard is the sharper half of this row.** `check-tier-config.sh`
+asserts the root's `CM_EDGE_CLUSTERS` excludes tier-managed edges and passes
+— correctly, and uselessly. It was written from the same understanding that
+produced the defect, so it inspects the half that was fixed and is blind to
+the half that was not. *A guard authored alongside a fix inherits the fix's
+blind spot; it can only fail if the fix regresses, never if the fix was
+incomplete.* That is a different property from being wrong, and it is why
+the live red-check is not redundant with the render-time guard.
+
+*Fix shape (its own increment, not a one-liner): retire the root's per-edge
+projector for tier-managed edges, and establish that HQ's read model for
+that edge is then written from the bridged derived state — which must be
+demonstrated, not assumed, since HQ tables for edge-01 presently have two
+writers. Re-run this red-check as the acceptance test; the assertion that
+matters is that the root's view goes **stale**, because a view that stays
+fresh under severance is a view fed by a path that was supposed to be gone.*
+
+`Status: open`
+
+**UD-12 — Subscription bootstrap creates and never reconciles; the root
+hides it, the tier accumulates it.** `register_subscriptions.py` (both
+services) has no delete path — it registers a desired set and never removes
+what is absent from it.
+
+- **At the root this is invisible**, because
+  `hook-restate-wipe.yaml` deletes the root's Restate PVC on every
+  install/upgrade when `restate.ephemeralOnUpgrade` is true. Wipe-and-
+  recreate *is* reconciliation, by the blunt route. **So UD-10's retirement
+  currently holds by way of a flag that knows nothing about tiers**, and the
+  chart's own comment documents `false` as the prod-like setting. Set it,
+  and the cutover silently stops retiring anything — with
+  `check-tier-config.sh` still green, since it reads the rendered list and
+  not the live subscription set.
+- **At the tier it is plainly visible**, because the wipe hook covers only
+  `<release>-restate-server` and not `<release>-tier-restate-<id>`. Observed:
+  **14 subscriptions across 7 distinct (source, sink, group) triples — every
+  one duplicated exactly ×2**, one copy per upgrade the tier has seen.
+
+Same group id, so today this is two members of one group on a one-partition
+topic: one holds it, one idles, output is correct. **The cost is that it
+rebuilds UD-10's own mechanism inside the tier** — a rebalance with a
+partition to hand around on every membership change — and it grows by one
+copy per upgrade with nothing that will ever report it.
+
+*Fix shape: make the bootstrap reconcile — delete subscriptions in its
+ownership scope that are absent from the desired set. That removes the
+root's dependence on `ephemeralOnUpgrade` and stops the tier's accumulation
+with one change, which is the sign the two halves are one defect.*
 
 ## Consequences
 

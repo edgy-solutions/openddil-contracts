@@ -1120,3 +1120,35 @@ tell success from not-running; this is about a probe that reports success
   paragraphs of qualification, it is an ADR, not a principle.
 - Principles do not override ADRs; they are the heuristics that make
   ADRs less necessary.
+
+## A guard written alongside its fix inherits the fix's blind spot
+
+A check authored in the same sitting as the change it protects is built
+from the same understanding that produced the change. It therefore tests
+the part the author already saw. It can catch a **regression** — someone
+later undoing the fix — and it is structurally incapable of catching an
+**incomplete fix**, because incompleteness lives exactly where the author
+was not looking.
+
+**Earned 2026-09-05.** A detection cutover moved one plane of a tier's
+work off the root and left a second plane reaching down. The guard written
+with it asserted the moved plane had moved, passed, and was blind to the
+other by construction. A live severance found it in ninety seconds.
+
+*The practical consequence:* a render-time guard and a live red-check are
+not redundant, and the second is not a formality once the first is green.
+The guard answers *did this stay fixed*. Only the live check answers *was
+it fixed*. Do not let a green guard retire the check that would have
+disagreed with it.
+
+*Corollary, and the specific way this one lied:* **freshness identifies no
+provenance.** A row that is up to date tells you *someone* is writing it,
+never *who*. When a path is supposed to have been retired, current data on
+the far side is equally consistent with "the replacement works" and "the
+thing you retired never stopped." Only cutting the link tells them apart —
+so the assertion to write is that the view goes **stale**, not that it
+stays fresh.
+
+*Related:* §*A probe must fail distinguishably from its own zero* ·
+§*A check that gets quieter as the data grows is worse than one that never
+worked* · §*A documented hazard is not a mitigated one*.
