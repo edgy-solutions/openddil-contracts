@@ -502,6 +502,21 @@ exactly one member; the other is a silent standby. Every tier subscription
 collides the same way — `fusion-service-silver-*`,
 `fusion-service-derived-*`, `cm-service-cm-events-*`.
 
+**THE INVERTED-SEVERANCE PROPERTY, and it is the reason stopping short of a
+green mattered by a wide margin.** *(Added on review; the original writing
+of this row did not see it.)*
+
+Cut the link, and **the root's consumer drops out of the group.** The
+rebalance hands the partition to the tier, and the tier starts working. So:
+
+> **The tier functions ONLY WHILE SEVERED, and freezes while connected.**
+
+A severance recording against a tier in this state would pass — the UI would
+serve live data while cut — and it would pass **because severance removed
+the competitor**, not because the tier is severance-tolerant. That is
+precisely UD-9's shape, and it is the most convincing false positive this
+arc could have produced: the demo would be more compelling for being wrong.
+
 **What it looks like from outside, which is the point.** The tier's
 cm-service is `1/1 Running`. It logged a normal startup, processed a burst
 during the rebalance, registered every asset it saw, and then received
@@ -522,22 +537,33 @@ labelled, because those had been written during the same burst.
 it is worth noting the shape:* **the three unlabelled rows were not the
 defect — they were the only externally visible trace of it.**
 
-**The naming collision is a symptom; the question underneath is
-architectural.** ADR-0032 §a says a severance-tolerant tier requires **that
-tier's own broker**. This tier consumes a broker the ROOT owns and the root
-also consumes. So the choice is not merely "add a tier suffix to the group
-id":
+**CORRECTION — this is consumer ownership, not broker location.** The first
+writing of this row framed it as an ADR-0032 §a question about whose broker
+it is. That was wrong in a way worth keeping visible: **the broker is
+already at the edge.** `redpanda-edge-01` runs where the tier runs, so its
+placement is fine and severance-tolerant physically. Nobody should read this
+row and conclude the fix involves moving brokers.
 
-- **If both are meant to consume**, the groups must be distinct — and then
-  two independent consumers process the same stream into two stores, which
-  is intended (root rolls up, tier presents locally) and needs saying.
-- **If the tier is meant to own that broker**, the collision disappears and
-  ADR-0032 §a is satisfied properly — but the root then needs its input from
-  the tier's rollup rather than from the edge stream directly.
+The defect is a **cross-tier CONSUMER on a tier's raw stream.** §a stands
+unchanged; its actionable form is:
 
-A group-suffix patch would make the symptom go away and leave that
-undecided, which is how a deployment shortcut becomes a design (ADR-0033's
-own opening argument).
+> **No consumer above a tier reads that tier's raw streams. Parents consume
+> derived state through the bridge.**
+
+**THE GROUP-SUFFIX PATCH IS REJECTED, and for a sharper reason than "it
+leaves the design undecided".** Distinct group ids make **both** consumers
+receive **every** message. The tier then computes severity for this edge and
+the root computes severity for this edge, independently, from one raw
+stream — **two severity truths for one asset, arbitrated by whichever
+projector wrote last.**
+
+That is the two-truths disease this project has killed on sight every time
+it appeared — two authz corpora, two read paths, two policy stores — and it
+would arrive in the DETECTION plane wearing a one-line config fix. The
+symptom would vanish and the disease would be worse, because a frozen tier
+is at least detectable and a silently-arbitrated severity is not.
+
+**The fix is a cutover, not a rename** — see §Detection cutover below.
 
 **Consequence for the capstone, stated plainly.** A severance recording made
 against a tier in this state would show the UI serving data while severed —
@@ -551,6 +577,38 @@ is complete and verified as far as the decision path goes.
 projector or cm-service reporting *time since last processed message*, and
 the ladder asserting it advances. Liveness of a stream is not liveness of a
 pod, and every probe currently in the ladder measures the second.
+
+### Detection cutover — the fix, landed 2026-09-05
+
+**When an edge gets a tier node, the root's downward subscription for that
+edge RETIRES**, and the root consumes that edge's **derived** state through
+the bridge instead: `asset-logistics-status` and `asset-cm-state`, with
+releasability labels already stamped by the tier's own fusion and
+cm-service.
+
+That is **ADR-0026's rule — coupled interim mechanisms retire together —
+applied to the detection reachback.** The root's direct subscription *was*
+the interim: detection ran once, centrally, because no tier had a detection
+plane of its own (ADR-0034). Tier-local detection is its replacement, and a
+replacement that leaves the interim running is not a replacement.
+
+Deployment-configured, and derived from ONE predicate
+(`openddil.isTierManaged`) read by both the root's subscription list and the
+bridge's topic list — so the two cannot disagree about which edges those
+are.
+
+**The topic names at HQ do not change**, only the producer: the root's
+projector and its HQ-cluster fusion subscription needed no edit at all. The
+root reaching down became the tier publishing up.
+
+**Resolves GD-08 for tier-managed edges as a side effect**, which is a sign
+it is the right cut rather than a workaround for the symptom.
+
+Guarded mechanically (`check-tier-config.sh`): no edge may appear in both
+the root's list and the tier-managed set, the bridge must carry derived
+state whenever the root stops computing — *otherwise HQ loses that edge
+entirely, a silent hole in place of a duplicate one* — and with no tier node
+the root's list must be unchanged.
 
 ## Consequences
 

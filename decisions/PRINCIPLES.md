@@ -1065,6 +1065,52 @@ site, which is why this is a principle and not a sweep.
 
 ---
 
+## A check that gets quieter as the data grows is worse than one that never worked
+
+`set -o pipefail` and `grep -q` in the same pipeline produce a
+**size-dependent false negative**, and the size dependence is the whole
+danger.
+
+`grep -q` exits on the first match and closes its input. The upstream
+`printf` or `echo` then takes SIGPIPE and exits 141. Under `pipefail` the
+pipeline reports 141 — **so a pipeline that MATCHED reports failure.**
+
+It only fires when the data exceeds the pipe buffer, about 64KB. Below that,
+the writer finishes before the reader exits, there is no SIGPIPE, and the
+check is correct.
+
+**Earned 2026-09-05**, in three shell checks at once — a completeness gate,
+a chart-invariant guard, and a demo. All three had `set -o pipefail`; all
+twelve pipelines were correct on the inputs they had; one of them was handed
+a 244KB helm render and inverted. The others would have inverted later, as
+fleets grew, with nothing marking the day they stopped meaning anything.
+
+**The direction of the lie is what makes this worth a principle.** In the
+common shape
+
+```sh
+match && bad "leak detected" || ok "no leak"
+```
+
+a SIGPIPE reads as *no match* and takes the `ok` branch — **reporting a PASS
+on a real leak.** The check does not merely stop working; it starts
+asserting the opposite, and it does so precisely when there is more data to
+be wrong about.
+
+*The generalizable form, which is not about shell:* **a check whose
+reliability depends on the size of its input has a threshold nobody wrote
+down and nobody will notice crossing.** Prefer constructs with no such
+threshold — here a here-string, which is not a pipeline and gives `pipefail`
+nothing to report — over constructs that are correct today at today's
+volumes.
+
+*Related:* §*A probe must fail distinguishably from its own zero* — this is
+its sibling in the other direction. That one is about a probe that cannot
+tell success from not-running; this is about a probe that reports success
+*because* it did not finish.
+
+---
+
 ## How to use this file
 
 - Add a principle when a *specific near-miss* produces a rule that would
