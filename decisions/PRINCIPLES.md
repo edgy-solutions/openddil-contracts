@@ -1152,3 +1152,43 @@ stays fresh.
 *Related:* §*A probe must fail distinguishably from its own zero* ·
 §*A check that gets quieter as the data grows is worse than one that never
 worked* · §*A documented hazard is not a mitigated one*.
+
+## A sever measures only the paths it cuts
+
+Fault injection is scoped by the instrument, not by the intention. A proxy
+in front of one link severs **that link**. Anything crossing the same
+boundary by another route is untouched, and the test reports on the
+boundary as though it had been closed.
+
+The failure is silent and it is flattering: the site keeps working while
+"severed", so it looks severance-tolerant — for the wrong reason. The
+better the result reads, the less anyone goes back to check what was
+actually cut.
+
+**Earned 2026-09-05.** A tier's severance rehearsal cut the HQ link at a
+proxy and watched the bridge buffer and drain. A root-owned projector read
+the edge's broker directly, never through that proxy, so HQ stayed fresh
+through every run. "HQ converges" was convergence onto a value HQ had
+never left — a check that could not fail, standing in the ladder as
+evidence for months.
+
+*The practical form:* **do not enumerate the paths to cut — deny by
+default and enumerate the exceptions.** A default-deny isolation cuts the
+path nobody knew about by the same rule as the path everybody knew about,
+which is the only construction that can test for the first kind. Then
+prove the cut in both directions: the far side unreachable **and** the near
+side still whole. One-sided proof passes a test that broke everything just
+as readily as one that broke nothing.
+
+*And name the exceptions honestly.* Where a lab stands something in for
+field hardware — a central simulator playing the part of on-site sensors —
+that stand-in must cross the boundary or the test cuts the site's own
+inputs and reports a frozen tier. That is a **false negative shaped exactly
+like the failure being hunted**, and the tempting repair is to weaken the
+test. Write the exception down, keep it narrow, and state what it would
+mean if it were widened.
+
+*Related:* §*A guard written alongside its fix inherits the fix's blind
+spot* — the sibling at the assertion layer · §*A probe must fail
+distinguishably from its own zero* · §*A documented hazard is not a
+mitigated one*.
