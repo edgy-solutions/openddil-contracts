@@ -171,6 +171,8 @@ heading, where nothing can be split. Verified by diffing: the change is
 | UD-8 | Field-by-field message copy drops what it was not told to carry | open |
 | UD-9 | A configuration setting whose consumer does not exist fails silently | open |
 | UD-10 | Tier and root share consumer groups; the tier goes silent looking healthy | open |
+| UD-11 | The detection cutover retired the subscription and left the projector reaching down | open |
+| UD-12 | Subscription bootstrap creates and never reconciles; a wipe hook hid it at the root | open |
 
 ### VE — verification-evidence gaps (`ADR-0037`)
 
