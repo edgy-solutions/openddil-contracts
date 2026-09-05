@@ -673,8 +673,31 @@ Verified by `check-severance-acceptance.sh edge-01`, all four green:
 | (c) | **HQ goes STALE, not empty, not fresh** | frozen at `17:09:21.822678`, **identical across two samples 40s apart**, 149s behind, 8 rows retained |
 | (d) | heal converges | `17:09:21` → `17:10:10`, drained in 6s |
 
-**(c) is also the exactly-one-writer proof, and it is stronger than the
-enumeration that preceded it.** An inventory of pods that read an edge
+**CORRECTION 2026-09-05, before the claim aged a day.** An earlier writing
+of this row said (c) had settled that `asset-registry-service` was not
+reaching into the tier's broker, on the reasoning that HQ could not have
+frozen otherwise. **That inference was invalid, and the service IS reaching
+down** — group `asset-registry-edge-01`, `Stable` on the tier's broker. It
+simply does not write `telemetry_latest_state`, so freezing that table said
+nothing about it. `openddil-faust-regional-region-east` is reaching down
+too, group `region-region-east-source-edge-01`, also `Stable`.
+
+**What (c) established is narrower than "one writer at HQ": HQ's FLEET view
+has exactly one writer and it is behind the bridge.** The regional rollup
+tables and the asset registry have their own writers and their own paths,
+and those paths still descend into a tier-managed edge. The retired
+projector's group `projector-telemetry-latest` reads `Empty`, which is
+UD-11's fix visible from the broker side — that part holds.
+
+*The general lesson, and it is the one this corpus keeps relearning:* a
+severance froze the table it was watching, and the table it was watching
+was not the whole of what crosses the boundary. **A cut proves something
+about the paths that feed what you measured, and nothing about the paths
+that feed what you did not.** The enumeration was the weaker instrument and
+was still the one that found these two.
+
+**(c) is also the exactly-one-writer proof FOR THE FLEET VIEW, and for that
+table it is stronger than the enumeration that preceded it.** An inventory of pods that read an edge
 broker and write the root store is a list of the reachbacks someone thought
 to look for; a frozen HQ under a complete cut is a statement about all of
 them. It settled an open question the enumeration could not: whether
