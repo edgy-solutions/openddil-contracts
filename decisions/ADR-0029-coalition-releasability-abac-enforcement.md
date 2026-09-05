@@ -717,12 +717,19 @@ With `hq-link` severed via toxiproxy, the partition **held: 13/13**.
 the inter-tier link. The PEP asks the tier's own Topaz against the tier's own
 bundle, and every component in that path is tier-local.
 
-**What it does NOT prove, and must not be reported as:** that an *edge*
-decides during severance. Slice 1 deploys **one** Topaz, at HQ (§6), and the
-per-tier locals land with the tier-bridge slice — which is the first slice
-where an edge must decide for itself. Severing the link below a tier whose
-decision path is entirely local is a weaker test than the capstone, and the
-capstone is still ahead.
+**What it did NOT prove, and must not be reported as:** that an *edge*
+decides during severance. Slice 1 deployed **one** Topaz, at HQ (§6).
+
+**PARTLY DISCHARGED 2026-09-05** — see §Per-tier PDP. Each tier's PEP now
+decides against that tier's own authorizer, against a policy bundle and
+corpus distributed to it, so an edge does decide for itself. Taken as its
+own increment ahead of the tier-bridge slice because it was fixing a
+regression rather than adding a feature.
+
+**Still not proven on hardware:** the lab runs `tierNode.enabled: false`,
+so this is verified by render and by reasoning, not by a severed tier. The
+capstone remains a recording nobody has made. What HAS changed is that it
+is now possible to make honestly.
 
 ### Two defects worth keeping, both found by asking the running system
 
@@ -910,6 +917,74 @@ passenger, not two, and should be designed together.
   the kill happens outside the JVM, so there is no `OutOfMemoryError` to
   print, and the diagnosis lives in the pod's `lastState`, which is not where
   anyone looks first.
+
+### Per-tier PDP — the enforcement point stops being a severance hazard
+
+*(2026-09-05. Taken as its own increment ahead of the tier-bridge slice,
+because it stands alone and because it was fixing a regression.)*
+
+**The regression, stated as a regression.** Slice 1's per-tier PEP enforced
+locally and decided against the **root's** Topaz. That was recorded at the
+time as *"enforce locally, decide remotely — correct, and not the
+capstone"*, which was accurate and understated the consequence by a wide
+margin. The consequence is:
+
+> Sever the tier's uplink and the PEP cannot reach its PDP. It fails closed
+> — correctly, loudly, with the marker — and **the maintainer UI at a
+> severed edge shows DENIED instead of data.**
+
+That is **ADR-0036 clause 4 violated by the enforcement point**: severance
+turned from a degraded mode into an outage. And it did not merely fail to
+deliver Arc 2's capstone — **it regressed a capability that already
+worked.** Phase 5 rung (iii), *"the tier UI live while severed"*, is Arc 1's
+proof artifact, and with enforcement enabled it could no longer be
+demonstrated, because the enforcement was the thing going dark.
+
+*Worth keeping as a shape:* **a fail-closed component placed across a link
+that is expected to fail converts a designed degraded mode into an
+outage.** Fail-closed is right; where it sits is the decision. The PEP
+belongs at the tier — it always did — but so does the thing it asks.
+
+**The fix, and why it was smaller than the slice it belongs to.** Per-tier
+Topaz pods already existed: `tier-topaz-<id>` shipped as a **reserved seat**
+in Phase 3, running healthy against an *empty bundle* — deployed, serving,
+and deciding nothing, which was honest and was precisely the argument for
+shipping the seat early. Two things were missing:
+
+1. **each tier's PEP pointed at its own authorizer** rather than the root's;
+2. **policy and the entitlements corpus distributed to each tier**, which is
+   the distribution seam's first real passenger.
+
+The corpus rides the runtime bundle, pulled at pod start — ADR-0029 §6's
+model without adding a mechanism: *policy distributed as versioned bundles,
+each tier deciding against its own copy, a severed link stopping policy
+UPDATES rather than decisions.* A tier running yesterday's bundle through a
+severance window is a correct posture, and it is auditable because every
+decision records the policy and corpus versions that produced it.
+
+**What fail-closed now means.** With the tier's own PDP, a refusal caused by
+an unreachable authorizer means *"my own decision point is down"* — a real,
+local fault worth paging about. Before, the identical refusal meant *"the
+link is cut"*, which is a condition this system exists to survive. Same
+marker, same status code, opposite operational meaning; that is the
+distinction the change buys.
+
+**The completeness gate follows the stores.** §7's question is *"is every
+labelled row in THIS deployment labelled?"*, and once tiers decide locally
+against their own data, "this deployment" stops being one place. Enabling
+enforcement at a tier is a decision about **that** store, and a pass at the
+root says nothing about it — the same error §7 already refuses one level up
+(a result about one cluster restated as a claim about another), now
+available one level down inside a single cluster. `--tier <id>` gates one;
+`--all-tiers` discovers the stores from the running cluster and fails if any
+of them does. Over zero tier stores it says so rather than reporting a pass
+that reads as a claim about tiers.
+
+**What this still does NOT do.** Keycloak remains at the root, so a severed
+tier keeps existing sessions (cached JWKS, local session table) and cannot
+mint new ones. Per-tier identity rides the tier-bridge slice alongside the
+rest of it. The honest sentence for a severed edge is therefore: *decides
+locally, enforces locally, and cannot log anybody new in.*
 
 ### Carried forward
 
