@@ -224,6 +224,43 @@ right).
 **Recommendation: decide this before building, because the choice changes
 what the regional node computes, not merely what it labels.**
 
+### THE FLOOR, stated now so nobody defaults to union
+
+Deciding the full rule under recording pressure is how a deployment
+shortcut becomes a design, so the rule waits for the block. **The floor does
+not:**
+
+> **Minimum releasability of a rollup = the INTERSECTION of its
+> contributing inputs' `releasable_to`.** Per-nation rollups are an
+> ADDITIVE refinement on top of that, never a relaxation of it.
+
+Anything more permissive than the intersection leaks: a row visible to a
+party not entitled to every input is a row that tells them something about
+an input they may not see. Union is the tempting error and it is simply
+wrong. Recording the floor separately from the rule means an implementer
+who reaches this before the decision has a safe answer rather than a blank.
+
+### What the read path already does with an unlabelled rollup, and why it is right
+
+Discovered 2026-09-06, and it settles the interim: the gateway's filter
+names `originator_nation` and `releasable_to`, so a table without those
+columns **cannot be partitioned and is therefore not served to anyone** —
+the fully entitled subject included.
+
+That behaviour was arriving *by accident*, as a SQL error surfacing three
+components away as a 502 that panels rendered as "awaiting first emission".
+It is now a stated refusal with cause `unlabelable`, and the wording matters:
+**not "not releasable"**, which would imply a decision went against the
+viewer. Nothing was decided about them. Unpartitionable data has no question
+to answer, so everyone gets the same answer.
+
+**Measured on the lab: five of fourteen served tables are labelable and nine
+are not** — `asset_registry`, `asset_telemetry_windows`, `audit_log`,
+`edge_buffer_status`, `inventory_items`, `tactical_events` and all three
+`region_*` rollups. The regional rollups are therefore not a special case;
+they are three of nine, and this package's §4 rule is the general answer for
+a whole class of tables rather than a regional detail.
+
 ---
 
 ## §5 — The demo shell's deprecation trigger
