@@ -41,6 +41,69 @@ and §3 set out.
 **This is the largest piece and it is bigger than edge-01's, because there
 are more downward paths and one of them is already known to be wrong.**
 
+### §1 INVENTORY, RUN 2026-09-06 — two findings, in opposite directions
+
+**Measured on the lab before writing any of the cutover. Both change the
+sizing, and the second invalidates a claim this package made in §0.**
+
+#### Finding A — the aggregation is ALREADY consuming derived state
+
+`faust-regional-region-east` holds two consumer families, and only one of
+them carries data:
+
+| group | broker | topics | state |
+|---|---|---|---|
+| `region-region-east-source-edge-NN` | each EDGE | `asset-telemetry-windows` | **empty — high-watermark 0 on every broker** |
+| `region-region-east-hq-source` | HQ | `asset-cm-state`, `asset-logistics-status`, `asset-registry-events` | live, total lag 10 |
+
+So the downward reachback reads a topic **nothing has ever produced to**,
+and the real inputs are HQ-side DERIVED topics — which, for a tier-managed
+edge, already arrive by way of that edge's bridge.
+
+*The consequence is a simplification:* "move regional aggregation off raw
+per-edge streams" is already true in practice. The cutover is a
+RELOCATION of where the aggregation runs, not a rewiring of what it reads,
+and retiring the per-edge reachback costs nothing measurable today.
+
+#### Finding B — a regional node is NOT configuration, and §0 was wrong
+
+§0 claimed "a second tier is configuration" on the strength of the
+fourth-tier render check. **That claim does not hold for a region**, for
+three reasons found by reading the chart rather than the check:
+
+1. **`tier-node.yaml` ranges over `.Values.edges`.** A region lives in
+   `.Values.regions` and cannot enter the loop at all. Nothing about the
+   template is region-aware.
+2. **Brokers are per-edge only.** `infrastructure.yaml` ranges over
+   `.Values.edges` to make `redpanda-<id>`; the cluster has exactly
+   `redpanda-edge-01/02/03` and `redpanda-hq`. There is no
+   `redpanda-region-east` — and **ADR-0032 §a says a severance-tolerant
+   tier requires its own broker**, so a region without one cannot satisfy
+   the two-dimension severance this package's §3 demands of it.
+3. **The fourth-tier check proves less than it was cited for.** It renders
+   an intermediate by injecting a synthetic entry into `.Values.edges`. That
+   validates SHAPE RESOLUTION in the presentation — which is real and still
+   holds — and says nothing about whether a region can be deployed as a tier
+   node. *I wrote that check and then cited it as evidence for a claim it
+   does not support*, which is §"a guard written alongside its fix inherits
+   the fix's blind spot" arriving one layer up: not a blind spot in the
+   guard, but in what its author later read it to mean.
+
+**Sizing correction.** The regional node needs a SCAFFOLDING increment
+before any cutover:
+
+* a broker for the region — or an explicit, recorded decision that the
+  region uses HQ's broker and is therefore NOT severance-tolerant, which
+  contradicts §3 and should be refused rather than defaulted;
+* the tier loop generalised from `.Values.edges` to a tier list that can
+  hold regions, with parent/child derived rather than assumed;
+* edges bridging to their region instead of to HQ, which is the
+  retarget §1 already names — and which only becomes meaningful once a
+  region has somewhere to receive.
+
+That work is not hard, and it is not what "configuration" meant. It is a
+block boundary, and the honest place to stop before it.
+
 ### What reaches into a region's edges today
 
 `openddil-faust-regional-region-east` runs **at the root** and carries:
@@ -56,13 +119,18 @@ It consumes each edge's broker **directly** and produces
 the HQ broker, where `projector-hq` writes them into `region_fleet_summary`,
 `region_top_factors`, `region_wear_trends`.
 
-**Two live root-owned consumer groups still sit on edge-01's broker — an
-edge that is already tier-managed:**
+**THREE live root-owned consumer families sit on each tier-managed edge's
+broker — six in total across edge-01 and edge-02, where this row previously
+said four.** Identified by client library and topic rather than by group
+name, because the name is not evidence: the tier's own Restate
+subscriptions use unsuffixed `cm-service-*` / `fusion-service-*` group ids
+and read as root-owned to a prefix test.
 
-| group | owner | state |
-|---|---|---|
-| `region-region-east-source-edge-01` | `faust-regional-region-east` | `Stable` |
-| `asset-registry-edge-01` | `asset-registry-service` | `Stable` |
+| group | client | owner | note |
+|---|---|---|---|
+| `region-region-east-source-edge-NN` | faust 0.15.3 | `faust-regional` | reads an EMPTY topic (Finding A) |
+| `asset-registry-edge-NN` | faust 0.11.3 | `asset-registry-service` | reads `telemetry-latest-state` |
+| `logistics-sim-edge-NN` | aiokafka | `logistics-sim` | **previously uncounted** |
 
 Neither is gated on `isTierManaged`. **This is UD-11 unfinished, not new
 work discovered here**: the projector was retired, and these two were not.
