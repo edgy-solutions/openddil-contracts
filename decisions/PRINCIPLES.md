@@ -1210,3 +1210,40 @@ server, and deleting it is the only lever it has.
 spot* — the sibling at the assertion layer · §*A probe must fail
 distinguishably from its own zero* · §*A documented hazard is not a
 mitigated one*.
+
+## A saturated signal hides every defect downstream of it
+
+Visibility bought by pegging a value is paid for in everything the peg
+conceals. When a measure is driven to its ceiling — by a demo override, a
+generous threshold, a clamp — it stops distinguishing the cases it was
+meant to distinguish, and every defect that would have shown up as an
+*unusual* reading now shows up as the same reading as everything else.
+
+**Earned 2026-09-06.** A prognostics coefficient was tuned to
+`ENGINE_LIFE_TOTAL_HOURS=1` so degradation would be visible quickly in a
+demo. Every asset passed one hour of "total life" in its first hour, and
+the fleet sat at exactly 100.0% wear on every axis thereafter. Removing the
+override produced a distribution — and the distribution immediately
+revealed that **four of the five remaining criticals were helicopters
+reporting 100% TRACK wear.** Helicopters do not have tracks.
+
+That defect had been there the whole time. It was invisible because a
+helicopter with impossible track wear and a tank with real track wear both
+read 100%. *The tuning did not cause the modelling error; it removed the
+only evidence of it.*
+
+*The practical rule:* before trusting that a fleet, a queue, or a rate is
+telling you something, check whether it is CAPABLE of telling you something
+else. A metric where every subject reports the same extreme value is not a
+measurement, and the first thing to do with it is un-peg it and look at
+what falls out — not to reason about the pegged value.
+
+*And the corollary for demo tuning specifically:* an override chosen to
+make a signal legible has a shelf life, usually short, after which it makes
+the signal illegible in a way nobody re-examines because the screen still
+moves. Prefer changing the SOURCE so the signal is naturally in range over
+changing the SCALE so it saturates.
+
+*Related:* §*A probe must fail distinguishably from its own zero* ·
+§*A check that gets quieter as the data grows is worse than one that never
+worked* · §*"Not found" is not "cleared"*.

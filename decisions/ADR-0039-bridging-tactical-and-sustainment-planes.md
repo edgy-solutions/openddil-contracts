@@ -183,6 +183,48 @@ from this repository, and none is made here.
   claim retracted in 2026-08-12. Stretching it to carry the primary
   thesis would repeat the mistake that produced the retraction.
 
+## The bridge's argument, in one number — service life (added 2026-09-06)
+
+The clearest case for this ADR turned up while diagnosing something else,
+and it is a single missing number rather than an architectural claim.
+
+**Engine wear on this deployment is computed from WALL-CLOCK TIME SINCE
+OPENDDIL FIRST SAW THE ASSET.** ADR-0020 records why: DIS Entity State PDUs
+carry no engine-on signal, so observed time is the closest available proxy.
+The consequence, measured on the lab, is that all 14 assets report an
+*identical* 647.3 hours in service.
+
+That number is not merely imprecise. It is **structurally incapable of
+varying between assets**, because every asset's life starts at zero the
+moment the tactical plane notices it. So:
+
+> **The engine wear axis cannot show a distribution at any coefficient.**
+> Not with better tuning, not with a longer run. A real fleet has airframes
+> at different points in their service life; this model has none, because
+> the tactical plane does not know what happened before the exercise
+> started.
+
+**The thing that knows an airframe's actual hours is the materiel system.**
+As-maintained state — installed configuration, accumulated service life,
+overhaul history — is a **Contract B supply read** (see
+`DESIGN-2026-09-06-interface-contracts.md` §2, read side). Until that read
+is wired, prognostics is deriving a quantity whose true value already
+exists in a system OpenDDIL is not yet talking to, and the derived number
+can only ever be "time since we started watching".
+
+*Why this is the better argument:* it is not "the planes should be
+bridged because integration is good". It is that a specific number on a
+specific screen is wrong in a specific, unfixable-from-this-side way, and
+the fix is a read the bridge already specifies. **Prior service life is a
+source fact, and the source is on the other side of the bridge.**
+
+*A note on what NOT to do meanwhile:* seeding synthetic prior hours in the
+sim would produce a convincing distribution and would be authored fiction
+in a physical unit — the same error as picking wear coefficients to taste
+(GD-14). If a demo needs varied service life before the bridge exists, it
+must be declared as scenario data by whoever owns the scenario, exactly as
+DIS enumerations are.
+
 ## What this ADR did not establish
 
 Per ADR-0037 §6.
