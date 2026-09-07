@@ -753,6 +753,61 @@ case that would hurt most is fusion's `fusion-service-cm-state-hq`, which
 shares the ownership prefix and carries every tier-managed edge's CM state
 INTO the root. Omitting it from the desired set would have pruned it.
 
+`Status: open`
+
+**UD-13 — Fusion discards DIS-sourced telemetry on a premise that expired,
+so the tactical→sustainment crossing reaches the read model and never
+reaches severity.** `on_proprietary_update` opens with:
+
+```python
+# Skip DIS-sourced events — they have no sustainment fields.
+if "DIS" in src.upper():
+    return
+```
+
+That was TRUE when written. It stopped being true on 2026-08-19, when the
+appearance-bits mapping gave DIS-sourced events an `operational_state`
+carrying `health_state` and `power_state` — the very axis ADR-0039 calls
+the crossing from the tactical plane into the sustainment one.
+
+**Measured 2026-09-07, driving one asset with the new per-asset damage
+lever:** `dis:1:1:1000` reached `HEALTH_STATE_FAULT` in BOTH the tier store
+and HQ — so the chain damage → appearance bits → Stage 1 → Bloblang →
+health axis works end to end. Fusion recomputed that asset (`rev=4294,
+trigger=telemetry`) and emitted `OK`, because the record carrying the fault
+had already been dropped at the guard. `_eval_operational_state` has the
+rule (`health_state == FAULT -> CRITICAL, operational.fault`) and never saw
+an operational state to apply it to.
+
+**Why it hid.** Every symptom pointed elsewhere. The projector writes
+`health_state` from the same Silver message, so the read model shows the
+fault and the screen would too; fusion logs a recompute, so it looks
+engaged; and the rule exists in the code, so reading fusion suggests the
+path is wired. Only comparing the store's `health_state` against the
+severity fusion produced for the SAME asset shows the disagreement.
+
+*The general shape, and it is not about DIS:* **a guard justified by a
+property of the data outlives the property.** The comment states its own
+premise honestly, which is what made it findable — but nothing re-checked
+that premise when the mapping that falsified it landed, because the
+mapping's author had no reason to look inside fusion's ingest guard.
+
+*Fix shape (a merge-semantics decision, deliberately not taken at 04:00):*
+the skip exists so a sustainment-less DIS record cannot clobber
+`_KEY_TELEMETRY`, which `_recompute` prefers over
+`_KEY_DERIVED_TELEMETRY`. Storing DIS records there wholesale would break
+wear evaluation for exactly the fleet this is meant to help. The shape that
+matches the file's existing design — separate keys with an explicit
+merge — is a third key holding the latest OPERATIONAL state regardless of
+source, consumed by `_eval_operational_state` alone. Small, but it changes
+how severity is computed for every asset, so it wants a decision rather
+than a 4 a.m. patch.
+
+**Blocks the injection-control acceptance** (one asset degraded → its
+tier's fusion emits one upward-transition alert). The lever itself is
+proven as far as the health axis; the alert cannot fire until this guard
+learns its premise expired.
+
 ## Consequences
 
 **Pros**
