@@ -1247,3 +1247,33 @@ changing the SCALE so it saturates.
 *Related:* §*A probe must fail distinguishably from its own zero* ·
 §*A check that gets quieter as the data grows is worse than one that never
 worked* · §*"Not found" is not "cleared"*.
+
+## An absence in the wrong table looks identical to an absence in the right one
+
+A query that returns nothing answers *this question, of this source*. It
+does not tell you the question was well-aimed, and an empty result is the
+one kind of answer that looks the same whether you asked the right place or
+the wrong one.
+
+**Earned 2026-09-06**, one step from being reported as a finding. Checking
+whether CM baselines were reaching asset data, I read
+`asset_logistics_status.cm_baseline_id` and found `(none)` for every row —
+and was about to record that *the source of truth is deployed but not bound
+to any asset*, a serious claim with an obvious remedy attached. The binding
+was in `asset_cm_state.baseline_id`, populated exactly as designed for the
+three assets whose variants have baselines.
+
+The near-finding was wrong in the most convincing way: it was *specific*,
+it explained the symptom, and it had a plausible cause. What saved it was
+checking a second table before writing it down, for no better reason than
+that the first answer was suspiciously total.
+
+*The practical rule:* **a uniform absence is a prompt to question the
+query, not to describe the world.** Before reporting that something is
+missing everywhere, find one case where it is present. If you cannot, you
+have either found something real or asked the wrong source — and only the
+second search distinguishes them.
+
+*Related:* §*Freshness identifies no provenance* — its twin. There a live
+value proved nothing about which path fed it; here a dead one proves
+nothing about which store holds it.
