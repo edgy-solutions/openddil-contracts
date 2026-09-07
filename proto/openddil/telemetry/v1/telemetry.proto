@@ -416,6 +416,58 @@ message Provenance {
   // shipping nothing, and the field number is the only part that is
   // expensive to change later. (ADR-0029 3.)
   reserved 11;
+
+  // ---------------------------------------------------------------------
+  // RELAY CHAIN -- how a message reached here, one entry per hop.
+  // ---------------------------------------------------------------------
+  // WHY THIS IS NOT ANOTHER TIMESTAMP FIELD. With one hop between a leaf
+  // and the root, `sample_time` was enough: if it stopped advancing,
+  // either the edge stopped sampling or its bridge stopped delivering,
+  // and both were the same edge's problem. Put a tier-managed region in
+  // between and there are THREE places the number can freeze -- the edge
+  // sampling, the edge->region bridge, the region->HQ bridge -- and all
+  // three freeze the same field. The root would then show a healthy edge
+  // as quiet while the actual failure sat at the region, which is the
+  // expensive direction to be wrong in: the response to "the edge is
+  // quiet" sends someone to the one place where nothing is broken.
+  //
+  // APPEND ONLY, ordered leaf -> root. A relay adds its own hop and
+  // touches nothing already in the chain. A region that overwrote the
+  // edge's entry would be fusing two ages into one, which is the exact
+  // failure this field exists to prevent -- see GD-05 on why a rolled-up
+  // number cannot be rolled up again.
+  //
+  // `sample_time` above is NEVER modified by a relay. It is the leaf's and
+  // stays the leaf's, the same discipline as edge_id / originator_nation:
+  // the earliest tier that knows the answer states it, later tiers carry
+  // it unchanged.
+  //
+  // ABSENCE IS UNSPECIFIED, NOT "DIRECT" AND NOT "FRESH". An empty chain
+  // means the message did not traverse a stamping relay -- which is a
+  // statement about instrumentation, not about latency. Telling "arrived
+  // directly" apart from "a relay failed to stamp" requires that EVERY
+  // relay stamp, single-hop edge->HQ included; then the chain length is
+  // itself the reading (1 = direct leaf, 2 = leaf under a region, 0 =
+  // unstamped or legacy).
+  //
+  // Absolute timestamps rather than durations, deliberately: durations
+  // would have to be summed to be read, and summing is fusing. A consumer
+  // computes each age locally and MUST treat a relayed_at in the future as
+  // clock skew rather than freshness.
+  //
+  // See decisions/DESIGN-2026-09-07-two-hop-freshness.md.
+  repeated RelayHop relay_chain = 12;
+}
+
+// One hop of a message's path up the tier tree. See Provenance.relay_chain.
+message RelayHop {
+  // The tier that performed the relay -- the PUBLISHER of this hop, not
+  // whoever received it. "edge-01" relaying to region-east records
+  // tier_id = "edge-01".
+  string tier_id = 1;
+
+  // When that tier handed the message upward.
+  google.protobuf.Timestamp relayed_at = 2;
 }
 
 // =============================================================================
