@@ -156,6 +156,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | GD-11 | Asset class inferred from one feed's behaviour | open |
 | GD-12 | Absence conventions declared only in the consumer | open |
 | GD-13 | Generated protos are not a package; every consumer invents a path | open |
+| GD-14 | Wear models applied irrespective of platform kind — helicopters accrue track wear | open |
 
 ### UD — undetected failure modes (`ADR-0036`)
 
