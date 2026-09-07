@@ -753,7 +753,7 @@ case that would hurt most is fusion's `fusion-service-cm-state-hq`, which
 shares the ownership prefix and carries every tier-managed edge's CM state
 INTO the root. Omitting it from the desired set would have pruned it.
 
-`Status: open`
+`Status: fixed 2026-09-07`
 
 **UD-13 — Fusion discards DIS-sourced telemetry on a premise that expired,
 so the tactical→sustainment crossing reaches the read model and never

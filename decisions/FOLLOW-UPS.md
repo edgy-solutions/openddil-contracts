@@ -174,7 +174,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | UD-10 | Tier and root share consumer groups; the tier goes silent looking healthy | open |
 | UD-11 | The detection cutover retired the subscription and left the projector reaching down | fixed 2026-09-05 |
 | UD-12 | Subscription bootstrap creates and never reconciles; a wipe hook hid it at the root | fixed 2026-09-05 |
-| UD-13 | Fusion skips DIS telemetry on an expired premise; health reaches the store, never severity | open |
+| UD-13 | Fusion skipped DIS telemetry on an expired premise — guard deleted, admission by content | fixed 2026-09-07 |
 
 ### VE — verification-evidence gaps (`ADR-0037`)
 

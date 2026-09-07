@@ -1277,3 +1277,43 @@ second search distinguishes them.
 *Related:* §*Freshness identifies no provenance* — its twin. There a live
 value proved nothing about which path fed it; here a dead one proves
 nothing about which store holds it.
+
+## A guard justified by a property of the data outlives the property
+
+Guards get written against what is true at the time, and the justification
+is usually recorded honestly in a comment beside the condition. What is not
+recorded is a way to notice when the justification stops being true — so
+the guard keeps enforcing a rule whose reason has expired, and nothing
+anywhere fails.
+
+The failure is worse when the guard tests a **correlate** rather than the
+property itself. `if "DIS" in source: return`, justified as *"they have no
+sustainment fields"*, is a test of the source's NAME standing in for a fact
+about its RECORDS. The name stays constant while the records improve.
+
+**Earned 2026-09-07.** That exact guard sat in fusion's ingest. It was
+correct when written and became wrong on 2026-08-19, when a mapping gave
+DIS-sourced records an operational state carrying health. For weeks after,
+a damaged asset's fault reached the read model and never reached severity.
+
+**Three signals said the path was live**, which is why it survived: the
+projector wrote the health value from the same message, so the screen would
+show the fault; fusion logged a recompute for the asset, so it looked
+engaged; and the severity rule for that health value existed in the code,
+so reading fusion suggested the wiring was done. Only comparing the store's
+health against the severity fusion produced *for the same asset* exposed
+the disagreement.
+
+*The rule:* **test the property, not the correlate.** "Does this record
+carry sustainment fields?" is true forever. "Is this DIS?" was true until
+someone improved DIS. A guard phrased as the first cannot expire; one
+phrased as the second expires silently, at a moment chosen by somebody who
+had no reason to look at it.
+
+*And when you find one, delete it rather than update it.* Rewriting the
+correlate — adding another source name to the check — reproduces the same
+defect with a longer list and a later expiry date.
+
+*Related:* §*A saturated signal hides every defect downstream of it* ·
+§*Freshness identifies no provenance* · §*A guard written alongside its fix
+inherits the fix's blind spot*.
