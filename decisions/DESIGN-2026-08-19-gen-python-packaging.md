@@ -114,6 +114,33 @@ mappings via absolute paths, with no version anywhere. If step 4 succeeds
 for the bindings, the identical argument applies to the ontology, and it
 should be taken up deliberately rather than by analogy.
 
+> **IT DRIFTED — 2026-09-06.** This was written as "would have the same
+> problem". It has it, measured:
+>
+> The root's fusion layers `demo/ontology` over `contracts/ontology` and
+> had **eight** files at `/ontology`. The tier fusions took only
+> `contracts/ontology` and had **five**. Two nodes, two ontologies at the
+> same absolute path, with nothing declaring a relationship between them
+> and nothing able to notice the difference.
+>
+> **What makes this the versioning defect rather than a chart typo:** the
+> divergence was undetectable until a NEW CONSUMER ASKED THE ONTOLOGY A
+> QUESTION THE OLDER COPY COULD NOT ANSWER. The wear-component manifest
+> landed, the root could gate wear axes by platform, the tiers could not —
+> so every axis on every tier-managed asset read UNDECLARED and no wear
+> factor was emitted at all. Both nodes were "reading the ontology", both
+> were working, and they believed different things about the same fleet.
+>
+> A version — or any declared identity on the mounted tree — would have
+> turned that into a startup mismatch instead of a silent behavioural
+> split. An absolute path carries no identity, so the only detector
+> available was a consumer noticing an answer it did not like.
+>
+> *Where it gets fixed:* the regional scaffolding increment, which
+> introduces a unified tier list and per-tier distribution of brokers,
+> bridges and reference data. Per-tier ontology distribution rides that
+> same seam, and doing it there is cheaper than doing it twice.
+
 ## 6. What this did not establish
 
 - **No packaging was written or tested.** The metadata shape, the registry
