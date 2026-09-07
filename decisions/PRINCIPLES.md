@@ -1317,3 +1317,44 @@ defect with a longer list and a later expiry date.
 *Related:* §*A saturated signal hides every defect downstream of it* ·
 §*Freshness identifies no provenance* · §*A guard written alongside its fix
 inherits the fix's blind spot*.
+
+## Fixing a filter does not repair what it already let through
+
+A filter tightened on the write side stops the next bad record. It evicts
+nothing. Where state is durable, a value admitted under the old rule keeps
+being chosen long after the rule that admitted it is gone — and the system
+looks unfixed, so the natural next move is to doubt the fix.
+
+**Earned 2026-09-07**, three wrong conclusions deep in one afternoon.
+
+A guard was replaced with a content test. Wear evaluation stayed dead, and
+each explanation was reasonable and wrong:
+
+1. **The test asked the wrong question.** `bool(record["sustainment"])` was
+   true for `{"health": {}}` — a submessage present and empty, because proto
+   presence is asserted by writing any field. A source-name correlate had
+   been replaced with a key-presence correlate: the same error at a shorter
+   distance.
+2. **The fix was not running.** The deploy waited on "the latest CI run",
+   which was the PREVIOUS run — the new one had not registered yet — so the
+   rollout restarted against the old image. The measurement that followed
+   was of unfixed code and was read as the fix failing.
+3. **The fix could not have worked anyway.** Durable object state still held
+   the record admitted under the bug, and the write-side test evicted
+   nothing.
+
+Only (3) is the principle; (1) and (2) are its escorts, and they are the
+reason it took three rounds to see. **Validate at the point of USE, not only
+at the point of entry.** A chooser should pick the record that can answer
+the question being asked of it. Asked there, history self-heals; asked only
+at the door, history is permanent.
+
+*Two escorts worth their own line, because both are cheap to avoid:*
+**poll for YOUR artifact, not for the latest one** — "the newest run" and
+"the run for this commit" differ exactly when a new commit is racing CI; and
+**after any deploy meant to change behaviour, ask the running container what
+code it holds** before believing a measurement about it.
+
+*Related:* §*A guard justified by a property of the data outlives the
+property* — this is its sequel: the replacement guard inherited the flaw,
+and the state it had already polluted outlived them both.
