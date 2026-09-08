@@ -51,6 +51,35 @@ CM_ENDPOINT      = os.getenv("TIER_CM_ENDPOINT", "")
 FUSION_ENDPOINT  = os.getenv("TIER_FUSION_ENDPOINT", "")
 TIMEOUT_S        = int(os.getenv("TIER_BOOTSTRAP_TIMEOUT_S", "180"))
 
+# DIRECT INGEST -- does this tier observe assets itself, or only receive what
+# its children already observed? Defaults FALSE: a tier that has not said it
+# ingests directly does not derive. A missing env must not silently re-enable
+# the thing this gate exists to prevent.
+DIRECT_INGEST = os.getenv("TIER_DIRECT_INGEST", "false").strip().lower() in (
+    "1", "true", "yes", "on")
+
+# Topics a tier RECEIVES RAW rather than derives.
+#
+# ADR-0032 §a as an actionable rule: A TIER DERIVES STATE ONLY FOR ASSETS IT
+# INGESTS DIRECTLY. For assets below it, it consumes their DERIVED state and
+# never re-derives.
+#
+# Measured 2026-09-07: region-east came up with cm-service-silver and
+# fusion-service-silver attached to `raw-sensor-stream` AT THE REGION, while
+# the edges read the same topic at the edge. Two tiers deriving one asset's
+# state from the same input, with nothing choosing between them. Under GD-05
+# the rollups are not composable, so "they will agree" was never a property.
+#
+# It is the reachback INVERTED. Rather than a parent reaching DOWN into a
+# child's broker, the child's raw data came UP and a consumer above the edge
+# derived from it anyway. The consumer census cannot see this: the consumer
+# sits on its OWN broker, which is the one place the census calls correct.
+#
+# So relayed raw topics are TERMINAL FOR DETECTION. They exist on a parent's
+# broker for PRESENTATION -- the leaf-under-region view, HQ's fleet picture --
+# and no detection consumer at a parent attaches to them.
+RAW_INGEST_TOPICS = ("raw-sensor-stream", "cm-events")
+
 # The tier's Restate names this cluster in its own restate.toml, scoped to
 # this tier's broker alone, so a subscription here cannot resolve to a
 # sibling tier's cluster. Nothing to register; only to reference.
@@ -63,7 +92,7 @@ def _subscriptions(tier_id: str) -> list[Subscription]:
     Complete is load-bearing: `prune_subscriptions` deletes anything owned
     and not named here, so an omission is a deletion.
     """
-    return [
+    subs = [
         Subscription("raw-sensor-stream", "AssetCM/observe",
                       f"cm-service-silver-{tier_id}"),
         Subscription("cm-events", "AssetCM/apply_cm_event",
@@ -79,6 +108,27 @@ def _subscriptions(tier_id: str) -> list[Subscription]:
         Subscription("asset-cm-state", "AssetLogistics/on_cm_state_change",
                       f"fusion-service-cm-state-{tier_id}"),
     ]
+
+    if DIRECT_INGEST:
+        return subs
+
+    # NOT a filter on what EXISTS -- a filter on what this tier is ENTITLED to
+    # derive from. The topic may well be present on the broker, relayed up for
+    # presentation; that is exactly the case this drops. "Fed" is necessary and
+    # not sufficient.
+    #
+    # OMISSION IS DELETION. `prune_subscriptions` removes anything owned and
+    # not named in the returned set, so dropping these retires the existing
+    # subscriptions on the next bootstrap rather than merely declining to
+    # create them. That is why this reads as a smaller desired set rather than
+    # as an unsubscribe call, and it is the mechanism that cleans up a region
+    # already running with them.
+    kept = [s for s in subs if s.topic not in RAW_INGEST_TOPICS]
+    dropped = sorted({s.topic for s in subs if s.topic in RAW_INGEST_TOPICS})
+    logger.info("[tier %s] NO DIRECT INGEST — detection not bound to relayed "
+                "raw topics %s; keeping %d of %d subscriptions",
+                tier_id, dropped, len(kept), len(subs))
+    return kept
 
 
 def main() -> int:
