@@ -148,3 +148,76 @@ an unfed consumer is a finding. The existing census cannot do this — it sees
 only groups that attached, and an unfed consumer never forms one, so it is
 invisible in exactly the data the census reads. It needs the rendered config
 as a second source.
+
+---
+
+## Amendment, 2026-09-08: two directions, and the raw rule
+
+The cutover deployed the 12-topic set and measured **8 fed of 12**. Working
+out why produced two corrections to the contract itself, not to the deploy.
+
+### A tier's inputs have TWO directions
+
+`asset-registry-events` was in the upward list and should never have been.
+The asset registry is **root-owned**: its events are distributed DOWN to
+tiers, not gathered UP from them. Putting it on the edge → region bridge
+asked edges to supply reference data they do not author, which is exactly why
+it sat at watermark 0 on every edge broker — the bridge was faithfully
+carrying nothing, forever.
+
+So the contract splits:
+
+* **Upward — derived state from children.** What a subtree computed about
+  itself. This is the bridge, and it is what the input set enumerates.
+* **Downward — reference data from the root.** The asset registry, CM
+  baselines, releasability policy. A distribution seam, not a bridge, because
+  the shape is one authority fanning out to many tiers rather than many tiers
+  converging on one parent.
+
+`asset-registry-events` moves to the downward half, and faust-regional's
+registry source waits on that seam rather than on the bridge. **Naming the
+direction is the fix**; leaving it on the bridge would have kept a topic
+"configured, created, subscribed and permanently empty" and called the contract
+satisfied.
+
+### Raw crosses a link only to where derivation happens
+
+The detection gate made region-east stop deriving from `raw-sensor-stream`,
+and the only groups touching it there became the two Empty retired ones. Zero
+groups on the HQ broker read it either (all 16 enumerated and described). So
+**3.78M messages on edge-01 alone were crossing a DDIL link to feed nobody.**
+
+The rule, which the detection gate already implies:
+
+> Raw crosses a link only to where derivation happens, or to a **declared**
+> consumer — archival, replay, an ADR-0034 training unit.
+
+Applied: the bridge's topic list is conditional on tier-managed-ness. An
+untier-ed edge still sends raw upward, because the ROOT derives its state
+directly and that is the derivation happening at the other end. A tier-managed
+edge sends its derived state plus `telemetry-latest-state` for presentation,
+and no raw at all.
+
+Measured after: region-east's `raw-sensor-stream` froze at 13,915 across two
+samples while edge-01 advanced 3,789,365 → 3,789,381. edge-03's path is
+unchanged and needs its own verification before anything touches it.
+
+### And the check grew a fourth rung
+
+`configured → created → subscribed → FLOWING`. The check had printed a caveat
+about itself — *a topic that exists at high-watermark 0 passes here and
+starves the consumer just the same* — one run before that caveat mattered,
+which is the tell that it belonged in a classification rather than in prose.
+
+An empty topic must now carry a **declared idle reason**
+(`scripts/declared-idle-topics.yaml`), with three statuses: `declared`
+(expected for this deployment), `held` (a known defect, deferred by decision,
+named so it cannot become "expected" through familiarity), and `investigate`
+(nobody knows, and it is meant to be uncomfortable). Undeclared and empty is a
+finding.
+
+**Its first run found one.** `cm-events` sat at watermark 0 on both edges —
+tiers the three-rung check had been reporting as 15 of 15 fed. No cm-ingest
+workload exists and `cm-items` is empty too, so nothing in this deployment
+authors configuration-change events. Declared, with the evidence, rather than
+discovered later as a silent gap.
