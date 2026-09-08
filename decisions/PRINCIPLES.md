@@ -1358,3 +1358,48 @@ code it holds** before believing a measurement about it.
 *Related:* §*A guard justified by a property of the data outlives the
 property* — this is its sequel: the replacement guard inherited the flaw,
 and the state it had already polluted outlived them both.
+
+---
+
+## A name declares what it denotes, or declares that it doesn't
+
+*Effective 2026-09-08, ahead of the semantic-layer ADR, because it costs
+nothing at authoring time and everything retroactively.*
+
+The intake question for a new Silver field or enum has been **"where did this
+name come from, and who is allowed to know it"** — schema provenance plus
+customer sovereignty. It gains a sibling:
+
+> **What does this denote in a standard vocabulary?**
+
+Two permitted answers and no third: a **named standard concept**
+(`sosa:Observation`, `prov:wasDerivedFrom`, `cco:Artifact`,
+`iso13374:block4`, a JC3IEDM entity), or **`organic:<reason>`** — this
+denotes something no standard names, and here is why. "We haven't looked" is
+not an answer; it is the absence of one, and it is the state this rule
+exists to stop accumulating.
+
+**Why now rather than with the ADR.** Alignment is nearly free while a field
+is being authored and expensive once a hundred fields exist unaligned — the
+same asymmetry as labelling rows before enforcement rather than after. The
+formal layer sits ABOVE the wire and is reached by declared mappings;
+ADR-0041 does not change. Nothing here alters a byte on the wire.
+
+### The absence discipline already has a name: the open-world assumption
+
+`UNSPECIFIED` is not a value; silence does not retract; not-applicable is
+distinct from unknown; a claim and an absence of a claim must not render
+alike. Every one of those was derived here from a field failure, and every
+one is native OWA semantics — what is not asserted is not thereby false.
+
+Recording it because the risk runs the other way. Someone will eventually
+read one of these conventions as an oversight and "fix" it into a closed-world
+default, which is precisely the inversion that produced GD-12, ADR-0035
+class 2, and the `not_applicable` versus `unknown` split in the wear
+manifest. **They are not conventions this project invented; they are a
+foundation it re-derived by measurement**, which is the strongest evidence
+they hold.
+
+*Related:* §*A caveat a check prints about itself is a column waiting to be
+born* — same shape, one level up: a discipline a project keeps re-deriving is
+a foundation waiting to be named.
