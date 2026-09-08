@@ -1047,3 +1047,71 @@ locally, enforces locally, and cannot log anybody new in.*
 - ADR-0031 — converged edge node; the co-located reasoning plane shares
   this ADR's policy engine rather than introducing a second authorization
   truth.
+
+
+---
+
+## Addendum 2026-09-08 — `originator_nation` is an authorship claim
+
+The §4 predicate is a **disjunction**:
+
+```
+(originator_nation IS NOT NULL AND originator_nation IN (:nations))
+OR (releasable_to IS NOT NULL AND releasable_to && ARRAY[:nations])
+```
+
+so **`originator_nation` alone grants access.** That is correct for a leaf
+row — the nation that produced a reading can always see it — and it is
+exactly why a derived row must be careful with the field.
+
+**The rule.** `originator_nation` is an **authorship claim**. A derived row
+inherits it **only when derivation preserves single authorship**. Otherwise
+it is absent, and `releasable_to` carries the composed set alone.
+
+A regional rollup is the first family where it does not. Stamping one with
+"the nation most contributors share" would look like a reasonable label and
+would silently open the first branch for everyone in that nation, showing
+them an aggregate computed over assets they are not entitled to — bypassing
+the intersection completely. An aggregate has no author; it claims none.
+
+Every future derived family decides this at authoring time. That is
+PRINCIPLES' third intake question applied to labels: what does this name
+denote, here answered as *whose claim is this*.
+
+### Composing the set: effective audience, not `releasable_to`
+
+The composition is the **intersection of effective audiences**, where
+
+```
+effective(row) = {originator_nation} ∪ releasable_to
+```
+
+Intersecting the bare `releasable_to` sets is wrong, and wrong in the
+direction that reads as the floor working. Measured on a fleet labelled 14 of
+14 with sets `{}` and `{BDR}` — a declared nation with no onward release
+being the ordinary coalition posture — the naive intersection came out empty
+and made every rollup invisible **to the one nation entitled to every single
+contributor**. A correct floor denies those who should not see; that one
+denied the only audience that should.
+
+The collapse cases are unchanged and remain deliberate: one ATL-only
+contributor, one unlabelled contributor, or two disjoint nations each take
+the rollup to releasable-to-nobody.
+
+### `[]` versus `NULL`, and what the wire can carry
+
+In the database the two differ and the difference is the whole meaning: `[]`
+is *labelled and releasable to nobody*, `NULL` is *nobody composed anything*.
+Both deny; only one is an answer, and the completeness gate counts them
+differently.
+
+**On the wire they are the same bytes.** proto3 does not serialise an empty
+repeated field, so composed-and-empty arrives identical to never-composed —
+a hazard `Provenance` already documents for these exact two fields, and which
+was designed against anyway. The consumer therefore reads the PRODUCER, not
+the payload: the sole writer of these tables composes on every emission, so
+absent means empty; and for a producer too old to compose, empty denies
+everyone, which is the safe reading of an unknown. Both want the same value.
+
+**A distinction the wire cannot carry is not a distinction, however carefully
+it is documented at both ends.**
