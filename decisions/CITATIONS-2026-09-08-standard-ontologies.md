@@ -91,3 +91,28 @@ errors would have survived into an ADR as confident prose.
 
 *Fetch before citing* is the same rule as *fetch before reporting board
 state*, applied to the literature.
+
+---
+
+## Annex note — FD/FI concepts and where they align
+
+Added 2026-09-08 alongside the fault-detection / fault-isolation reframing:
+
+* **IOF-MRO** (Release_202603, namespace
+  `https://spec.industrialontologies.org/ontology/202603/maintenance/`) —
+  failure event, fault state, failure mode, component. It is the reason this
+  corpus now distinguishes **failure** (the event, a loss of function) from
+  **fault** (the underlying state): the formal ontology separates them, and
+  the FD/FI metrics cannot be stated without that separation.
+* **CCO artifact-parts** — the wear-component manifest is mereology, so the
+  manifest's "declared present / declared absent / no manifest" trichotomy
+  aligns to artifact part-of assertions.
+* **PROV-O** — the returned advisory cites a reasoning-plane graph node.
+  `AdvisoryProvenance` with a reasoning-plane basis is
+  `prov:wasDerivedFrom` a `prov:Entity` that is the TM node.
+
+**And the forward-compatibility note the ADR should carry:** CCO 3.0
+(expected 2026-12-31) *incorporates GeoSPARQL and QUDT*. So aligning to
+GeoSPARQL and QUDT **directly, now** moves toward CCO's own plan rather than
+away from it — there is no reason to defer those two behind CCO 4.0. Only the
+CCO-specific alignment waits.

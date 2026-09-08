@@ -95,3 +95,32 @@ one place to look.
 - ADR-0034 — analytics configurability.
 - `PRINCIPLES.md` §Framework vs. instantiation — the tell that produces
   most of these rows.
+
+---
+
+## GD-14 addendum 2026-09-08 — the manifest gains a TM identifier per component
+
+The wear-component manifest declares which components a platform class
+physically has. Fault isolation needs one more thing from the same
+declaration: **what this component is called in the technical manual**, so a
+candidate set can become an entry point into the TM graph.
+
+So each component gains a **TM identifier** field — declared, overlay-owned,
+per platform, exactly like the component list itself.
+
+**Read from the graph rather than assumed (2026-09-08).** The obvious guesses
+were S1000D SNS / data-module codes, or legacy functional-group and
+work-package numbers. The graph carries **both** — its labels include
+`DataModule` *and* `WorkPackage`, over S1000D, IADS, DITA and MIL-STD-40051 —
+and it addresses everything by **URI**. So the manifest carries the graph's
+URI, or enough to resolve one, and does not commit to a single manual
+standard's identifier. Choosing S1000D would have worked for the platforms
+whose manuals are S1000D and failed silently for the rest.
+
+That is C1's intake question applied to a component name: *what does this name
+denote in the TM's vocabulary* — answered by reading the vocabulary.
+
+**Absence stays a first-class answer here too.** A component with no TM
+identifier is UNMAPPED, not unmappable: the manifest says the platform has a
+track and the graph has not been told which node describes it. That renders
+as a gap in the isolation path, not as an isolation to nothing.

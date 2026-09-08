@@ -546,3 +546,68 @@ Per ADR-0037 clause 6.
 - **`PRINCIPLES.md` §Framework vs. instantiation** — the tell this ADR
   works against, one tense later: reasoning from what exists to what the
   framework permits, rather than from a deployment to a law.
+
+---
+
+## Addendum 2026-09-08 — AE-6 in fault-detection / fault-isolation vocabulary
+
+AE-6 has been recorded as "block 4 partial". That is true and imprecise, and
+the imprecision matters because the two halves of block 4 have different
+evidence, different metrics and different honest output shapes.
+
+**Fault detection is PRESENT.** Constraining factors, severity, the
+three-axis operational state, the CM discrepancy set — these answer *is
+something wrong, on which asset, how badly*. That is detection, and the
+system does it.
+
+**Fault isolation is ABSENT.** Nothing here answers *which unit is at fault*.
+Saying "block 4" without the split invites a reader to assume both.
+
+### The honest output shape for isolation is an ambiguity group
+
+When isolation lands it must emit a **candidate component set** with its
+**size** and its **provenance** — not a single cause. A one-line "replace the
+starter" reads better and asserts more than the evidence supports; an
+ambiguity group of four with a stated basis is a smaller claim and a more
+useful one, because the technician's next step is to narrow it and they need
+to know how wide it is.
+
+Collapsing an ambiguity group for a cleaner screen is the same defect as
+rendering an absence as a value: it presents a confident answer where the
+system holds an uncertain one.
+
+### Metrics an evaluator will ask for, named now
+
+* **fault detection rate** — of the faults present, how many were detected
+* **false-alarm rate** — of the alerts raised, how many were not faults.
+  **This project has an instance:** the 2026-06-24 yellow-fleet incident,
+  where the fleet showed degraded on a derivation error. Found and fixed.
+  It is worth keeping as the worked example, because a false-alarm rate is
+  abstract until a team has produced one.
+* **fault isolation rate to N units** — the fraction isolated to an ambiguity
+  group of size ≤ N. Reported *with N*, since "isolation rate" without it is
+  not a number.
+
+### Vocabulary: failure vs fault
+
+Per IOF-MRO, and adopted here: a **failure** is the EVENT — a loss of
+required function. A **fault** is the STATE underlying it. An engine that
+stops has failed; the cracked injector is the fault. The formal ontology
+distinguishes them and so should this corpus, because "fault detection"
+detects evidence of a fault, while an alert is usually raised on a failure or
+its precursor, and conflating the two makes the metrics above unstatable.
+
+### Sanitization, and a glossary correction
+
+**Real IETM content is distribution-limited and will not appear here.** The
+demo uses **authored fictional data modules for the fictional platforms** —
+genuine S1000D-shaped structure, invented content. That is the same rule the
+nations follow: real shape, invented substance, and the substance never comes
+from a controlled source.
+
+**Glossary correction: IADS here is the Interactive Authoring and Display
+System — the IETM viewer.** It is not an air-defence system. The acronym
+collides with one, the collision was made in conversation, and it is
+corrected here so the corpus does not inherit it. The graph's own sources are
+listed as S1000D, IADS, DITA and MIL-STD-40051, which is a list of manual
+formats and authoring systems throughout.

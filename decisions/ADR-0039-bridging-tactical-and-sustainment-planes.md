@@ -260,3 +260,34 @@ Per ADR-0037 §6.
   bridge carries echelon context.
 - **ADR-0034 / ADR-0035 / ADR-0020** — the provenance disciplines that
   commitment 2 applies at the portfolio seam.
+
+---
+
+## Addendum 2026-09-08 — the end-to-end chain, stated once
+
+```
+detection
+  -> fault code + candidate components
+    -> TM fault-isolation procedure        (reasoning plane, ADR-0031)
+      -> corrective procedure
+        -> parts
+          -> NSN
+            -> requisition intent          (Contract B)
+              -> MMIS
+```
+
+**The IETM is the middle of the bridge.** Everything left of it is this
+system's own derivation; everything right of it is somebody else's system of
+record. The bridge was described as tactical-to-sustainment; this names what
+sits between the two halves and why neither half can reach the other without
+it — a detection cannot become a requisition without a procedure that says
+which part.
+
+**The loop closes into supply.** ADR-0040's offline reconciliation is the
+last link's failure mode: when the MMIS is unreachable the intent queues and
+is rendered as unapplied, and everything upstream of it still worked.
+
+**Second meeting point with the reasoning plane.** The returned procedure is
+a natural workflow for the process plane — steps, tools, hazards, parts, in
+order. Noted rather than designed: it is the shape of the next seam, not a
+commitment to build it.

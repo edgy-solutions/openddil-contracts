@@ -346,3 +346,72 @@ own project, against these contracts.
   attributes the reasoning plane's checks decide over.
 - `../invincible-agent` — the external project mini-iagent is a reduced
   deployment of.
+
+---
+
+## Addendum 2026-09-08 — the seam's first concrete payload
+
+The reasoning-plane seam has been an architectural position without traffic.
+Fault isolation gives it its first real message, and specifying that message
+also settles the division of responsibility that has been implicit.
+
+### The division: state versus knowledge
+
+**OpenDDIL holds the STATE of the world.** What was detected, on which asset,
+isolated to which candidates, with what confidence and provenance. It is
+observation and derivation over a fleet that exists right now.
+
+**The reasoning plane holds KNOWLEDGE about the world.** The technical-manual
+graph — procedures, parts, tools, hazards, cross-references. It is true of a
+platform CLASS and changes when a manual is revised, not when an asset moves.
+
+That line is the same one the wear-component manifest drew (GD-14): a fact
+about a platform class does not belong in a per-asset record. Here it is
+drawn between systems rather than between files.
+
+### The message that crosses
+
+**Outbound — the entry point into the graph, not a question about it:**
+
+```
+platform / model identifier
+fault code or symptom set
+candidate component set
+ambiguity group size
+provenance
+```
+
+**Inbound — the resolved procedure node(s):** TM references, steps, and the
+parts they call for, carrying NSNs.
+
+### OpenDDIL proposes; the system of record disposes
+
+OpenDDIL does not isolate to a single unit and must not appear to. The
+manual's own fault-isolation procedure does that, with the technician. The
+IETM is the authoritative procedure source; what crosses the seam is an entry
+point into it and what returns is a citation of it.
+
+The returned advisory renders through `AdvisoryProvenance` with a
+reasoning-plane basis and the graph node cited — so an operator reading a
+recommendation can see it came from a manual and which node of it, rather
+than from an opinion this system formed.
+
+### Measured properties of the graph, read rather than assumed (2026-09-08)
+
+The graph is **URI-addressed**: its tools take `from_uri` and `uris` and
+return identities to be resolved separately from content. Its labels span
+`Procedure`, `Part`, `Tool`, `Hazard`, `DataModule`, `WorkInstruction`,
+`WorkPackage`, over S1000D, IADS, DITA and MIL-STD-40051 sources.
+
+Two consequences for this seam:
+
+* **The identifier that crosses is a graph URI**, not a raw data-module code
+  or work-package number. The graph already spans several manual standards
+  under one addressing scheme, and picking one standard's identifier at this
+  boundary would work for some platforms and silently fail for others.
+* **Content fetch is ACCESS-GATED on the reasoning plane's own terms** —
+  ungated nodes are omitted from a fetch. So two independently gated systems
+  meet here, and neither may assume the other's authorization. A procedure
+  OpenDDIL is entitled to ask about may be one the caller cannot read, and an
+  omitted node must render as *withheld*, never as *absent* — this corpus's
+  oldest rule, arriving at a new boundary.
