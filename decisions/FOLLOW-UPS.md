@@ -4,6 +4,29 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## PROMOTED 2026-09-08 — asset-registry-service must stamp its own writes
+
+**Was:** deferred, behind the bridge. **Now:** behind the region, before any
+recording.
+
+**Why the cost changed.** The service still does not stamp releasability on
+rows it writes; 20260906010000 backfilled what existed, so the gate reads
+zero unlabelled today. That was survivable when an unstamped row hid ONE
+asset.
+
+Regional rollups are now labelled by **intersection**, and an unlabelled
+contributor takes the intersection to empty. So a single row the service adds
+after the backfill no longer hides an asset — **it blanks the regional
+screen, for everyone, including the fully-entitled liaison.**
+
+That is deny-unlabeled propagating correctly through aggregation, and it is
+the right behaviour. The blast radius is what changed, not the correctness:
+one unstamped write now costs a region's whole rollup rather than one row.
+
+**Test when it lands:** add an asset through the service and confirm the
+regional rollups keep their composed audience rather than going empty.
+
+
 ## Why this exists, and why it is shaped this way
 
 Open follow-ups live in **six separate registers** across five documents.
