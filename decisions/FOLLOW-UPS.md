@@ -4,6 +4,51 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-08 — a new consumer group replays history into a schema that has since changed
+
+Giving region-east its own `region_*` projectors created three NEW consumer
+groups, which started at offset 0 and replayed the topic's whole history —
+including messages emitted BEFORE the rollups were partitioned by
+releasability class.
+
+A pre-partition message carried no `releasable_to`, so it decodes as the
+**empty class**, and it carried the WHOLE region's counts. The result was a
+phantom partial: `class='' assets=14 releasable_to={}` sitting alongside the
+three real ones.
+
+**It cannot be fixed by decoding.** A pre-partition message and a legitimate
+empty-audience partial — a class whose contributors are releasable to nobody
+— are byte-identical. There is no field that distinguishes "this producer
+predates the concept" from "this producer computed an empty set".
+
+**Why it was not visible.** `releasable_to={}` denies everyone under the §4
+predicate, so the phantom row renders on no screen. It is wrong data that no
+subject can see, which is the most patient kind.
+
+**Cleaned by hand this once** (three rows at the region, plus a stale
+`id='edge'` buffer row left behind when the buffer key became the tier id —
+same shape: *a key change does not delete the old key's row*).
+
+**What to decide, before the next tier is added:**
+
+* Whether new tier consumer groups should start at `latest` rather than
+  `earliest`. That avoids the replay and loses legitimate history — a real
+  trade, not an obvious win.
+* Or whether the aggregate handler should reject a message whose provenance
+  carries no `releasable_to` KEY at all, distinct from one carrying an empty
+  list. proto3 erases that distinction on the wire (recorded already), so
+  this would need a producer-side marker — which is the same conclusion the
+  composed-vs-uncomposed branch reached, and was abandoned for the same
+  reason.
+* Or accept the phantom and have the completeness gate name it: a partial
+  whose class is empty AND whose asset_count equals the region total is a
+  legacy row, and that conjunction is checkable even though neither half is.
+
+The third is the cheapest and the most honest: it does not pretend the wire
+carries something it does not, and it turns an invisible wrong row into a
+named finding.
+
+
 ## PROMOTED 2026-09-08 — asset-registry-service must stamp its own writes
 
 **Was:** deferred, behind the bridge. **Now:** behind the region, before any
