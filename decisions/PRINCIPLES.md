@@ -1443,3 +1443,28 @@ someone's entitlements widen or the filter is relaxed for a test. Therefore
 the completeness gate must look at what the filter denies, not only at what
 it serves — **denial is where wrong rows go to wait**, and a check that only
 inspects served rows has agreed not to look there.
+
+---
+
+## A wrong accessor that compiles is a check that only reports success
+
+`deployment().this_tier?.has_children === true` type-checked, ran, and was
+`undefined` forever. The field is `tier`. `this_tier` does not exist — but the
+property it was reached through is OPTIONAL, so optional chaining turned a
+typo into a silent `false`, the scope selector kept the root's shape on every
+tier, and `tsc --noEmit` exited 0.
+
+**The compiler's silence about an optional field is not evidence the field
+exists.** Optional chaining is designed to suppress exactly the error that
+would have surfaced this, which makes it the frontend's version of a check
+that can only report success: it runs, it returns, it never disagrees.
+
+The tell is the same as the census lesson. Reading the count told us the
+groups were fine; asking the broker told us they were not. Here, reading the
+compiler told us the accessor was fine; **grepping the type told us it was
+not.** When a value can be legitimately absent, confirm the NAME against its
+declaration, not against the absence of a complaint.
+
+*Related:* §*A caveat a check prints about itself is a column waiting to be
+born* and §*A key change is a migration, not an edit* — three ways of saying
+that a tool's quiet is a fact about the tool.
