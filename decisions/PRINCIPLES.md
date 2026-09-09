@@ -1403,3 +1403,43 @@ they hold.
 *Related:* §*A caveat a check prints about itself is a column waiting to be
 born* — same shape, one level up: a discipline a project keeps re-deriving is
 a foundation waiting to be named.
+
+---
+
+## A key change is a migration, not an edit
+
+Changing what a producer writes does not touch what it already wrote. Rename
+the key a row is stored under and the new key writes *beside* the old one;
+nothing retires the old, and both are served.
+
+Two instances on the same afternoon, from two unrelated fixes:
+
+* the buffer monitor's row id became the tier id, and `id='edge'` sat beside
+  `id='region-east'` — **visible**, and the reason a region's screen said
+  `EDGE→HQ BUFFER`;
+* the rollup key gained the releasability class, and a pre-partition row
+  carrying the whole region's counts under the empty class sat beside the
+  three real partials — **invisible**.
+
+This is the sibling of §*Fixing a filter does not repair what it already let
+through*. That one is about data a broken rule admitted; this one is about
+data a superseded key left behind. Both say the same thing: **a change to a
+rule is not retroactive, and the rows that predate it are still there.**
+
+So every key change ships with the retirement of the old key's rows, or it
+ships a ghost.
+
+### And the gate must inspect what the PEP hides
+
+The invisible instance is the more important one, and it was invisible for a
+good reason: `releasable_to={}` denies everyone, so the §4 predicate hid a
+row carrying the whole region's counts from every screen. **The PEP's
+correctness is what concealed it.**
+
+> **Wrong data that no subject can see is the most patient kind.**
+
+It waits. Nobody reports it, no panel disagrees, and it surfaces the day
+someone's entitlements widen or the filter is relaxed for a test. Therefore
+the completeness gate must look at what the filter denies, not only at what
+it serves — **denial is where wrong rows go to wait**, and a check that only
+inspects served rows has agreed not to look there.

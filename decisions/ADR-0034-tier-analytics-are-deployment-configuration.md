@@ -439,3 +439,36 @@ with Arcs 2/3 by bandwidth.
   — the practitioner-facing companion: how a team lands an existing
   algorithm implementation (C or otherwise) at one of the pure seams
   while the engine is fenced, and which constraints above bind it.
+
+---
+
+## Addendum 2026-09-08 — the stamp is what proto3 cannot say
+
+A rollup partial replayed from before the releasability partition is
+**byte-identical** to a legitimate empty-audience partial. Both carry no
+`releasable_to`, because proto3 does not serialise an empty repeated field,
+and both therefore decode as the empty class. No amount of care at the
+consumer separates them: the distinction was erased at the field level.
+
+**It survives at the MESSAGE level, and this ADR's stamp shape is the place
+it lives.** The aggregator is a registered producer with a version, so
+`{producer, version, config_hash}` on each emitted partial makes the question
+answerable by construction: a consumer refuses or quarantines any partial
+whose producer version predates the partition, and a replay of history stops
+being indistinguishable from current output.
+
+That is declared-not-inferred applied to schema evolution. The completeness
+gate's detector — *empty class AND asset_count equal to the region total* —
+is a **correlate**: a good signal, cheap, worth having now, and still an
+inference about a row's origin from its shape. The stamp is the
+**declaration**, and only the declaration is safe when a legitimate empty
+class eventually exists and the correlate starts firing on real data.
+
+**Land the correlate now; land the stamp when the aggregator is next
+touched.** They are not alternatives — the detector catches what is already
+in the topics, and the stamp prevents the next one.
+
+This generalises past rollups. *A new consumer group starts at offset 0 and
+replays history that predates the current schema* will recur at the next
+partition of anything, and a producer version on the message is the general
+answer to it.
