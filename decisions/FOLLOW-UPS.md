@@ -4,6 +4,44 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## RETRACTED 2026-09-09 — "a broker restart wedges its clients" is not true
+
+I reported that as the night's root pattern. It does not reproduce.
+
+**Two deliberate reproductions on edge-01's broker:** a 6-second pod delete,
+and a 150-second full scale-to-zero. In both, every client — sensor-ingest,
+the DIS mapper, faust-edge, the bridge, the tier projector — reconnected on
+its own, and the advancing pre-flight read green within 100 seconds. Nothing
+wedged.
+
+So the 21:29–21:44 event that killed four clients **remains unexplained.**
+The correlation with a broker roll was real; the causation was mine.
+
+**And it strengthens the case for the mechanisms rather than weakening it.**
+A known trigger could be fixed at the trigger. An unexplained wedge can only
+be defended against where it shows: a component that cannot do its job must
+die, and a component whose output has stopped must go unready. Those convert
+an unknown cause into a visible restart, which is the property that matters
+when the cause is unknown.
+
+### And a second retraction, from the same block
+
+I wrote that `kafka_errors` counts produce ATTEMPTS rather than deliveries,
+citing edge-02 reporting zero errors while its topic was frozen. **Reading the
+code shows the delivery callback does increment on error**, and re-measuring
+shows edge-02's ingest was never broken: its output topic `ingress-dis-raw`
+was advancing normally. The frozen topic I compared against was
+`raw-sensor-stream`, which is the DIS MAPPER's output, not the ingest's.
+
+**I diagnosed a component by watching a topic it does not write.** That is the
+same mislabelling the pre-flight's own probe carried until it was corrected,
+committed twice in one session — once in the tool, once in the reasoning.
+
+What survives from that block, verified: edge-01's ingest DID enter a fatal
+producer state and log at WARNING forever, and that is now fixed by exiting
+non-zero.
+
+
 ## OPEN 2026-09-09 — two components that wedge at 1/1 Running, found before a severance
 
 Pre-cut baseline for the two-dimension severance found the pipeline **dead
