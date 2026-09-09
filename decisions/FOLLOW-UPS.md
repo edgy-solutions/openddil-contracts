@@ -4,6 +4,61 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-09 — two components that wedge at 1/1 Running, found before a severance
+
+Pre-cut baseline for the two-dimension severance found the pipeline **dead
+for three and a half hours**, in two unrelated ways, both invisible to every
+liveness probe:
+
+**1. Both edge bridges stopped consuming at 21:29-21:31.** edge-01 logged
+`kafka: error while consuming telemetry-latest-state/1: the provided member
+is not known in the current generation` — a consumer-group rebalance error —
+then went silent. edge-02 logged "Input type kafka is now active" and then
+nothing. Both pods stayed `1/1 Running`; lag climbed to **106,249** and
+**79,726** and neither restarted.
+
+**2. edge-01's sensor-ingest entered a FATAL librdkafka producer state at
+00:51:04** — `KafkaError{code=_FATAL, val=-150, "Unable to produce message:
+Local: Fatal error"}`. A fatal producer state is unrecoverable by design: the
+client will never produce again without being recreated. The pod stayed
+`1/1 Running, restarts=0` and kept RECEIVING and DECODING (460,181 decoded,
+21,264 kafka_errors and climbing) — so every counter except the one that
+mattered looked healthy.
+
+Both are the same shape this corpus keeps recording, now on the WRITE and
+RELAY sides rather than the read side: **a process that is up, probed
+healthy, and doing nothing.** The read-side instances were the reachback, the
+unfed consumer and the wedged Faust table; these are their producers.
+
+**What would have caught them, and did not.** The edge buffer monitor tracks
+exactly this — `bridge_group_lag` climbing to 106k is the signal — and it was
+recording it. Nothing ESCALATED it. The number was on a panel nobody was
+looking at, which is the difference between an instrument and an alarm.
+
+**Why it matters beyond the outage:** severing a tier whose inbound is
+already frozen measures nothing, exactly as severing a tier whose link probe
+is already down measures nothing. The pre-cut baseline is what caught it, and
+it caught it because the baseline asked whether numbers ADVANCE rather than
+whether they exist.
+
+**Restart cleared both.** Region inbound resumed (frozen at 199,883, moved on
+restart) and ingest re-bound its UDP socket.
+
+**To decide:**
+
+* A liveness or readiness probe that fails on a fatal producer state, rather
+  than one that only checks the process is alive. The ingest knows: it counts
+  `kafka_errors`, and a nonzero-and-climbing rate with a fatal code is
+  self-diagnosing.
+* A bridge probe on consumer progress, not process liveness — committed
+  offset advancing, not "the container is up".
+* An escalation path for `bridge_group_lag` beyond rendering it. A threshold
+  that turns the existing instrument into an alarm.
+* **For the recording:** these two wedge. Check `bridge_group_lag` and the
+  ingest's `kafka_errors` immediately before recording, because both fail
+  silently and the demo would show a frozen fleet with every pod green.
+
+
 ## OPEN 2026-09-08 — a new consumer group replays history into a schema that has since changed
 
 Giving region-east its own `region_*` projectors created three NEW consumer
