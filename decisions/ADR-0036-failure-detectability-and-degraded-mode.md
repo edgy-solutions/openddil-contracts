@@ -869,3 +869,48 @@ learns its premise expired.
   one · §Match structure, not prose · §"Not found" is not "cleared".
 - **GD-08** (`GENERALIZATION-DEBT.md`) — per-tier detection; the
   in-arc resolution for the `NT` rows.
+
+---
+
+**UD-14 — Four clients wedged at `1/1 Running`, cause unexplained, trigger
+narrowed but not found.**
+
+On 2026-09-09 the pipeline had been dead for three and a half hours. Both edge
+bridges had stopped consuming — one on a consumer-group generation error, one
+with **no error at all** — `faust-edge` at both edges had logged nothing since
+21:44, and the DIS mapper at edge-01 nothing since 21:29. Every pod was
+`1/1 Running` with zero restarts. Separately, edge-01's sensor-ingest was in a
+fatal librdkafka producer state, still receiving and decoding, publishing
+nothing.
+
+It was found by a baseline taken before a severance test, because that
+baseline asked whether numbers ADVANCE rather than whether they exist.
+
+**What has been ruled out, and what has not.** The first hypothesis was *a
+broker restart wedges its clients*, and it is **exonerated**: two deliberate
+tests on edge-01's broker — a 6-second pod delete and a 150-second full
+scale-to-zero — saw every client reconnect unaided, with the advancing
+pre-flight green inside 100 seconds.
+
+But the 21:29 event coincided with a **helm rollout**, which restarts brokers
+*and* rewrites configs *and* rolls other pods in an order nobody chose. The
+reproductions tested a NARROWER trigger than the event. So:
+
+* broker restart alone — **exonerated by test**
+* helm rollout touching the same objects — **untested, and the only
+  reproduction that could find this**
+
+That distinction is the whole value of leaving this row open. Closing it on
+"broker restarts are fine" would retire the investigation one step before the
+thing that actually happened, and the correlation that produced the wrong
+hypothesis would be the same correlation that hid the right one.
+
+**Why the remedy does not wait for the cause.** A known trigger can be fixed
+at the trigger. An unexplained wedge can only be defended where it shows: a
+component that cannot do its job must die, and a component whose output has
+stopped while its input advances must be restarted. Those convert an unknown
+cause into a visible restart — which is exactly the property that matters when
+the cause is unknown, and is why the mechanism landed before the diagnosis.
+
+*Status:* remedy landing (fatal-exit shipped; stall→liveness in progress);
+**cause open**, trigger narrowed to "a rollout, not a restart".
