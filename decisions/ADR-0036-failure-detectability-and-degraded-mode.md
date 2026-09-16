@@ -872,6 +872,8 @@ learns its premise expired.
 
 ---
 
+`Status: remedy landed, cause OPEN`
+
 **UD-14 — Four clients wedged at `1/1 Running`, cause unexplained, trigger
 narrowed but not found.**
 
@@ -912,5 +914,7 @@ stopped while its input advances must be restarted. Those convert an unknown
 cause into a visible restart — which is exactly the property that matters when
 the cause is unknown, and is why the mechanism landed before the diagnosis.
 
-*Status:* remedy landing (fatal-exit shipped; stall→liveness in progress);
-**cause open**, trigger narrowed to "a rollout, not a restart".
+The declared token is at the head of this entry, where the checker reads it.
+An entry carrying a second status sentence in its body would be a second
+source of truth for the same fact — which is the drift this register's own
+tooling exists to catch.

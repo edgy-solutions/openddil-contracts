@@ -336,6 +336,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | UD-11 | The detection cutover retired the subscription and left the projector reaching down | fixed 2026-09-05 |
 | UD-12 | Subscription bootstrap creates and never reconciles; a wipe hook hid it at the root | fixed 2026-09-05 |
 | UD-13 | Fusion skipped DIS telemetry on an expired premise — guard deleted, admission by content | fixed 2026-09-07 |
+| UD-14 | Four clients wedged at 1/1 Running for 3.5h — broker restart exonerated by test, helm rollout untested | remedy landed, cause OPEN |
 
 ### VE — verification-evidence gaps (`ADR-0037`)
 

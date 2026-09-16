@@ -166,8 +166,73 @@ if [ -n "$status_report" ]; then
   fail=1
 fi
 
+# ---------------------------------------------------------------------------
+# CROSS-REPO CITATIONS — ADR numbers now name two different documents
+# ---------------------------------------------------------------------------
+# openddil:ADR-0029/0031/0034/0035/0037 and iagent:ADR-0029/... are different
+# decisions. An unqualified number is therefore already ambiguous, and the
+# convergence will only add more of them.
+#
+# THE CONVENTION IS LOCALITY: an unqualified `ADR-NNNN` means THIS repo, which
+# is what the ~227 existing references already mean and why they are not being
+# rewritten. A reference to the other corpus MUST carry its prefix, because
+# that is the one case the reader cannot infer.
+#
+# WHAT THIS CAN AND CANNOT CHECK, stated rather than implied:
+#   * an unknown prefix          -> a finding; the vocabulary is closed
+#   * `openddil:ADR-NNNN`        -> must resolve to a document HERE
+#   * `iagent:ADR-NNNN`          -> form checked, EXISTENCE NOT CHECKED
+#
+# The third is the honest limit. This repo cannot see that one, and a checker
+# that reported a foreign citation as "verified" would be asserting something
+# it has no access to -- the same shape as a check that cannot fail. So they
+# are counted and listed, and the summary says they are unresolved.
+KNOWN_REPOS="openddil|iagent"
+
+# NO  IN THIS PATTERN, deliberately. An earlier version carried one and a
+# layer of quoting turned it into a literal BACKSPACE byte, so the search
+# matched nothing and the summary reported "0 prefixed, all prefixes known"
+# -- a clean pass over a query that could not match, in a checker whose
+# whole job is catching that shape. The unanchored pattern is equivalent
+# here (verified against the corpus: same two hits) and has nothing to
+# mis-transcribe.
+xrefs=$(grep -ohE "[a-z][a-z0-9-]*:ADR-[0-9]{4}" *.md 2>/dev/null | sort -u)
+
+bad_prefix=$(printf '%s
+' "$xrefs" | grep -vE "^($KNOWN_REPOS):" | grep -v '^$')
+if [ -n "$bad_prefix" ]; then
+  echo "FAIL: cross-repo citations with an unrecognised prefix:" >&2
+  printf '%s
+' "$bad_prefix" | sed 's/^/    /' >&2
+  echo "      Known repos: openddil, iagent. An unqualified ADR-NNNN means" >&2
+  echo "      THIS repo by locality and needs no prefix." >&2
+  fail=1
+fi
+
+missing_local=""
+for ref in $(printf '%s
+' "$xrefs" | grep -E "^openddil:ADR-[0-9]{4}$"); do
+  num="${ref#openddil:ADR-}"
+  ls ADR-${num}-*.md >/dev/null 2>&1 || missing_local="${missing_local}    ${ref}"$'
+'
+done
+if [ -n "$missing_local" ]; then
+  echo "FAIL: openddil:-prefixed citations with no matching document here:" >&2
+  printf '%s' "$missing_local" >&2
+  fail=1
+fi
+
+foreign=$(printf '%s
+' "$xrefs" | grep -cE "^iagent:ADR-" || true)
+
 if [ "$fail" -eq 0 ]; then
   echo "decision indexes clean: $(echo "$corpus" | wc -l | tr -d ' ') IDs, all documents indexed, all statuses agree"
   echo "note: 'agree' means the index matches the home, NOT that either is true."
+  echo "cross-repo citations: $(printf '%s
+' "$xrefs" | grep -c . || true) prefixed, all prefixes known,"
+  echo "  all openddil:-prefixed ones resolve here."
+  echo "  ${foreign:-0} iagent:-prefixed reference(s) NOT resolved — this repo"
+  echo "  cannot see that corpus, and reporting them as verified would assert"
+  echo "  something it has no access to."
 fi
 exit "$fail"
