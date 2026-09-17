@@ -4,6 +4,56 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-16 — tactical_events: HQ prunes, the tiers never do
+
+The completeness gate refused `tactical_events` as empty-and-undeclared at
+HQ. It is right to refuse, and the cause turned out to be two facts that only
+look like a fault together:
+
+* **HQ's mapping carries `retention_hours: 24`** and a background pruner
+  drops rows older than that. **The tier projector mappings carry no
+  retention at all.**
+* **Every tactical event in the system is 8 days 21-22 hours old.** Fusion
+  emits only on an UPWARD transition into an alerting severity, and the fleet
+  has been stable since. So nothing new has been produced for eight days.
+
+HQ's zero is therefore **correct behaviour**, not a stalled producer — and
+the region's 18,562 rows are the same events that HQ correctly aged out.
+
+### Do NOT declare tactical_events expected-empty
+
+`expected-empty.yaml` wants *"a dated claim that a named producer is absent
+for a named reason."* The producer here is not absent; it is **quiescent**. A
+declaration would suppress exactly the signal the gate exists to raise: a
+genuinely broken fusion looks identical to a stable fleet from the table, and
+the difference is the whole reason the check asks.
+
+**The resolution before a recording is to GENERATE an event, not to declare
+the table empty** — which the demo's injection beat does anyway, and which
+also proves the path rather than excusing it.
+
+### The asymmetry is the real finding
+
+**The tier stores have unbounded tactical-event retention.** region-east holds
+18,562 rows nine days old and will hold them indefinitely; HQ holds 24 hours.
+Nothing decided that — HQ's mapping was configured and the tier mappings were
+copied without the field.
+
+Two things to settle:
+
+* **Which way should it go?** An edge is the tier with the least storage and
+  the most reason to keep local history through a long severance; HQ has the
+  most storage and the least need for raw event history. The current
+  configuration is the opposite of that argument in both directions, which
+  suggests it was inherited rather than chosen.
+* **Unbounded growth at a tier store is a DDIL hazard**, not just untidiness:
+  the store that must survive a severance is the one with no bound on this
+  table.
+
+Recorded rather than fixed, because picking a retention is a deployment
+decision and a number invented here would read as a requirement.
+
+
 ## RETRACTED 2026-09-09 — "a broker restart wedges its clients" is not true
 
 I reported that as the night's root pattern. It does not reproduce.
