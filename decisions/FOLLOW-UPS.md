@@ -4,6 +4,63 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-17 — Restate memory scales with SUBTREE, not with tier kind
+
+The 90-minute sizing measurement recorded that the regional tier runs ~3x an
+edge. That ratio is not a property of *being a region*. region-east consumes
+**two children plus its own ingest**; an edge consumes its own ingest only.
+The 3x is arithmetic about subtree size that happens to coincide with tier
+kind in the current topology, and the lab has exactly one shape.
+
+**A region with four edges will not be 3x. HQ over several regions is a
+different number again.** Written as a per-tier constant, the first
+deployment with a second region inherits a limit measured on a fleet that
+never had one -- and the failure mode is the one this week already cost eight
+hours: an OOM whose cause looks like data growth and is actually a budget
+that was sized for a different topology.
+
+### The change
+
+Derive the Restate memory limit from the **tier list**, not from a constant:
+
+* subtree size is already computable -- `openddil.tierList` resolves parent
+  for every tier and `hasChildren` is already used to switch relay kind,
+  projector mappings and subscription sets;
+* per-kind overheads stay explicit (a root carries the registry and the
+  aggregation fan-in an edge does not);
+* the RocksDB budget already derives from the limit via
+  `openddil.halfMemoryBytes`, so fixing the limit fixes the budget and the
+  two still cannot drift. The helper composes rather than being replaced.
+
+Same move as every other per-tier value landed this month: **declared from
+topology, not inferred from the lab.** The ingest set, the subscription set,
+the relay kind and the bridge target are all derived from the declared
+hierarchy; memory is the last per-tier number still measured once by hand and
+copied forward.
+
+### Sizing inputs available today
+
+| tier | children | own ingest | observed peak | budget |
+|---|---|---|---|---|
+| root | 2 regions (relayed) | registry + HQ | 407 Mi | 1 GiB |
+| edge | 0 | DIS + CM + logistics | 374 Mi | 1 GiB |
+| region-east | 2 edges | own | 1192 Mi | 1 GiB |
+
+One data point per shape and only one region shape, so this is enough to fit
+an intercept and a per-child slope and nothing more. **Do not fit a curve to
+three points and call it a model.** The honest next step is the helper plus a
+declared per-child increment that is easy to revise, not a formula that looks
+authoritative.
+
+**Bites at:** the first deployment with a second region, or any region with
+more than two edges. Not urgent on the lab; it is a correctness problem the
+moment the topology stops matching the one the constant was measured on.
+
+*Related:* the closed sizing record in the RESOLVED section below, and the
+`openddil.halfMemoryBytes` helper it would compose with.
+
+---
+
 ## RESOLVED 2026-09-17 — the derive stage completes, for the first time
 
 Five defects, stacked so each one's fix was blocked by the next, and the whole
