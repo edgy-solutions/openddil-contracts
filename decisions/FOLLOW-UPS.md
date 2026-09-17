@@ -4,6 +4,176 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## RESOLVED 2026-09-17 — the derive stage completes, for the first time
+
+Five defects, stacked so each one's fix was blocked by the next, and the whole
+stack invisible because every instrument was green. Full operator account in
+`openddil-helm/scripts/RUNBOOK-2026-09-17-unwedge.md`.
+
+| # | defect | state |
+|---|---|---|
+| 1 | Restate OOMKilled at 1Gi (~1600 restarts) | fixed, 2Gi, 0 restarts |
+| 2 | zstd on Restate-subscribed topics | fixed, `lz4` applied and confirmed |
+| 3 | comment inside a line continuation → whole `topic-init` script unparseable | fixed + guard 4 |
+| 4 | release wedged `pending-upgrade` 8h behind the failed hook | cleared |
+| 5 | `hook-restate-wipe` covered 1 Restate of 4 | fixed, `wipe_one` over all |
+
+**The measurement that had never once been non-zero** (`check-derive-stage.sh`,
+90s window, after the repair):
+
+| tier | asset-cm-state | asset-logistics-status |
+|---|---|---|
+| edge-01 | +148 | +24 |
+| edge-02 | +112 | +18 |
+| region-east | +262 | +51 |
+
+Registrations restored: 2 deployments / 7 subscriptions at each edge, 2 / 4 at
+region-east. Zero restarts across all four Restates.
+
+### NEW, and only visible because the pipeline now runs
+
+**`tactical_events` produces unlabelled rows.** The table was empty for the
+whole period the gate was green, so this branch had never executed against
+real data. Two producers, two different wrong behaviours:
+
+* `cm-service` (3 rows): stamps **neither** `originator_nation` nor
+  `releasable_to` — the 6 unlabelled values the gate now names;
+* `logistics-fusion` (2 rows): stamps `originator_nation` but leaves
+  `releasable_to` an **empty array**, which under the ADR-0029 §4 disjunction
+  is not a denial but a silent narrowing to the originator alone.
+
+Gate FAILS, correctly, and now names the subjects. **This is the next code
+fix.** It is a labelling gap in the producers, not in the gate.
+
+**The gate could not name what it failed on.** It deduplicated by `asset_id`;
+`tactical_events` keys on `subject` and the rollups on `region_id`, and an
+earlier fix had SKIPPED those tables to stop psql errors printing into the
+findings section. Result: `GATE FAILS: 6 unlabelled value(s)` followed by an
+empty list. Fixed — key column resolved per table, subjects table-qualified.
+
+And the first version of that fix **accused the three `region_*` rollups**,
+because its predicate was a second implementation of the counting rule and
+disagreed with it: an aggregate with a NULL originator is *correct*. The
+predicate is now derived from the same `is_aggregate()` the counter uses.
+*A second implementation of a rule is a second rule.*
+
+### ROOT CAUSE of the OOMs — Restate budgets RocksDB at 100% of the limit
+
+The memory limit was never the variable. Restate reads the cgroup limit, sets
+`rocksdb-total-memory-size` to ALL of it, and **prints an ERROR about itself at
+every startup**:
+
+    'rocksdb-total-memory-size' parameter is set to 2.0 GiB, more than 90% of
+    the process memory limit of 2.0 GiB. This risks an OOM under load; keep it
+    under 50% of process memory
+
+At the old 1Gi limit that is a 1 GiB budget inside a 1 GiB cap — not a tuning
+problem, an arithmetic one. **That is what drove the ~1600 kills on edge-01 and
+1124 on region-east**, and it was in the logs at every one of those starts.
+
+**Raising the limit to 2Gi did not fix it, it re-scaled it.** The budget became
+2 GiB of a 2 GiB cap; region-east then peaked at **1656 Mi of 2048** (81%) —
+still climbing toward the same wall, just more slowly. 2Gi bought time and
+looked like a fix because the restart counter stopped.
+
+FIXED: `RESTATE_ROCKSDB_TOTAL_MEMORY_SIZE` set to 50% of the container limit,
+computed by `openddil.halfMemoryBytes` from the SAME value that sets the limit
+so the two cannot drift. Applied to the root and all five tiers (6 render
+sites). Emitted in bytes because the env override rejects unit strings the TOML
+field accepts, and a rejected value is silently ignored.
+
+Verified on region-east 2026-09-17: startup ERROR gone, partition budget
+810.3 MiB -> 405.2 MiB, peak 1656 Mi -> steady ~1014 Mi, zero restarts, derive
+stage still completing at the same rates.
+
+| node | pre-fix peak | post-fix | limit |
+|---|---|---|---|
+| root `restate-server` | 510 Mi | 517 Mi | 2Gi |
+| `tier-restate-edge-01` | 638 Mi | 558 Mi | 2Gi |
+| `tier-restate-edge-02` | 337 Mi | 342 Mi | 2Gi |
+| `tier-restate-region-east` | **1656 Mi** | 1014 Mi | 2Gi |
+
+**ACCIDENTAL CONTROLLED COMPARISON, and it is the strongest evidence here.**
+The fix was applied to region-east alone at 12:24 while a memory watch was
+already running. That left three unfixed nodes under identical load for the
+next 52 minutes:
+
+| node | budget | 12:18 -> 13:10 |
+|---|---|---|
+| region-east | **1 GiB (fixed)** | 1656 peak -> oscillates **1087-1185, no trend** |
+| edge-01 | 2 GiB (= cap) | 589 -> 638, sawtooth to 288, then 288 -> 614 climbing |
+| edge-02 | 2 GiB (= cap) | **279 -> 617 monotonic**, ~6.5 MiB/min |
+| root | 2 GiB (= cap) | 466 -> 642, climbing |
+
+The only node that went flat is the only node that was fixed. edge-02's slope
+put it at the 2Gi cap in roughly 3.5 hours; the sawtooth on edge-01 is RocksDB
+releasing on compaction and refilling toward the same ceiling. So "2Gi is
+stable" was an artefact of not having watched long enough -- the restart
+counter stopping is not the same measurement as the memory plateauing.
+
+Applied to the remaining three at 13:14 by `kubectl set env` rather than a
+helm upgrade, deliberately: an upgrade fires the wipe hook on all four
+Restates, and discarding the state that had just started working to deliver a
+memory fix would have been a poor trade. The chart renders the identical value,
+so the next upgrade reconciles rather than reverts. After the restarts: zero
+warnings on all four, partition budget 810.3 -> 405.2 MiB everywhere, derive
+stage completing at unchanged rates, zero restarts.
+
+**The 167 MiB baseline is retired as a sizing input.** It was measured on an
+idle Restate and it measured the PARTITION budget, which is a different number
+from the one that kills the process. The sizing record should be written
+against the RocksDB budget, not against observed RSS.
+
+*The lesson, and it is the batch's theme again:* the component was reporting
+its own misconfiguration, in its own logs, as an ERROR, roughly 1600 times.
+Every instrument outside it was green, so nobody read the one instrument that
+was not. **A component's self-report is an instrument too, and the cheapest one
+in the system.** Read the logs of the thing that is restarting before tuning
+the thing it is restarting against.
+
+### Reliability finding, independent of what caused the kills
+
+**~1600 OOM kills corrupted a single-node Restate's cluster metadata past
+self-recovery.** `POST /query` answered `node N1:1645 was shut down or
+removed`; the node could neither create nor enumerate an invocation, while
+every pod read `1/1 Running`. Not "invocations failing", not "invocations
+absent" — a third state in which the substrate cannot answer questions about
+itself, and which no liveness or readiness probe in the system detects.
+Recovery was a wipe. Worth a durability row on its own merits.
+
+### Guards landed
+
+* **guard 4** in `check-chart-render.sh` — parses every rendered shell script
+  with `sh -n`, across **three variants** (`default` 35, `tiernode` 62,
+  `releasability` 38). The first version rendered defaults only and so never
+  parsed any of the 27 scripts in `tier-node.yaml`; it also missed
+  ConfigMap-shipped shell (`relay-stall-probe.sh`, 4.6 KB). Both were the same
+  covers-one-of-N shape as defect 5, arriving inside the fix for defect 3.
+* **`check-derive-stage.sh`** — dispatch item (2). Three terms: consumed,
+  completed, deployment reachable. Its first draft reported `0` for eight
+  watermarks including one known to be 1,436,481, because it did not export
+  `KUBECONFIG`, `2>/dev/null` ate the error and `s+0` manufactured a zero. It
+  now refuses to report a number it did not read, and asserts the cluster.
+
+### Next, in order
+
+1. Fix `cm-service` / `logistics-fusion` tactical-event labelling; gate to zero.
+2. ~~Sizing record~~ **CLOSED 2026-09-17.** Written into values.yaml against
+   the RocksDB budget. 90-minute watch, all four nodes under a 1 GiB budget
+   with the derive stage running: root 265-407Mi, edge-01 165-374Mi, edge-02
+   148-375Mi, region-east 989-1192Mi -- all sawtoothing, no trend, peak 58%
+   of 2Gi. region-east runs ~3x an edge (two children plus own ingest); size
+   the regional tier from that ratio, not from an edge measurement.
+3. Parsers for the other embedded languages — Bloblang in the three
+   `connect.yaml` ConfigMaps (`rpk connect lint`, binary already in the
+   redpanda image), TOML and JSON (stdlib, free). Survey done; none checked.
+4. Nightly cron for `check-advancing` + `check-derive-stage` + the gate.
+5. `ADR-0042` custody: `wipe_one` must refuse to wipe a Restate holding intent
+   custody. Constraint recorded in the hook's design note while it is still
+   safe; the refusal lands with custody.
+
+---
+
 ## OPEN 2026-09-17 — Restate consumes, the services never produce (edge-01)
 
 Two defects found tonight. The first is fixed and the second is not, and they

@@ -1468,3 +1468,77 @@ declaration, not against the absence of a complaint.
 *Related:* §*A caveat a check prints about itself is a column waiting to be
 born* and §*A key change is a migration, not an edit* — three ways of saying
 that a tool's quiet is a fact about the tool.
+
+---
+
+## Nothing in the pipeline was asking a shell
+
+A comment block was placed between `for spec in \` and the first item of its
+word list in the `topic-init` Job:
+
+```sh
+for spec in \
+    # compression.type=lz4 ON EVERY TOPIC RESTATE SUBSCRIBES TO
+    ...
+    "raw-sensor-stream|-p 1 -r 1 ..." \
+```
+
+The backslash joins the next line; `#` then eats the rest of that joined
+line; the `for` loses its word list; **the whole script is a parse error** —
+not the loop, the script. The Job ran nothing at all.
+
+Every layer upstream said yes. The YAML was valid. `helm template` rendered
+it. `helm lint` passed. The manifest applied. The Job was created, the image
+pulled, the container started. **The only reader that ever objects is a shell
+asked to parse it, and nothing in the pipeline was asking one.** Four tools
+agreed, and all four were answering a different question.
+
+What it cost is the part worth keeping. `topic-init` failed 7 times to
+`BackoffLimitExceeded`; that failed the `post-upgrade` hook, wedging the
+release in `pending-upgrade` for eight hours; which stopped the *other*
+`post-upgrade` hook — the one registering Restate's deployments and Kafka
+subscriptions — from running at all; and the compression fix the comment
+described never applied, so the defect it documented stayed live underneath
+it.
+
+**A comment explaining a fix prevented the fix.** Same family as §*A wrong
+accessor that compiles*: the artifact looks like the thing it is supposed to
+be, every automated reader agrees, and none of them is the reader that
+matters. The remedy is the same too — ask the tool that would actually
+object. `sh -n` over the rendered chart, which is now guard 4.
+
+*The generalisation:* **an embedded language gets validated by its host, not
+by itself.** Shell inside YAML, SQL inside a string, Bloblang inside a
+Connect config, a regex inside a config field — each is checked thoroughly as
+text by something that cannot execute it, and the confidence that produces is
+borrowed from the wrong reader. Wherever the chart embeds a language, a check
+must hand that text to that language's own parser.
+
+---
+
+## A mechanism that covers one of N is an absent mechanism with a reassuring name
+
+`hook-restate-wipe.yaml` exists so `ephemeralOnUpgrade: true` discards Restate
+state that new code cannot replay. It wiped `data-<release>-restate-server-0`.
+When the chart grew per-tier Restate StatefulSets, it was not extended — so
+the flag meant *ephemeral* at the root and *durable forever* at every tier,
+under **one flag, one name, and no warning**.
+
+It surfaced as the failure it was written to prevent. edge-01's Restate had
+OOM-restarted ~1600 times; its cluster metadata still referenced node
+generations those restarts destroyed, so `POST /query` answered `node N1:1645
+was shut down or removed` and an invocation could be neither created nor
+enumerated — neither *failing* nor *absent*, but a third state in which the
+substrate cannot answer questions about itself. Every upgrade carried that
+metadata forward, because the hook that exists to discard it was looking at
+one StatefulSet out of four.
+
+Recursion made the tiers uniform everywhere except in the mechanisms written
+before the tiers existed. **When a thing the chart renders once becomes a
+thing it renders N of, every mechanism naming it by its singular name becomes
+silently partial** — and partial is worse than absent, because the operator
+reads the flag and believes the wipe happened.
+
+*The check that follows:* when a resource becomes per-tier, grep the chart for
+its old singular name before declaring the change complete. The residue is
+never in the template that was changed; it is in the ones that reference it.
