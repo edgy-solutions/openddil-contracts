@@ -4,6 +4,73 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-17 — Restate consumes, the services never produce (edge-01)
+
+Two defects found tonight. The first is fixed and the second is not, and they
+were stacked so the first hid the second.
+
+### FIXED — Restate OOMKilled at 1Gi
+
+`tier-restate-edge-01` at **1600 restarts**, `region-east` at **1124**, all
+`OOMKilled` (exit 137) roughly every 17 seconds: start, catch up partitions in
+~16s, die. Restate drives fusion, so nothing downstream could run. Raised to
+2Gi; all three now stable with zero restarts.
+
+**Do not record 2Gi as SIZING yet.** The 2026-08-08 note measured 167 MiB RSS
+idle and concluded "the cost is BASELINE, not data". A consumer task dying and
+restarting every 17 seconds for eight days is a plausible driver of the
+975 MiB the survivor showed. Measure against the baseline once the pipeline
+is healthy; the note may still be right and 2Gi merely margin.
+
+### FIXED — zstd on Restate-subscribed topics
+
+Restate's Kafka ingress is built on a librdkafka **without zstd**. One zstd
+batch kills the consumer task (`Decompression (codec 0x4) ... Not
+implemented`); Restate restarts it from its stored position, hits the same
+batch, dies again, forever.
+
+**The obvious suspect was wrong.** The chart does set `compression.type=zstd`
+— on four `ingress-*-raw` topics, and **Restate subscribes to none of them**.
+The real cause is `compression.type=producer`, the default the subscribed
+topics carried, which means *store whatever codec the CLIENT chose* — and one
+client chooses zstd. Evidence came from HQ's broker, never altered by hand,
+showing `producer (DEFAULT_CONFIG)` rather than zstd.
+
+Chart now sets explicit `lz4` on all six subscribed topics. **This reaches the
+work cluster on upgrade: P0.1 gate.** Also worth checking whether a current
+Restate image ships zstd, which would retire the constraint instead of
+documenting it.
+
+### OPEN — the services are invoked by nothing
+
+After both fixes, at edge-01:
+
+* `raw-sensor-stream` advancing (+98/60s) — input present
+* `cm-service-silver-edge-01` **Stable, lag 7** — Restate IS consuming
+* zstd errors **0**
+* all seven subscriptions registered, sinks correct
+* `asset-cm-state` **+0** and `asset-logistics-status` **+0** — the services
+  produce nothing
+* fusion's log shows only `GET /discover` — **zero invocations**, ever
+
+Restarting both services changed nothing. So Restate consumes the messages
+and the invocation does not reach the service, or reaches it and produces no
+output and no log line.
+
+**Next, in order:** query Restate's invocation status via the admin API
+(`/invocations`) to see whether invocations exist and are failing, rather than
+inferring from the absence of output; check whether the registered service
+DEPLOYMENT in Restate points at the current pod revision; and check whether
+the services' own Kafka publisher can connect — fusion logs "Kafka publisher
+installed" at startup but nothing proves it produced since.
+
+**Instrument gap this exposes.** `check-advancing` watches BROKER topics and
+was green throughout, because ingest and the mapper were fine. It does not
+watch the derive stage's OUTPUT relative to its input. The feed check watches
+consumer groups, which were Stable. Neither instrument asks the question that
+would have caught this: *this service consumed N and emitted 0.*
+
+
 ## OPEN 2026-09-16 — tactical_events: HQ prunes, the tiers never do
 
 The completeness gate refused `tactical_events` as empty-and-undeclared at
