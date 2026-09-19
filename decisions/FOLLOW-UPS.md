@@ -30,8 +30,16 @@ right thing.
 
 `snapshot-consumers.sh` now takes that reading: every consumer group's state,
 committed offset and lag on every broker, diffed across a rollout. At
-revision 50, over 92 group-on-broker rows: **0 wedged, 0 state changes, 0
-groups disappeared**, pre-flight 5 of 5 afterwards.
+revision 50, over 92 group-on-broker rows, sampled every 10 minutes for
+**1h43m** after the rollout completed — eight consecutive clean samples:
+**0 wedged, 0 state changes, 0 groups disappeared**, 0 containers terminated
+in the window, pre-flight 5 of 5 afterwards.
+
+The termination check is against `lastState.terminated.finishedAt`, not the
+RESTARTS column — that column counts LIFETIME restarts and reported nine pods
+whose last restart was five days earlier. A first pass called those "restarts
+since the rollout", which would have manufactured a finding out of a column
+that was answering a different question.
 
 **Narrowed, not closed.** One clean rollout is not proof against an
 intermittent wedge, and the original took 3.5 hours to be noticed. The
