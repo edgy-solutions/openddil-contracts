@@ -4,6 +4,68 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-19 — hq_link_severed tracks the simulator, not reachability
+
+Found by the severance rehearsal. edge-01 severed with sever-tier.sh (a
+NetworkPolicy), and its edge_buffer_status row reported truthfully on two
+fields and misleadingly on the third:
+
+  bridge_group_lag   2713 -> 3020   climbing, correct
+  probe_healthy      false          correct
+  hq_link_severed    false          WRONG for this mechanism
+
+edge_buffer_monitor._probe_hq_link_severed() probes toxiproxy hq-link -- the
+frontend WAN toggle. sever-tier.sh cuts with a NetworkPolicy, which toxiproxy
+knows nothing about, so the flag answers a question nobody asked during a
+script-driven cut.
+
+The screens render a LINK UP / LINK DOWN indicator from that field. In the
+severance beat -- the beat whose entire subject is a screen refusing to show
+what it cannot support -- the indicator will read LINK UP while the data
+visibly stops.
+
+NOT FIXED, deliberately. Whether the flag should track reachability rather
+than the simulator is a semantics decision with two defensible answers, and
+picking one silently to make a demo tidy is the move this corpus exists to
+refuse. Recorded, and flagged in RECORDING-SCRIPT before BEAT 3 with two
+honest ways to handle it on camera.
+
+Related: the relay that cannot buffer (below) -- both are cases where a
+mechanism behaves correctly for its own definition and wrongly for the one a
+reader assumes.
+
+---
+
+## 2026-09-19 — severance rehearsed against revision 50
+
+Predicted by classification before either cut; ended connected; pre-flight
+5 of 5 after. 15 of 16 predictions held.
+
+Dimension 1 (region from HQ), all eight: HQ held 14 rows at 403s stale --
+not fresh (no path crosses the boundary), not gone (no absence rendered as
+deletion). Heal 420s -> 0s in 45s.
+
+Dimension 2 (edge-01), six of seven, including the beat: edge-01 398s stale
+beside edge-02 0s fresh on one screen; at HQ edge-01 418s while the region own
+rollup was 14s. Heal 635s -> 0s in 45s.
+
+### 2.6 WAS WRONG: the relay that cannot buffer
+
+Predicted 0 bridge restarts on the reasoning that buffering is the designed
+degraded mode. It crash-looped 6 times, and the log gives the cause:
+redpanda-connect exits at STARTUP unable to init its Kafka output. It never
+runs long enough to be probed, so the stall probe destination-reachable clause
+is not falsified -- it never ran. What is falsified is the assumption that
+this relay buffers in place. It cannot; it cannot start.
+
+It cost nothing, and that was verified rather than assumed:
+bridge-group-edge-01 reached TOTAL-LAG 3020 while severed and drained to 3 on
+heal, group Stable. THE KAFKA TOPIC IS THE BUFFER, which is why a relay that
+holds no state is still safe to lose -- and why a relay that DID buffer in
+memory would be the design worth worrying about.
+
+---
+
 ## 2026-09-19 — the dispatch finished, and UD-14 narrowed
 
 Pre-flight **5 of 5 across every tier**, gate green on all four stores, run
