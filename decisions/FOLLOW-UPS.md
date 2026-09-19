@@ -4,6 +4,129 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## 2026-09-19 — the dispatch finished, and UD-14 narrowed
+
+Pre-flight **5 of 5 across every tier**, gate green on all four stores, run
+before and after a deliberate rollout at helm revision 50.
+
+| # | check | result |
+|---|---|---|
+| 1 | advancing, nine stages | every stage moved |
+| 2 | derive stage | COMPLETING — edge-01 +101/+16, edge-02 +75/+12, region-east +177/+56 |
+| 3 | tier feed | 45 consumers clean |
+| 4 | shape sizes | 81 / 45 / 83 KiB per client load |
+| 5 | completeness gate | ALL 4 STORES PASS |
+
+Deletes, predicted then confirmed: region 18,562 → 11 remaining; region
+unlabelled 3 → 8 labelled; edge-01 13 → 8; edge-02 7 → 2. Every prediction
+matched exactly.
+
+### UD-14 — ROLLOUT TESTED, NOT REPRODUCED
+
+The trigger had never been tested. Broker restart was exonerated by two
+deliberate tests; the helm rollout that actually preceded the 3.5-hour wedge
+was never watched, because rollouts kept happening with nobody looking at the
+right thing.
+
+`snapshot-consumers.sh` now takes that reading: every consumer group's state,
+committed offset and lag on every broker, diffed across a rollout. At
+revision 50, over 92 group-on-broker rows: **0 wedged, 0 state changes, 0
+groups disappeared**, pre-flight 5 of 5 afterwards.
+
+**Narrowed, not closed.** One clean rollout is not proof against an
+intermittent wedge, and the original took 3.5 hours to be noticed. The
+instrument exists now, so the next occurrence is caught in the act rather
+than inferred. `RECORDING-SCRIPT` keeps its no-upgrade rule.
+
+**THE DETECTOR NEEDED A THIRD TERM, and its first run proved it.** `Stable
+AND committed frozen` matched **44 groups**, nearly all stuck at 0 on a
+declared-idle tier and on known-empty topics. A signature that matches 44
+healthy things would bury the one real case — the exact failure mode it was
+built to catch, arriving in the detector. The condition is now
+
+    wedged == Stable AND committed did not move AND lag > 0
+
+the same three-term shape as the relay stall probe's destination-reachable
+clause. An absence is only a finding when something else proves there was
+work to do.
+
+### `sparse`, and the parser that nearly defeated it
+
+`tactical_events` is empty at the root whenever the fleet is stable, because
+events fire on TRANSITIONS. Declaring it plainly empty would have explained
+away a stopped producer, which `expected-empty.yaml`'s own header forbids.
+
+The table cannot be its own evidence — if it is empty there is no newest row
+to age against retention — so the condition is **the producer is
+demonstrably completing**, taken from `check-derive-stage`, which now
+publishes a timestamped verdict the gate refuses when stale.
+
+    empty AND completing       -> sparse   (green, with the reason)
+    empty AND not completing   -> stopped  (a finding)
+    empty AND no fresh verdict -> unexplained (a finding)
+
+All four branches red-checked. **The third is load-bearing**: absence of
+evidence buys nothing, so it fails closed to the prior behaviour.
+
+**A DEFECT FOUND BY THAT RED-CHECK.** The declared-empty parser emitted every
+entry lacking a `stores:` key, so the sparse entry landed in BOTH lists,
+`is_declared_empty` won, and a CONDITIONAL declaration silently became an
+unconditional one — precisely the failure the category was added to prevent,
+arriving inside its own parser.
+
+### THE RETENTION GRADIENT WAS INVERTED
+
+Leaves 168h, intermediates 72h, root 24h: the tier with the most storage and
+the archival role retaining the *least*. Not a decision — the root's 24h was
+a pre-existing default in another repo and the tiers had no value at all, so
+nothing ever compared them. Now **root 720h > intermediates 168h > leaves
+72h**, sized by role. A second effect: at 24h the root's alert feed emptied
+within a day, so `sparse` was the steady state there rather than the
+exception, and a category that always fires stops carrying information.
+
+### THE CONFIG THAT RENDERED, APPLIED, AND NEVER ARRIVED
+
+Adding `retention_hours` updated the live ConfigMap and changed nothing in the
+pod template, because the tier projector deployment had **no checksum
+annotation at all**. Kubernetes correctly rolled nothing, helm reported
+success, and the projector kept the mapping set it had loaded at startup.
+
+The bridge-retarget shape in a document that had never been given the bridge's
+rule. The body is now extracted into `openddil.tierProjectorConfig` and hashed
+— the rendered document, not a hand-listed tuple. Verified as a pure refactor
+(render byte-identical, 628,728 both sides) and red-checked as a live hash
+(changing a retention value moves it).
+
+### NINE DAYS OF RED CI, and what it did and did not break
+
+`openddil-demo`'s Docker Build had failed since 2026-09-09 on a frontend type
+error: `RegionalApp` read `.map` off the fleet hook result rather than its
+`.data`. One missed `.data` collapsed the inference into a second error
+downstream; fixing the first resolved both.
+
+So the published frontend image stayed **nine days behind the committed
+source** while nothing reported it — ADR-0025's rule broken on the regional
+screen, which is in the recording. The running frontend was an older image
+that worked; the committed source did not compile.
+
+**The PEP was unaffected and that was verified, not assumed**: it reaches the
+cluster through the runtime-bundle, a different path, and `sha256sum` of
+`/app/pep.py` in the running pod is byte-identical to `gateway/pep.py`.
+
+### Still open
+
+1. **UD-14** at lower priority — rollout tested, not reproduced.
+2. **§E severance NOT re-run** against the current build. The substrate
+   changed underneath those measurements (Restate wiped three times,
+   retention declared, PEPs replaced), so the severance beats should be
+   rehearsed once before recording rather than trusted from a week-old run.
+3. **Restate subtree-scaling** still a design row, not a helper.
+4. **One place should declare all three retention values.** The root's still
+   lives in the projector repo; unifying it needs a retention override on the
+   root projector.
+
+---
+
 ## 2026-09-18 — the read path had never carried real data
 
 Every tier PEP `OOMKilled` in a loop; every panel on every screen read FEED
