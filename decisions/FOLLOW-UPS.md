@@ -4,6 +4,109 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## 2026-09-18 — the read path had never carried real data
+
+Every tier PEP `OOMKilled` in a loop; every panel on every screen read FEED
+UNAVAILABLE. The write path was perfect throughout: nine advancing stages, the
+derive stage completing at all three tiers, 45 consumers clean.
+
+**The banner is the part worth keeping.** *"The request failed; the panels
+below are not reporting an absence of data."* ADR-0036 clause 1 and ADR-0035
+class 2 on one screen, refusing to let a read failure be read as an empty
+fleet. The session opened on the suspicion that traffic had stopped; the
+screen had already said it had not.
+
+### The chain — three fixed things and one never-exercised path
+
+1. A null-keyed relay (**fixed weeks ago**) →
+2. a projector fallback, `decoded.get("subject") or key or ""`, that **answered
+   where it should have refused** → 18,562 rows with an empty subject and a
+   fresh uuid each, so `ON CONFLICT (id)` deduped nothing — one burst,
+   2026-09-08 →
+3. nobody saw them for ten days because **the read path had never carried real
+   data** →
+4. the first day the derive stage worked, a PEP had to buffer 10 MiB × 9 shapes
+   × reconnect retries in unbounded threads against 256 MiB.
+
+Nothing new accumulated after the relay fix. **The repair made the residue
+visible** — the same shape as a dead pipeline concealing everything downstream.
+
+### Fixed
+
+* **`pep.py` streams, bounds, and measures.** `payload = resp.read()` removed;
+  a `BoundedSemaphore` caps in-flight shapes; per-shape bytes logged with a
+  ceiling that WARNS rather than refuses. Streaming alone would not have been a
+  bound — an unbounded thread per connection still multiplies whatever each
+  thread holds, and raising 256 MiB only changes how many concurrent shapes the
+  process survives. *A cap is a sizing only if something bounds what runs
+  beneath it* — the RocksDB lesson, one day later, in a different component.
+  Chunked framing is written by hand: `BaseHTTPRequestHandler` does not encode
+  it, and the first draft sent the header without doing the work. Red-checked
+  by removing the framing — the client then **hangs**, which is the browser
+  symptom, not an error anyone can name.
+* **The projector refuses an empty subject and counts refusals.** A refusal
+  nobody counts is a silent drop. Counted rather than only logged: a log line
+  is evidence for whoever is tailing at the time, a counter is evidence for
+  whoever asks afterwards. Red-checked by reverting ONLY the handler — the
+  first attempt reverted `base.py` too and "failed" on `ImportError`, which
+  proves the import is missing, not that the fallback writes the row.
+* **Retention declared per tier kind**, edges 168h / intermediates 72h.
+  Intermediates keep a *shorter* window: the region accumulates its whole
+  subtree's events and is where the shape is read from.
+* **`check-shape-sizes.sh`** — per-tier, per-table shape bytes against a
+  ceiling, measured from inside the PEP. The read-path dimension that did not
+  exist, the way consumed-vs-completed did not exist two days ago.
+* **Gate declarations can be scoped per store class.** `asset_registry` is
+  root-side (ADR-0028) and structurally empty at tiers; declaring it unscoped
+  would have excused the root too — so the day the root's registry emptied, the
+  gate that exists to notice would be the thing explaining it away.
+
+### THE ASYMMETRY THAT LET IT GROW
+
+The projector has always had a retention pruner and a `retention_hours` field.
+The **root** declares `retention_hours: 24` in
+`openddil-projector/src/config/projector_config.yaml`. The **tiers declared
+nothing**, so the field was None and the pruner skipped the table — while the
+handler's docstring says "a background pruner deletes rows older than
+retention_hours", true and vacuous at once.
+
+Both halves read the same field name from configs that live in **different
+repos**, and only one filled it in. Nothing anywhere disagreed.
+
+### A CORRECTION worth more than the cleanup
+
+**2026-09-17's "GATE PASSES" was a single-store run, and it was recorded as
+readiness.** `--all-tiers` already existed; the checklist invoked the root-only
+form, and the gate's own footer said so — *"a statement about the root store
+AND NOTHING ELSE"*. The first `--all-tiers` run found unlabelled rows in two
+tier stores and two undeclared-empty tables. **The mechanism existed; the
+checklist did not use it.** That is the covers-one-of-N shape one level up
+from the code, in the procedure.
+
+### STILL OPEN
+
+1. **Edge residue deletes.** edge-01 has 13 unlabelled rows, edge-02 has 7, all
+   predating the cm-service labelling fix (newest unlabelled 12:02; every row
+   after 18:15 is labelled). Blocked pending authorization. Predicted: 13 → 8
+   remain, 7 → 2 remain.
+2. **The root's `tactical_events` is empty for a reason the gate has no
+   category for.** Root retention is 24h; the newest tactical event is 33h old
+   because events fire on TRANSITIONS and the fleet has been stable. So the
+   table is legitimately empty *most of the time*, and the gate will fail every
+   time.
+   **Do not simply declare it.** A declaration would also explain away a
+   genuinely stopped producer, which is exactly what `expected-empty.yaml`'s
+   own header forbids. The missing category is **sparse**: empty is expected
+   when no qualifying event occurred within the retention window, which the
+   gate can only decide by looking at the producer's last-event time rather
+   than at the table alone. That is a real design row, not a config edit.
+3. **Retention is committed but not applied** — it needs a `helm upgrade`,
+   which fires the Restate wipe hook.
+4. `openddil-demo`'s Docker Build is failing — **pre-existing** (the
+   2026-09-09 run failed the same way), not from this batch.
+
+---
+
 ## OPEN 2026-09-17 — Restate memory scales with SUBTREE, not with tier kind
 
 The 90-minute sizing measurement recorded that the regional tier runs ~3x an
