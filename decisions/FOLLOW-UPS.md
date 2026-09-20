@@ -4,6 +4,71 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-19 — a human-raised CRITICAL discrepancy is accepted and surfaces nowhere
+
+Found by a mis-aimed emit-path probe, which is the only reason anyone looked.
+
+`cli/submit_cm_event.py --manual-discrepancy 'CRITICAL|...'` against an asset
+with no CM baseline is accepted at every layer and produces nothing:
+
+  CLI            prints "Published dis:1:1:1000: manual_discrepancy (event_id=...)"
+  Kafka          cm-events partition 1, high-watermark 0 -> 1
+  Restate        group cm-service-cm-events-edge-01, offset 1, LAG 0
+  handler        POST /invoke/AssetCM/apply_cm_event -> 200
+  result         no status change, no tactical event, NO LOG LINE AT ALL
+
+The cause is one early return in `_reanalyze`:
+
+    if not record.baseline_id:
+        record.manual_discrepancies = preserved_manual
+        return record  # registered but no baseline assigned
+
+`_apply_event_to_record` has already appended the CRITICAL discrepancy, so it
+IS stored. `_reanalyze` then returns before recomputing `overall_status`, so
+the asset stays at its prior value, `_persist_and_emit_transitions` sees no
+transition, and the alert gate never opens. Every layer reports success and
+the finding is invisible.
+
+SCOPE: 12 of 14 assets. Only dis:1:1:1001, dis:1:1:1006 and dis:2:1:1001 carry
+a baseline (GD-14 records the coverage as 3 of 14).
+
+WHY THIS IS WORSE THAN A DROPPED EVENT. The handler ALREADY HAS the
+drop-with-a-reason shape for the adjacent case -- an event for an unknown
+asset logs "Dropping CM event for unknown asset" and returns. A known asset
+with no baseline gets no such line. The distinction the code draws is between
+"I have never heard of this asset" and "I have heard of it and cannot judge
+it", and only the first is spoken. ADR-0035 is about surfaces refusing to
+show what they cannot support; this is the same rule one layer down, in a
+handler that accepts an input it cannot act on and says so to nobody.
+
+It is also the reverse of the usual shape in this corpus. GD-11 and GD-12 are
+about a value being INFERRED where it was not declared. Here a value was
+DECLARED, by a human, explicitly, at the highest severity the vocabulary has
+-- and the system dropped it on the floor because a different, unrelated field
+was absent. An inference failure produces a wrong answer; this produces no
+answer while reporting success.
+
+NOT FIXED. Three shapes, none obviously right:
+  (a) log and count the swallow, so it is at least visible -- smallest, and
+      leaves the discrepancy unactioned.
+  (b) let a MANUAL discrepancy set overall_status even with no baseline. A
+      human assertion does not need a baseline to be true, and the analyzer's
+      early return is about ANALYZER-derived findings. Probably correct, and
+      it changes what overall_status means for baseline-less assets.
+  (c) refuse the event at intake with a reason, the way the unknown-asset
+      path already does.
+(b) with (a)'s counter is the likely answer. Deliberately not picked.
+
+RESIDUE, disclosed: dis:1:1:1000 currently holds one such swallowed CRITICAL
+from the probe. It is inert and invisible while that asset has no baseline,
+it WOULD activate if one were ever assigned, and it is cleared by the next
+helm upgrade, since the wipe hook discards Restate Virtual-Object state.
+
+Related: GD-14 (baseline coverage), ADR-0035, and the derive-stage row below
+-- both are a mechanism returning success for a question it did not answer.
+
+---
+
 ## OPEN 2026-09-19 — check-derive-stage counts an ARRIVAL as a COMPLETION at region-east
 
 Found while verifying a fresh session's pre-flight against the cluster rather
