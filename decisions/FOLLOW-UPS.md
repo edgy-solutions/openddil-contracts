@@ -527,7 +527,10 @@ Recovery was a wipe. Worth a durability row on its own merits.
 
 ---
 
-## OPEN 2026-09-17 — Restate consumes, the services never produce (edge-01)
+## CLOSED 2026-09-17 (was OPEN) — Restate consumes, the services never produce
+
+> **CLOSED the same night** — see "RESOLVED 2026-09-17: the derive stage
+> completes, for the first time" above. Kept for the diagnosis chain.
 
 Two defects found tonight. The first is fixed and the second is not, and they
 were stacked so the first hid the second.
@@ -594,7 +597,12 @@ consumer groups, which were Stable. Neither instrument asks the question that
 would have caught this: *this service consumed N and emitted 0.*
 
 
-## OPEN 2026-09-16 — tactical_events: HQ prunes, the tiers never do
+## CLOSED 2026-09-19 (was OPEN 2026-09-16) — tactical_events: HQ prunes, the tiers never do
+
+> **CLOSED by the retention gradient work of 2026-09-19.** The tiers now
+> declare retention_hours per kind (root 720h > intermediates 168h > leaves
+> 72h) and the pruner has a target at every tier. The row below is kept for
+> the diagnosis, not as outstanding work.
 
 The completeness gate refused `tactical_events` as empty-and-undeclared at
 HQ. It is right to refuse, and the cause turned out to be two facts that only
