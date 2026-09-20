@@ -4,6 +4,79 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-19 — check-derive-stage counts an ARRIVAL as a COMPLETION at region-east
+
+Found while verifying a fresh session's pre-flight against the cluster rather
+than against this corpus.
+
+check-derive-stage.sh carries a hardcoded matrix that applies the same two
+"OUTPUT TOPIC" terms to all three tiers:
+
+  edge-01|...|asset-cm-state asset-logistics-status
+  edge-02|...|asset-cm-state asset-logistics-status
+  region-east|...|asset-cm-state asset-logistics-status
+
+At region-east, asset-cm-state is NOT an output. Nothing there produces it.
+The tier bootstrap says so in its own log, deliberately:
+
+  [tier region-east] NO DIRECT INGEST -- detection not bound to relayed raw
+  topics ['cm-events', 'raw-sensor-stream']; keeping 4 of 7 subscriptions
+
+All four of region-east's live subscriptions sink to AssetLogistics. There is
+no AssetCM subscription at that tier, and openddil-tier-cm-region-east has
+served ZERO invocations since it started (11h, one log line in 30 minutes,
+against 3926 and 4318 lines per 30 minutes at the two edges). The topic
+advances because edge-01 and edge-02 bridge their derived state up.
+
+MEASURED, twice, 60s each:
+
+  sample A   edge-01 +99   edge-02 +75   sum 174   region-east +174
+  sample B   edge-01 +99   edge-02 +75   sum 174   region-east +175
+
+The identity holds to one message of cross-broker sampling skew. The contrast
+is the proof: asset-logistics-status over the same windows was +17/+14 at the
+edges against +60 at the region -- NOT a sum, because the region genuinely
+derives that one locally over 14 assets. One row is pass-through, the other is
+real work, and the check reports them identically.
+
+WHY IT MATTERS, stated no higher than it goes. This does not create a false
+green for the region's derive stage: asset-logistics-status is a genuine
+AssetLogistics output, it is measured, and the check requires every row
+advancing, so a region fusion stall is still caught. Three narrower things are
+true instead:
+
+  * The script's own term 2 is "the handler's OUTPUT topic advances." That row
+    re-measures term 1 -- arrival -- under term 2's name. CONSUMED IS NOT
+    COMPLETED is this script's founding sentence, and the substitution it was
+    written to delete has reappeared at the one tier whose wiring differs.
+  * "6 advancing" reads as three tiers completing two derive stages each. It
+    is five completion terms and one arrival term.
+  * A reader who sets "region-east asset-cm-state +174 advancing" beside a
+    deployed openddil-tier-cm-region-east pod concludes the region's CM
+    service is working. It has never been invoked.
+
+The failure direction is mislocated attribution, not a missed failure: if both
+edges stopped, that row goes frozen AT REGION-EAST and accuses the region of a
+fault belonging to its children.
+
+NOT FIXED, and the choice is real rather than a typo. Either drop the row --
+region-east has one derive stage, not two -- or keep measuring it under a term
+that says what it is, since bridged arrival at the parent IS a liveness
+property worth a check and nothing else currently asserts it. The second is
+probably right and is a change to what the script claims, not to what it
+reads. Deliberately not picked here.
+
+Same shape as hq_link_severed below: a mechanism behaving correctly for its
+own definition and wrongly for the one a reader assumes. Related:
+PRINCIPLES.md §A column that answers a different question, §A mechanism that
+covers one of N is an absent mechanism with a reassuring name.
+
+NOT A BLOCKER for the recording. The pre-flight's five checks are green on
+their own terms, and every number in RECORDING-READINESS §C re-measured
+correct on 2026-09-19.
+
+---
+
 ## OPEN 2026-09-19 — hq_link_severed tracks the simulator, not reachability
 
 Found by the severance rehearsal. edge-01 severed with sever-tier.sh (a
