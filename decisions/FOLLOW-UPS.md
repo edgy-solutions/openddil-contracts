@@ -59,12 +59,41 @@ The failure direction is mislocated attribution, not a missed failure: if both
 edges stopped, that row goes frozen AT REGION-EAST and accuses the region of a
 fault belonging to its children.
 
-NOT FIXED, and the choice is real rather than a typo. Either drop the row --
-region-east has one derive stage, not two -- or keep measuring it under a term
-that says what it is, since bridged arrival at the parent IS a liveness
-property worth a check and nothing else currently asserts it. The second is
-probably right and is a change to what the script claims, not to what it
-reads. Deliberately not picked here.
+NOT FIXED, and the choice is real rather than a typo. THREE options, for the
+user to pick; none implemented here.
+
+  (a) DROP THE ROW. region-east has one derive stage, not two. Smallest
+      change, and it discards a real signal -- nothing else currently asserts
+      that child state is arriving at the parent.
+
+  (b) KEEP IT, RELABEL IT. Measure the same topic under a term that says it
+      is ARRIVAL, not completion. Changes what the script claims rather than
+      what it reads, and keeps the bridge-liveness signal.
+
+  (c) DERIVE THE TERMS FROM EACH TIER'S DECLARED OUTPUTS, rather than keeping
+      a matrix by hand. The wiring is already declared and already correct:
+      the tier bootstrap computes exactly this when it logs "NO DIRECT INGEST
+      -- detection not bound to relayed raw topics; keeping 4 of 7
+      subscriptions," and Restate will list a tier's live subscriptions on
+      request. A tier's completion terms are the OUTPUT topics of the
+      handlers it actually has subscriptions for; its arrival terms are the
+      rest. Derived that way, region-east's asset-cm-state classifies itself
+      correctly with no one remembering to, AND A FOURTH TIER GETS RIGHT
+      TERMS WITH NO EDIT -- which the hand-kept matrix cannot do, and which
+      is the same forcing function GD-04 applies to presentation.
+
+      This is the one that removes the defect's CAUSE rather than its
+      instance. The matrix is a second, hand-maintained statement of wiring
+      the deployment already declares -- PRINCIPLES.md "A second
+      implementation of a rule is a second rule," and the two disagreed the
+      moment a tier's wiring stopped matching the others'. It is also the
+      most work, and it makes a pre-flight check depend on the admin API of
+      the thing it is checking, which is a coupling worth weighing rather
+      than assuming: an instrument that reads its subject's own account of
+      itself cannot catch that account being wrong.
+
+(b) is the cheapest honest fix and (c) is the one that stops this recurring.
+Deliberately not picked here.
 
 Same shape as hq_link_severed below: a mechanism behaving correctly for its
 own definition and wrongly for the one a reader assumes. Related:
