@@ -1542,3 +1542,43 @@ reads the flag and believes the wipe happened.
 *The check that follows:* when a resource becomes per-tier, grep the chart for
 its old singular name before declaring the change complete. The residue is
 never in the template that was changed; it is in the ones that reference it.
+
+---
+
+## A reference table is looked up, never recalled — and "known" is not "known as what"
+
+The ontology's first eleven DIS tuples were written from memory, in the right
+shape, with plausible numbers. Checked against SISO-REF-010-v37, **none was
+right.** Seven existed in SISO under a different platform's name — the key
+labelled M1A2-SEPv3 is SISO's M551A1, the UH-60M key is a UH-1B — and four
+did not exist at all. The header's country codes were wrong too.
+
+Nothing noticed, because nothing could. dis-sim emitted the same tuples the
+ontology mapped, so the lab agreed with itself end to end: every entity
+resolved, every coverage count read complete. **A private code, used
+consistently, is indistinguishable from the standard one** until the first
+producer who took it from the standard shows up — and then stock traffic for
+a light tank is displayed as a main battle tank, which is worse than being
+unresolved, because unresolved is at least visible.
+
+Two lessons, and the second is the one a check usually misses:
+
+**Recall is not a source.** A standard's enumeration is data with a version
+and a hash. Numbers that look right, typed by someone (or something) who has
+seen the table before, are a reconstruction. Look them up, record which
+release they came from, and let a machine re-look them up.
+
+**Existence is not identity.** "Is this tuple in SISO?" passes seven of the
+eleven wrong keys. The question that catches them is "what does SISO call
+it?" — so every entry now carries SISO's own name for its tuple, and the
+check compares names, not membership. The overlay validator has the weaker
+check, and says so in its runbook.
+
+*Related:* §*A wrong accessor that compiles* — a consistent system's silence
+about its own vocabulary is a fact about its consistency, not its correctness.
+
+*The check that follows:* any key drawn from an external standard carries
+the release it was taken from and the standard's own label for it, and CI
+resolves the key against a pinned, hash-verified copy of that release by
+label. A check that asks only whether the key exists is kept, but not
+counted as having checked it.
