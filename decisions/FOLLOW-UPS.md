@@ -4,6 +4,126 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-21 — the next deploy relabels six simulated assets
+
+A **prediction from reading code, not a measurement.** Nothing is deployed.
+It covers the next rollout of openddil-customer-bundle-example 77d8657
+(dis-sim's list, 11 → 10 types) together with the ontology.
+
+**The fleet count does not change: 14 before, 14 after.** dis-sim creates
+`DIS_ENTITIES` entities (8 at northpoint, 6 at capeverdant, per dis-sim's
+`k8s/dis-sim.yaml`) and assigns types round-robin,
+`types[index % len(types)]`. The number of entities is
+set by that variable, not by the length of the list. With 8 and 6 entities
+the list never reached its last three entries, so shortening it moves
+assignments instead of removing an asset. The distinct variants on the wire
+are also 8 before and 8 after.
+
+| asset | before | after |
+|---|---|---|
+| dis:1:1:1004 | RCV-M | AH-64E-V6 |
+| dis:1:1:1005 | AH-64E-V6 | UH-60M |
+| dis:1:1:1006 | UH-60M | CH-47F-BlockII |
+| dis:1:1:1007 | CH-47F-BlockII | F-35A-Block4 |
+| dis:2:1:1004 | RCV-M | AH-64E-V6 |
+| dis:2:1:1005 | AH-64E-V6 | UH-60M |
+
+Per variant: RCV-M 2 → 0, UH-60M 1 → 2, F-35A-Block4 0 → 1. Every other
+variant keeps its count, though AH-64E and CH-47F move to different ids.
+The other eight assets are unchanged.
+
+**What follows, per store.**
+- *Upsert tables* (`telemetry_latest_state`, `asset_logistics_status`,
+  `asset_telemetry_windows`, `asset_element_telemetry`, each keyed on
+  `asset_id`) overwrite the variant in place on the asset's first record.
+  No row goes stale, because all six keep emitting. **This corrects the
+  RCV-M paragraph of "before the SISO-aligned tuples deploy"**: the RCV-M
+  ids do not go quiet; they come back as AH-64Es.
+- *Wear.* At revision 50, dis:1:1:1004 was one of the two assets the region
+  rollup counted as logistics CRITICAL: the RCV-M with fully consumed
+  track. An AH-64E has no track component in the wear manifest. Expected:
+  that CRITICAL clears, and the region critical count goes from 2 to 1
+  unless some AH-64E component is itself critical. If 1004 stays CRITICAL,
+  read which factor drives it before narrating it.
+- *CM.* dis:1:1:1006 is one of the three assets that carry a CM baseline.
+  Baselines attach to an asset through `baseline_assigned` events, are
+  replayed from `cm-events` (compact+delete, 30 days), and are **not
+  re-derived from the variant**. So 1006 keeps the baseline it was given as
+  a UH-60M while it reports as a CH-47F. Its CM discrepancies would then
+  be one platform's configuration judged against another's: the mislabel
+  class again, one layer down. dis:1:1:1001 and dis:2:1:1001 are unchanged.
+- *Releasability* (`openddil-demo/ontology/releasability.yaml`) is declared
+  per id without a variant, so labels carry over unchanged.
+- *Display.* dis:1:1:1007 becomes the first fixed-wing asset in the
+  simulated fleet. F-35A-Block4 has a CM baseline file and an ontology
+  entry, but no wear-manifest entry (fixed wing is exempt), so it shows no
+  wear factors. Among DIS variants only M1A2-SEPv3 has a schematic, so the
+  F-35A renders as the Unknown badge, as the RCV-M did.
+- The F-16C-Block50 and MQ-9A-Block5 keys are still never emitted.
+
+**Doc lines that cite the count or the affected assets.**
+
+| line | says | status |
+|---|---|---|
+| openddil-helm `PILOT-RUNBOOK.md:472` | "currently **11 entries**" | aligned in 6118266: "11 keys for 10 platforms" |
+| openddil-contracts `DESIGN-2026-08-11-declared-asset-class.md:99` | "All 11 entries are `kind=1`" | dated record, left as written; true again by coincidence (11 keys since 90b8ee9) |
+| openddil-customer-bundle-example `tools/dis-sim/dis_sim.py:84-91`, `:524` | list "transcribed from" the ontology; `--list-types` titled "from ontology/dis_entity_types.yaml" | no count, but now claims equality that no longer holds (10 tuples vs 11 keys); not edited |
+| openddil-helm `scripts/RECORDING-READINESS.md:384-385` | CM for `1001`, `1006`; logistics CRITICAL for `1002`, `1004` | a revision-50 measurement, correct as history; those ids mean different platforms after the deploy |
+| openddil-contracts `GENERALIZATION-DEBT.md:77` | "14/14" | fleet size, unchanged |
+| openddil-contracts `ontology-siso.yml:6`, `PRINCIPLES.md` §*A reference table is looked up* | "eleven" | the history of the first set, correct |
+
+**To close:** after the deploy, run `SELECT asset_id, platform_variant FROM
+telemetry_latest_state` and compare it with the table above. Read the
+region critical count, and read 1006's `baseline_id` from cm-service. If
+1006 still carries a UH-60M baseline, that is a decision: reassign it, or
+pin dis-sim's order so ids keep their platforms. It is not a fix to
+improvise.
+
+---
+
+## RESOLVED 2026-09-21 — RCV-M stays unmapped
+
+**Decision (user, 2026-09-21).** RCV-M has no SISO-REF-010-v37 entry at any
+level, so the shared ontology gives it no key. The key is not invented, and
+no local range is chosen here.
+
+**The mechanism for local tuples is the overlay.** A deployment that needs
+a locally defined type declares it as deployment data, in two halves:
+
+- **Emitting side:** the dis-sim enumeration overlay
+  (`DIS_ENTITY_TYPES_PATH`; template, example, validator and runbook in
+  openddil-customer-bundle-example `tools/dis-sim/enumeration/`). Its
+  validator reports a non-SISO row as a WARN and counts it in
+  `NOT_IN_SISO`, which is the right shape for a deliberate local type.
+- **Resolving side:** the deployment's ontology overlay (ADR-0029 §3,
+  `openddil-demo/ontology/` → `/bundle/demo/ontology/`). The chart's
+  bundleInit copies it over `contracts/ontology`.
+
+**What the resolving side does not do yet.**
+
+- bundleInit's overlay is `cp -r src/. dst/`, so on a filename collision
+  the later copy wins. A deployment that ships `dis_entity_types.yaml`
+  therefore **replaces the whole shared file**. It must carry every shared
+  key as well as its own, and it drifts from openddil-contracts on every
+  change there.
+- The SISO check (`ontology-siso.yml`) sees only the contracts file. It
+  never sees an overlaid one, and it would refuse a local key if it did.
+
+So the overlay is the right place for local tuples, but on the resolving
+side it is currently a whole-file override, not a merge of added keys.
+Making local keys additive (a separate overlay file merged at lookup
+time, with a check that its keys are **absent** from SISO) is the step that
+would turn the overlay into the mechanism this row names. No deployment
+needs it today.
+
+**Where RCV-M still appears.** Its wear-component entry in openddil-demo
+`ontology/wear_component_manifest.yaml` is kept. It is keyed by variant
+name, is harmless when unused, and is what a deployment that emits RCV-M
+through the overlay would need. The simulated RCV-M assets become
+AH-64Es; see "the next deploy relabels six simulated assets".
+
+---
+
 ## OPEN 2026-09-21 — before the SISO-aligned tuples deploy: which stored rows carry the earlier tuples
 
 A **prediction from reading code, not a measurement.** Nothing here has been
@@ -38,6 +158,10 @@ earlier tuple indefinitely in the compacted topic.
 **RCV-M.** It is no longer mapped or emitted. Its upsert rows and its last
 compacted record stay, labelled RCV-M, with a tuple SISO does not define,
 until they are flushed. That is a stale asset, not a mislabelled one.
+*Correction 2026-09-21: wrong for the lab. dis-sim assigns types by index,
+so the two RCV-M ids keep emitting, as AH-64Es, and their rows are
+overwritten in place. This holds only for an RCV-M that stops emitting. See
+"the next deploy relabels six simulated assets".*
 
 **What append-only means here.** ADR-0019 splits projection into upsert for
 compacted state and append for event streams, and the provenance chain is
@@ -53,7 +177,9 @@ deliberately (`flush-assets.sh`), not waited out.
 and `telemetry_latest_state` rows whose tuple is not in the current ontology,
 and confirm the count reaches 0 once every asset has emitted again, or once
 the leftovers are flushed. Update the four places listed in the RESOLVED row
-below first, or the demo tests will fail against the new ontology.
+below first, or the demo tests will fail against the new ontology. *(Done
+2026-09-21; the per-asset consequence is in "the next deploy relabels six
+simulated assets".)*
 
 ---
 
@@ -97,7 +223,8 @@ extra.
   would need a decision on which range to use.
 - MQ-9A: SISO has two entries for the airframe — "MQ-9A Reaper"
   (1.2.225.50.34.1.0, chosen) and "Predator B" (1.2.225.50.4.4.0). A CGF may
-  emit either; only the first resolves.
+  emit either; only the first resolves. *Update 2026-09-21: both are now
+  mapped (90b8ee9).*
 - AH-64E: chosen with Longbow (.7); without Longbow is .8. F-16C: the CJ is a
   separate specific (1.2.225.1.3.10.0), not mapped.
 
@@ -116,7 +243,9 @@ disagree with the ontology once it deploys: openddil-demo
 `fixtures/generate_fixtures.py` and its README, openddil-helm
 `PILOT-RUNBOOK.md` (the tuple table), and a comment in openddil-demo
 `dynamic-mappings/sim-dis-mapping.yaml`. Stored history: see the OPEN row
-above.
+above. *Update 2026-09-21: all four aligned — openddil-demo 420b6dc,
+openddil-sensor-ingest ec99387, openddil-helm 6118266. RCV-M: see "RCV-M
+stays unmapped".*
 
 ---
 
