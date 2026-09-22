@@ -4,6 +4,122 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-21 — before the SISO-aligned tuples deploy: which stored rows carry the earlier tuples
+
+A **prediction from reading code, not a measurement.** Nothing here has been
+deployed or queried. It is recorded so the deploy is checked against it,
+not reasoned about afterwards.
+
+**Where a tuple or its resolution is stored.** Resolution happens once, at
+ingress (`openddil-demo/dynamic-mappings/sim-dis-mapping.yaml:54-96`), and
+the raw 7-tuple travels on beside the result in `AssetIdentity.dis_entity_type`
+(`telemetry.proto:317-325`).
+
+| store | carries | shape | prediction after deploy |
+|---|---|---|---|
+| `ingress-dis-raw` | raw tuple | delete, 24h | ages out within a day; until then a replay resolves the earlier tuples to `_default` → UNKNOWN |
+| `asset-logistics-status` | tuple + variant | **compact, retention -1** | the last record per asset keeps the earlier tuple **indefinitely**, until that asset emits again |
+| `asset-telemetry-windows` | variant | delete, 24h | ages out |
+| `telemetry_latest_state`, `asset_logistics_status`, `asset_telemetry_windows`, `asset_element_telemetry` (`platform_variant`) | variant only | upsert per asset_id | re-resolved on the asset's next record; stale only for assets that stop emitting |
+| Restate `AssetLogistics.latest_telemetry_dict` | tuple + variant | per-asset durable state | discarded only where `ephemeralOnUpgrade` actually wipes that tier |
+| `tactical_events` | neither | append | unaffected |
+| `region_fleet_summary` | no variant grouping found | — | unaffected |
+
+**The part that is not a re-resolve.** In the lab, the *variant names* in
+stored rows are right: the ontology and dis-sim were wrong together, so every
+asset resolved to its intended name, and the names do not change. What is
+wrong is the **raw tuple stored beside the name**. The earlier tuples are
+real SISO keys for other platforms — the stored M1A2-SEPv3 carries SISO's
+M551A1 key. Any consumer that reads `dis_entity_type` and looks it up in SISO
+gets a different platform from the one displayed. Upsert and compaction fix
+that only for assets that emit again; an asset that never re-emits keeps the
+earlier tuple indefinitely in the compacted topic.
+
+**RCV-M.** It is no longer mapped or emitted. Its upsert rows and its last
+compacted record stay, labelled RCV-M, with a tuple SISO does not define,
+until they are flushed. That is a stale asset, not a mislabelled one.
+
+**What append-only means here.** ADR-0019 splits projection into upsert for
+compacted state and append for event streams, and the provenance chain is
+append-only by rule. No record is rewritten in place. A correction is a
+**new record that supersedes**: by key where the store is compacted or
+upserted, and never where it is a stream. So the earlier tuples are not
+wrong history to be edited. They are what was emitted, under the ontology in
+force then. The correction is complete when every live asset has emitted
+under the new ontology, and when anything that never will has been flushed
+deliberately (`flush-assets.sh`), not waited out.
+
+**To close:** after the deploy, count the `asset-logistics-status` records
+and `telemetry_latest_state` rows whose tuple is not in the current ontology,
+and confirm the count reaches 0 once every asset has emitted again, or once
+the leftovers are flushed. Update the four places listed in the RESOLVED row
+below first, or the demo tests will fail against the new ontology.
+
+---
+
+## RESOLVED 2026-09-21 — the ontology's DIS tuples are aligned to SISO-REF-010-v37
+
+**In repo, not deployed.** openddil-contracts be97329 (ontology + CI) and
+openddil-customer-bundle-example 77d8657 (dis-sim's built-in list), pushed
+together. The two live in different repos, so "one commit" is two paired
+commits that cite each other.
+
+**Finding.** Checked against SISO-REF-010-v37 (2026-05-25, the XML in
+open-dis/opendis7-source-generator at 604a0ee9, sha256 eaafe0b8…), **0 of 11**
+ontology keys named the platform they were mapped to. Seven existed in SISO
+as a different platform; four did not exist. The header's country codes were
+wrong as well (USA is 225, UK 224, Canada 39). dis-sim emitted the same
+tuples, so the lab resolved every entity and nothing could notice. A stock
+CGF would have been mislabelled, not merely unresolved.
+
+| platform_variant | was | SISO name at old key | now | SISO name at new key |
+|---|---|---|---|---|
+| M1A1 | 1_1_225_1_1_1_0 | M1 Abrams | 1_1_225_1_1_2_0 | M1A1 Abrams |
+| M1A2-SEPv3 | 1_1_225_1_3_1_0 | M551A1 | 1_1_225_1_1_18_0 | M1A2 SEP V3 (M1A2C) |
+| M2A3-Bradley | 1_1_225_2_1_1_0 | M2A2 Bradley Infantry Fighting Vehicle (IFV) | 1_1_225_2_1_9_0 | M2A3 Bradley IFV |
+| HMMWV-M1151A1 | 1_1_225_3_1_1_0 | M88A1 | 1_1_225_6_1_32_1 | M1151A1 Integrated Armor Protection (IAP) |
+| AH-64E-V6 | 1_2_225_20_1_3_0 | AH-64C | 1_2_225_20_1_7_0 | AH-64E Guardian with Longbow Radar |
+| UH-60M | 1_2_225_21_1_2_0 | UH-1B | 1_2_225_21_2_26_0 | UH-60M |
+| CH-47F-BlockII | 1_2_225_22_1_1_0 | SH-2 | 1_2_225_23_1_9_0 | CH-47F |
+| F-35A-Block4 | 1_2_225_40_1_5_0 | *absent* | 1_2_225_1_12_1_0 | F-35A CTOL |
+| F-16C-Block50 | 1_2_225_41_1_1_0 | *absent* | 1_2_225_1_3_3_4 | F-16C Block 50/52 |
+| MQ-9A-Block5 | 1_2_225_50_1_1_0 | *absent* | 1_2_225_50_34_1_0 | MQ-9A Reaper |
+| RCV-M | 1_1_225_80_1_1_0 | *absent* | **not mapped** | no SISO entry at any level |
+
+**Granularity.** SISO does not enumerate V6 (AH-64E), Block II (CH-47F),
+Block 4 (F-35A) or Block 5 (MQ-9A); those keys name the nearest SISO entry,
+and the variant suffix is ours. F-16C maps to SISO's combined "Block 50/52"
+extra.
+
+**Choices a reviewer may overturn.**
+- RCV-M is dropped, not given an invented key. It still exists by variant
+  name in openddil-demo's wear-component manifest. A locally defined tuple
+  would need a decision on which range to use.
+- MQ-9A: SISO has two entries for the airframe — "MQ-9A Reaper"
+  (1.2.225.50.34.1.0, chosen) and "Predator B" (1.2.225.50.4.4.0). A CGF may
+  emit either; only the first resolves.
+- AH-64E: chosen with Longbow (.7); without Longbow is .8. F-16C: the CJ is a
+  separate specific (1.2.225.1.3.10.0), not mapped.
+
+**Mechanism.** `.github/workflows/ontology-siso.yml` runs
+`scripts/check-ontology-siso.py`: fetch v37 at the pinned commit, verify the
+hash, index the Entity Types table (uid 30) only, and fail on any key absent
+or whose SISO name differs from the entry's `siso_description`. A permanent
+red-check step plants one mislabelled key (SISO's M551A1 in place of the
+M1A2 SEP V3) and requires the check to refuse it. The same workflow runs
+`tests/test_ontology.py`, which previously ran in no CI.
+
+**Not changed here** — these still carry the earlier tuples and will
+disagree with the ontology once it deploys: openddil-demo
+`tests/hero_scenario_v3` (test_04, 09, 10 and ~15 tests passing
+`category=1, subcategory=3` kwargs), openddil-sensor-ingest
+`fixtures/generate_fixtures.py` and its README, openddil-helm
+`PILOT-RUNBOOK.md` (the tuple table), and a comment in openddil-demo
+`dynamic-mappings/sim-dis-mapping.yaml`. Stored history: see the OPEN row
+above.
+
+---
+
 ## OPEN 2026-09-19 — a human-raised CRITICAL discrepancy is accepted and surfaces nowhere
 
 Found by a mis-aimed emit-path probe, which is the only reason anyone looked.
