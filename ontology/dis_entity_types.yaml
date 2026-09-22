@@ -23,7 +23,13 @@
 #   - All changes require a PR with a domain expert reviewer.
 #   - A new entry needs its tuple AND its siso_description copied from the
 #     SISO-REF-010 release named in siso_ref; the CI check enforces both.
-#   - A platform with no SISO-REF-010 entry is not given a key here.
+#   - A platform with no SISO-REF-010 entry is not given a key here. A
+#     locally defined tuple is deployment data: the simulator side is the
+#     dis-sim enumeration overlay (DIS_ENTITY_TYPES_PATH), the resolving side
+#     the deployment's ontology overlay. See FOLLOW-UPS.md "RCV-M stays
+#     unmapped".
+#   - More than one key may map to the same platform_variant when SISO
+#     enumerates one airframe twice (MQ-9A: Reaper and Predator B).
 #   - The `_default` entry must always be present and must not be removed.
 #   - cbm_schema and default_baseline may be null for platforms not yet onboarded.
 #
@@ -165,6 +171,19 @@ mappings:
     domain_authority: "AFLCMC"
     siso_ref: "SISO-REF-010-v37"
     siso_description: "MQ-9A Reaper"
+
+  # SISO-REF-010-v37 enumerates the same airframe a second time, under the
+  # Predator family. A CGF may emit either, so both resolve to one variant.
+  "1_2_225_50_4_4_0":
+    platform_variant: "MQ-9A-Block5"
+    platform_family: "MQ-9-Reaper"
+    nomenclature: "Unmanned Aircraft: MQ-9A Reaper Block 5"
+    cm_schema: "uas-medium-altitude-v1"
+    default_baseline: "MQ-9A-Block5-Baseline-2024.2"
+    cbm_schema: "reaper-telemetry-v1"
+    domain_authority: "AFLCMC"
+    siso_ref: "SISO-REF-010-v37"
+    siso_description: "MQ-9A Predator B"
 
   # ===========================================================================
   # _default — MUST NOT BE REMOVED
