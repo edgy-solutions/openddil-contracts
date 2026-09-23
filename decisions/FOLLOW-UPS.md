@@ -4,6 +4,45 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-23 — the DIS fixture reaches PyPI at container start
+
+**Opened, not scheduled.** Noticed while closing the mirror-coverage gap in
+openddil-helm; recorded because the fixture sits just outside what that
+check can see.
+
+`tools/dis-sim/k8s/dis-sim.yaml` runs both simulator containers as
+`python:3.11-slim` with `pip install --quiet --no-cache-dir opendis==1.0`
+in the start-up command, then execs the generator from its ConfigMap mount.
+So each restart needs egress to docker.io for the base image and to PyPI
+for the wheel.
+
+That was a deliberate trade when it was written: no image to build, no
+registry to maintain for a test fixture, and the version pin kept where a
+reader can see it must match what sensor-ingest decodes with.
+
+**What changed around it.** openddil-helm now has
+`scripts/check-mirror-coverage.sh`, which renders the chart with every
+optional stack on and refuses any image the mirror inventory does not carry
+or that does not resolve by digest. The fixture is not part of the chart,
+so nothing in that check reaches it — but it is part of what a lab
+deployment pulls. An air-gapped site that mirrors everything the check
+demands still cannot start the simulator.
+
+**Why the cost is low where it matters most.** A site that already runs its
+own computer-generated-forces application takes DIS from that application
+instead, and deletes this Deployment entirely; the fixture exists so that a
+site without one still has wire-compatible traffic. The gap therefore bites
+exactly the case the fixture is for: a disconnected lab with no CGF.
+
+**To close, in the order that costs least:**
+1. Mirror `python:3.11-slim` — already done, chart-side, as part of the
+   releasability PEP's base image.
+2. Vendor the wheel alongside the generator's ConfigMap, or bake generator
+   and dependency into one small image published with the other
+   OpenDDIL-owned images, which also removes the per-restart delay.
+3. Either way, keep the version where the pin and the decoder's expectation
+   stay visible to the same reader.
+
 ## OPEN 2026-09-23 — the per-site entity count and the pin map state the same fact twice
 
 **Not now.** Recorded when it was noticed, in the dispatch that introduced
