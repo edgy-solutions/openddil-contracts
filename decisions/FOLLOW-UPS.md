@@ -4,7 +4,76 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
-## OPEN 2026-09-21 — the next deploy relabels six simulated assets
+## OPEN 2026-09-21 — the next deploy relabels two simulated assets
+
+A **prediction from reading code, not a measurement.** Nothing is deployed.
+It covers the next rollout of openddil-customer-bundle-example 29beeb6
+(dis-sim pins each entity id to one platform) together with 77d8657
+(SISO-REF-010-v37 tuples) and the ontology.
+
+**Why the prediction changed.** dis-sim used to derive an id's platform from
+its position in the type list, `types[index % len(types)]`, so shortening
+the list moved six ids to other platforms. Each id is now pinned in
+`DEFAULT_ENTITY_PLATFORMS`, and the type list's order means nothing. The
+map keeps every id on the platform it reports at revision 50, except the
+two RCV-M ids. `tests/test_dis_entity_platforms.py` holds the map to that
+snapshot and checks that reordering the list relabels nothing.
+
+**Fleet: 14 before, 14 after.** Per variant: RCV-M 2 → 0, AH-64E-V6 2 → 4.
+Every other variant and every other id is unchanged.
+
+| asset | before | after |
+|---|---|---|
+| dis:1:1:1004 | RCV-M | AH-64E-V6 |
+| dis:2:1:1004 | RCV-M | AH-64E-V6 |
+
+Every one of the 14 ids changes its **tuple** (77d8657), and the ontology
+resolves each new tuple to the variant it had before. So on the variant axis
+only the two rows above move.
+
+**Predicted delta:**
+- **Relabels: 2.** The two rows above. The upsert tables, each keyed on
+  `asset_id`, overwrite the variant in place on the first record. Both ids
+  keep emitting, so no row goes stale.
+- **CM baseline mismatches: 0.** The three assets with a baseline,
+  dis:1:1:1001, dis:1:1:1006 and dis:2:1:1001, keep their platforms (M1A2-SEPv3,
+  UH-60M and M1A2-SEPv3). The two relabelled ids have no baseline.
+- **Wear clears: 1.** At revision 50, dis:1:1:1004 was one of the two assets
+  the region rollup counted CRITICAL, because its RCV-M track was fully
+  consumed. The AH-64E-V6 wear manifest declares `[engine, barrel]` and no
+  track, so that CRITICAL clears and the region critical count goes from 2 to 1.
+  The one way this fails is if 1004's engine is itself critical; if 1004 is
+  still CRITICAL, read which factor drives it before narrating it.
+  dis:2:1:1004 was not CRITICAL, and there is nothing for it to clear.
+- *Unchanged:* releasability, which is declared per id. Display: both ids
+  showed the Unknown badge as RCV-M and still show it as AH-64E-V6, because
+  the schematic registry keys `AH-64E`, not `AH-64E-V6`. No fixed-wing asset is
+  emitted, and the F-35A-Block4, F-16C-Block50 and MQ-9A-Block5 keys all
+  stay unemitted.
+
+**Doc lines that cite the count or the affected assets.**
+
+| line | status |
+|---|---|
+| openddil-helm `PILOT-RUNBOOK.md:472` | aligned in 6118266: "11 keys for 10 platforms" |
+| openddil-customer-bundle-example `tools/dis-sim/dis_sim.py`, the type-list comment and the `--list-types` heading | aligned in 29beeb6: each tuple is a key in the ontology, one tuple per platform |
+| openddil-contracts `DESIGN-2026-08-11-declared-asset-class.md:99`, "All 11 entries are `kind=1`" | a dated record, left as written |
+| openddil-helm `scripts/RECORDING-READINESS.md:384-385` | a revision-50 measurement. After the deploy, `1001`, `1006` and `1002` still name the same platforms and `1004` is an AH-64E |
+| openddil-contracts `GENERALIZATION-DEBT.md:77`, "14/14" | fleet size, unchanged |
+
+**To close:** after the deploy, run `SELECT asset_id, platform_variant FROM
+telemetry_latest_state` and compare it with the tables above: exactly two
+ids should differ from revision 50. Then read the region critical count
+(expect 1) and each baseline holder's `baseline_id` against its variant
+(expect 0 mismatches). Any other difference is a finding.
+
+## SUPERSEDED 2026-09-21 — the next deploy relabels six simulated assets
+
+**Superseded the same day** by "the next deploy relabels two simulated
+assets". openddil-customer-bundle-example 29beeb6 pins each dis-sim id to
+one platform, so the six-id relabel below describes code that no longer
+ships. It is kept because the mechanism it found, platform by list
+position, is why the pinning exists.
 
 A **prediction from reading code, not a measurement.** Nothing is deployed.
 It covers the next rollout of openddil-customer-bundle-example 77d8657
@@ -120,7 +189,7 @@ needs it today.
 `ontology/wear_component_manifest.yaml` is kept. It is keyed by variant
 name, is harmless when unused, and is what a deployment that emits RCV-M
 through the overlay would need. The simulated RCV-M assets become
-AH-64Es; see "the next deploy relabels six simulated assets".
+AH-64Es; see "the next deploy relabels two simulated assets".
 
 ---
 
