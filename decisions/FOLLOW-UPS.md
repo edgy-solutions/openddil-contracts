@@ -4,6 +4,48 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-23 — the per-site entity count and the pin map state the same fact twice
+
+**Not now.** Recorded when it was noticed, in the dispatch that introduced
+the overlap. No work is scheduled.
+
+Since openddil-customer-bundle-example 29beeb6, dis-sim gets the platform
+for an entity id from `DEFAULT_ENTITY_PLATFORMS` (or
+`DIS_ENTITY_PLATFORMS_PATH`). How many entities it builds is still a
+separate number: `--entities` / `DIS_ENTITIES`, set per site in
+`tools/dis-sim/k8s/dis-sim.yaml` (8 at northpoint, 6 at capeverdant). The
+map already says which ids exist at each site. The count repeats it.
+
+**The count should derive from the map**: for the site and app dis-sim is
+running as, build exactly the ids the map pins, and keep `--entities` only
+as an explicit override that must be a subset.
+
+**Which way each direction of drift fails.**
+- *Count above the map:* refused. `platform_for` raises `SystemExit` for an
+  unpinned id, so the sim stops at start-up rather than emitting an asset
+  whose platform nothing declared. Verified with `--entities 9` at site 1.
+- *Count below the map:* silent. The pins for the missing ids are simply
+  never used, and the fleet is quietly smaller than the map says. Nothing
+  reports it. This is the direction that would mislead a reader who takes
+  the map as the fleet, which is the reading the map invites.
+
+The manifest is also the only place a second site's id range is declared. A
+site whose map has ids but whose deployment sets a lower count looks, from
+the map alone, like a fleet that is not emitting.
+
+**Not doing it now costs little:** the two lab edges are the only
+deployments, their counts match their pins, and
+`tests/test_dis_entity_platforms.py` pins the map to the deployed snapshot.
+The cost arrives with a third site, or with the first scenario that supplies
+`DIS_ENTITY_PLATFORMS_PATH` without also setting a matching count.
+
+**To close:** derive the count in `main()` from the pins for
+`--site-id`/`--app-id`, make `--entities` an override that is refused when
+it exceeds the pinned ids, and delete `DIS_ENTITIES` from both containers in
+`k8s/dis-sim.yaml`. Then a test that a site's entity count equals its pin
+count. See "the next deploy relabels two simulated assets" for the map
+itself.
+
 ## OPEN 2026-09-21 — the next deploy relabels two simulated assets
 
 A **prediction from reading code, not a measurement.** Nothing is deployed.
