@@ -4,6 +4,153 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## CLOSED 2026-09-23 — `/ontology` was one directory under helm and another under compose
+
+**Home:** `ADR-0043` §"Where the findings went",
+`PLAN-arc2-slice2-opening-package.md` §4.1. Fixed in the same dispatch that
+found it; recorded because the *shape* of the failure outlives the fix.
+
+Under helm, `/ontology` is an overlay — `contracts/ontology` first, then
+`demo/ontology` on top — and `releasability.yaml`, the deployment's
+declaration of national origin, arrives from the second layer. Compose
+mounted only the first. So `dynamic-mappings/sim-dis-mapping.yaml`'s
+`file(path: "/ontology/releasability.yaml")` read nothing, **no record on the
+compose stack carried a label, and none ever had.**
+
+**Why it survived.** Unlabelled is a legal answer. There is no error, no
+empty mount, no missing file the eye lands on — just a directory of ontology
+files that parses, missing one nobody was looking for. A stack labelling
+nothing is indistinguishable from a fleet nobody declared, which is the
+precise condition ADR-0029's deny-unlabeled floor exists to make visible and
+which nothing was yet checking under compose.
+
+**Two traps found while fixing it, both worth keeping:**
+
+1. **A nested single-file bind mount cannot patch a directory mount.**
+   Binding the one demo file into a read-only `/ontology` fails outright
+   (`create mountpoint … read-only file system`). Binding it into a
+   *writable* one **succeeds** — by creating a zero-byte
+   `releasability.yaml` inside the contracts repo on the host. A zero-byte
+   declaration parses as a fleet of no assets, so that workaround's failure
+   mode is a stack that labels nothing while every mount looks correct. Two
+   empty directories still sitting in `openddil-contracts/ontology/`, named
+   after real contracts files, are the fossil of an earlier attempt at it —
+   see the next row.
+2. **`docker-compose.override.yml` shadowed the fix.** Compose merges
+   volumes **by container path**, so the override's
+   `../openddil-contracts/ontology:/ontology:ro` — written once, for all
+   three connectors — replaced the base file's assembled volume. The base
+   said one thing and the connectors saw another, and because both mounts
+   are a plausible directory of ontology files, `docker compose config` was
+   the only place the difference was visible.
+
+**The fix:** one throwaway `ontology-overlay` container assembles the two
+sources into a named volume with the chart's precedence on every `up`, every
+consumer mounts the result read-only, and the override no longer mentions
+`/ontology` at all. Verified inside all three running connectors.
+
+**What is still owed:** nothing mechanical checks that the compose overlay
+and the chart's overlay produce the same directory. They agree today because
+one was written from the other.
+
+## OPEN 2026-09-23 — two empty directories in `openddil-contracts/ontology/`
+
+`ontology/asset_identity_aliases.yaml` and
+`ontology/platform_variant_aliases.yaml` exist **as directories**, untracked,
+alongside the real files of those names. They are the residue of a
+single-file bind mount attempted against a writable parent (previous row).
+
+They are harmless today only because the overlay assembler skips non-files
+explicitly (`[ -f "$f" ]`). **Remove that guard and the assembler would copy
+an empty directory over a populated ontology file** — which is the same
+class of silent-emptiness failure the previous row is about, one layer in.
+
+Not removed in this dispatch: the removal was declined as an irreversible
+local deletion, correctly, since nothing here can tell an empty fossil from
+a directory someone is midway through creating. **Needs a human `rmdir`.**
+
+## OPEN 2026-09-23 — `redpanda-hq` had no healthcheck, so two services could never start
+
+Found by trying to start the egress gate. `logistics-sim` and the gate both
+declare `depends_on: redpanda-hq: condition: service_healthy`, and
+`redpanda-hq` had no `healthcheck:` block — which compose rejects outright:
+*"container … has no healthcheck configured"*. The three **edge** brokers
+each had one; only the HQ broker was missing it.
+
+**The finding is not the missing block.** It is that a service whose only
+declared dependency is unstartable had been in the compose file long enough
+for nobody to notice, which means **`logistics-sim` has never been started
+under compose.** A service nothing runs is a service whose behaviour is a
+reading of its source.
+
+Fixed by giving `redpanda-hq` the same `rpk cluster health` check the edge
+brokers carry. **What is owed:** nothing enumerates which compose services
+are actually exercised by anything, so this class is not searched, only
+stumbled into.
+
+## OPEN 2026-09-23 — `run_all.py` stops registering tests at `test_34`
+
+The hero-scenario runner's `TESTS` list ends at `test_34`. Tests `35`
+upward exist on disk and are **not in it**, so they run only when somebody
+names them individually.
+
+A test that exists and is not registered is worse than no test: it reports
+green when run by its author and is absent from every subsequent run, so the
+corpus reads as if it were covered. The two Slice 2 tests were registered in
+this dispatch; **the gap from 35 to 49 was not audited** — each needs a
+reason it is or is not runnable in a default pass before being added.
+
+## OPEN 2026-09-23 — the compose PDP config is a second copy of the chart's
+
+**Home:** `ADR-0043` §Limits.
+
+`openddil-demo/policy/topaz-config.yaml` exists because the releasability
+stack was chart-only until Slice 2, which meant the read gate's own PDP could
+not be exercised without a cluster — and the egress gate's central claim
+(one predicate, proven by agreement between two PEPs) is a claim about two
+components that must both be running.
+
+Its `version`, `opa` and `api.services.authorizer` blocks are the chart's
+**verbatim**, deliberately: a compose PDP answering differently from the
+cluster PDP would make every compose measurement a statement about compose.
+Only the paths differ (bind mounts rather than an init-container copy).
+
+Two copies is still two copies. **Nothing mechanical keeps them in step**,
+and the drift would present as a measurement quietly ceasing to be about the
+thing it names.
+
+## OPEN 2026-09-23 — `users-promoted.yaml` is missing a subject the demo corpus has
+
+`openddil-demo/policy/users.yaml` carries five subjects;
+`users-promoted.yaml` carries four. The subject present in one and absent
+from the other is the region-east seat.
+
+A subject absent from a corpus is refused as **`destination_unknown` /
+unknown subject** rather than denied — the right outcome for a real unknown,
+and a confusing one for a seat someone expects to work. Which of the two
+files is wrong has not been established, so nothing was changed.
+
+## OPEN 2026-09-23 — Contract B's producer is labelled but not wired
+
+**Home:** `ADR-0043` §Limits, `PLAN-arc2-slice2-opening-package.md` §4.4.
+
+`logistics-sim` now stamps `originator_nation` from its site's declared
+nation and omits both label keys when the site declares none. That was built
+and verified in-image.
+
+**It does not reach the gate.** Its outputs are
+`asset-element-telemetry` and `asset-element-inventory`, consumed by the
+projector; the gate guards `asset-logistics-status`, which the fusion service
+publishes. So the producer half of Contract B is labelled, and the path from
+that producer to the guarded boundary is **not** demonstrated.
+
+**The exact next step**, so it does not have to be re-derived: run the
+fusion service under compose against a labelled `logistics-sim`, and confirm
+that the labels survive fusion onto `asset-logistics-status` — including the
+case where the site declares no nation, where fusion must continue to refuse
+to default and the gate must refuse the result as `unlabelled`. That last
+case is the one worth building the run for; the happy path is the easy half.
+
 ## OPEN 2026-09-23 — the DIS fixture reaches PyPI at container start
 
 **Opened, not scheduled.** Noticed while closing the mirror-coverage gap in
