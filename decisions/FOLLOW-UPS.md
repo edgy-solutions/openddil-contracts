@@ -4,33 +4,78 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
-## OPEN 2026-09-24 — the windowing hop drops the releasability labels
+## CLOSED 2026-09-24 — the windowing hop drops the releasability labels
 
-`faust_edge._emit_window_for_asset` builds a **fresh** `provenance` for each
-`WindowedTelemetry` and copies `sample_time`, `producer_id`, `edge_id`,
-`region_id`, `ingest_time` and `classification` from the source event. It
-does not copy `originator_nation` or `releasable_to`. So every record on
-`asset-telemetry-windows` is unlabelled.
+`faust_edge._emit_window_for_asset` built a **fresh** `provenance` for each
+`WindowedTelemetry` and copied `sample_time`, `producer_id`, `edge_id`,
+`region_id`, `ingest_time` and `classification` from the source event, and
+not `originator_nation` or `releasable_to`. Every record on
+`asset-telemetry-windows` was unlabelled.
 
-The neighbouring agents do carry them: `edge/prognostics/agent.py` copies
-both onto its output, and `regional/aggregator_app.py` has a worked position
-on what an aggregate may and may not claim. Only the windowing agent does
-not, which reads as an omission rather than a decision — but a window over
-one asset's own samples is not an aggregate over several authors, so there is
-a real question here and this row does not settle it.
+**The question the OPEN row declined to settle, settled.** A window is a
+rollup of ONE asset's own samples, so it inherits that asset's labels whole.
+That is not the aggregate case `regional/aggregator_app.py` handles, where
+rows from several authors are combined and no one of them may claim
+authorship of the result. Here there is exactly one author and it is the
+same author as the source event, so the agent propagates — and propagates
+only, with no else-branch and no default, per ADR-0029 §3. An unlabelled
+source event still produces an unlabelled window.
 
-**Why it has not bitten.** `raw-sensor-stream` is a direct fusion input and
-fusion's stored label is sticky, so one labelled inbound is enough and the
-declared assets come out labelled anyway. **An asset that reached fusion
-ONLY through the windowed path would be indistinguishable at the gate from
-an asset nobody declared** — refused `unlabelled`, with the fix appearing to
-belong at an ingress that had in fact done its job.
+**Why it had not bitten.** `raw-sensor-stream` is a direct fusion input and
+fusion's stored label is sticky, so one labelled inbound was enough and the
+declared assets came out labelled anyway. An asset that reached fusion ONLY
+through the windowed path would have been indistinguishable at the gate from
+an asset nobody declared.
 
-**Not measured.** `test_52` predicts it (P4) and reports that the prediction
-was not exercised: the topic held zero records, because faust-edge emits only
-once a window holds enough samples to trend and the test's PDUs carry no
-fluid or thermal metrics. The prediction stands as a reading of the source,
-which is weaker than a measurement and is labelled as such in the test.
+**Now measured, in a path compose could not previously exercise at all.**
+`test_52` had predicted this from the source and reported the prediction
+unexercised: the topic held zero records. The reason turned out to be
+structural rather than incidental — the only producer of `raw-sensor-stream`
+under compose is the DIS mapper, and DIS Entity State PDUs carry no
+sustainment data (the mapping says so in its own comments), while
+`faust_edge._buffer_event` buffers only fluids, consumables and wear. So a
+DIS-only fleet never fills a window buffer and the hop never emits. **The
+path was unexercised, not merely untested**, which is why a source reading
+was all that was available.
+
+`test_53` injects sustainment-bearing source events to play the part compose
+has no producer for, and says out loud that those records' labels on
+`raw-sensor-stream` are the test's own. What it measures is the hop: a
+declared asset's window now arrives carrying the declared labels, and an
+undeclared asset's window arrives carrying none. Red-checked both ways by
+removing the copy.
+
+**Still owed, and not a blocker here:** `asset-telemetry-windows` remains a
+topic no ordinary compose run produces to. The invariant covers it only
+because a test injects. A compose feed carrying sustainment would close
+that, and would also light up `derived-sustainment` for assets other than
+the ones a test names.
+
+## OPEN 2026-09-24 — ten of fusion's thirteen inputs hold no records under compose
+
+`test_53` discovers fusion's inputs from Restate's `/subscriptions` — 13
+subscriptions, 5 topics, 4 clusters, 5 handlers — and finds that on a
+typical compose stack only three of the thirteen hold any records at all:
+`raw-sensor-stream`, `derived-sustainment` and `asset-telemetry-windows`,
+all on `openddil-edge-01`.
+
+The other ten prove nothing, so `test_53` reports SKIP rather than PASS. The
+distinction is the whole point of the row: **an invariant test that goes
+green over empty topics is the failure this slice is about.** Deny-unlabeled
+means an unlabelled record is a legal answer, so silence and correctness are
+indistinguishable unless coverage is stated separately from content.
+
+What is missing, by group:
+* **edge-02 and edge-03** — the DIS feed under compose addresses edge-01
+  only, so the two sibling edges are wired, subscribed and idle.
+* **`asset-capability-snapshot`** on all three edges — produced by the
+  customer-overlay mapping, which is not part of the open stack.
+* **`asset-cm-state`** on hq — `cm-service` was not running for this
+  measurement; it is a service the open stack does start.
+
+None of these is a defect on its own. The row exists so that the gap between
+"fusion's inputs" and "fusion's inputs anybody has ever observed" is written
+down rather than inferred from a green tick.
 
 ## CLOSED 2026-09-23 — `/ontology` was one directory under helm and another under compose
 
