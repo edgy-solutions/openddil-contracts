@@ -49,6 +49,33 @@ sources into a named volume with the chart's precedence on every `up`, every
 consumer mounts the result read-only, and the override no longer mentions
 `/ontology` at all. Verified inside all three running connectors.
 
+**What the finding invalidates, and what it does not.** Every
+releasability measurement taken **under compose before 2026-09-23** was taken
+against a fleet that carried no labels, and every one of them passed, because
+an unlabelled record is refused and a refusal is the expected answer for an
+undeclared asset. Those numbers are a **floor, not a result**: they establish
+that the code path runs and refuses, and they establish nothing about which
+assets a declaration admits. **Lab measurements are unaffected** — helm mounts
+both layers, so the declaration was present there, and the 14/8/7 partition
+(fleet / ATL / BDR) was measured under helm against a labelled fleet. Anything
+compose-side that reads as a releasability result and predates this row should
+be read as "the gate refused everything it was given, and it was given
+nothing."
+
+**The zero now has a mechanism.** `openddil-demo/scripts/check-releasability-declaration.py`
+runs as the last step of the `ontology-overlay` assembler and
+**refuses to complete** when the assembled `releasability.yaml` is missing,
+zero bytes, unparseable, not a mapping, or authored-but-naming-nobody. Because
+every consumer gates on `ontology-overlay: condition:
+service_completed_successfully`, a declaration that labels nobody now stops the
+stack instead of producing a silent floor — the same shape as the pinned
+entity map refusing an id it does not carry. Red-checked by truncating the file
+to zero bytes: the assembler exited 1 with `REFUSED: /out/releasability.yaml is
+zero bytes` and `redpanda-connect-01` refused to start. The check deliberately
+does not validate nation codes or cross-check `releasable_to`; the readers do
+that, and a second validator here would be a second implementation of the
+declaration's rules.
+
 **What is still owed:** nothing mechanical checks that the compose overlay
 and the chart's overlay produce the same directory. They agree today because
 one was written from the other.
