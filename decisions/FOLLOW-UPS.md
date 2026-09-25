@@ -4,6 +4,34 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-24 — the windowing hop drops the releasability labels
+
+`faust_edge._emit_window_for_asset` builds a **fresh** `provenance` for each
+`WindowedTelemetry` and copies `sample_time`, `producer_id`, `edge_id`,
+`region_id`, `ingest_time` and `classification` from the source event. It
+does not copy `originator_nation` or `releasable_to`. So every record on
+`asset-telemetry-windows` is unlabelled.
+
+The neighbouring agents do carry them: `edge/prognostics/agent.py` copies
+both onto its output, and `regional/aggregator_app.py` has a worked position
+on what an aggregate may and may not claim. Only the windowing agent does
+not, which reads as an omission rather than a decision — but a window over
+one asset's own samples is not an aggregate over several authors, so there is
+a real question here and this row does not settle it.
+
+**Why it has not bitten.** `raw-sensor-stream` is a direct fusion input and
+fusion's stored label is sticky, so one labelled inbound is enough and the
+declared assets come out labelled anyway. **An asset that reached fusion
+ONLY through the windowed path would be indistinguishable at the gate from
+an asset nobody declared** — refused `unlabelled`, with the fix appearing to
+belong at an ingress that had in fact done its job.
+
+**Not measured.** `test_52` predicts it (P4) and reports that the prediction
+was not exercised: the topic held zero records, because faust-edge emits only
+once a window holds enough samples to trend and the test's PDUs carry no
+fluid or thermal metrics. The prediction stands as a reading of the source,
+which is weaker than a measurement and is labelled as such in the test.
+
 ## CLOSED 2026-09-23 — `/ontology` was one directory under helm and another under compose
 
 **Home:** `ADR-0043` §"Where the findings went",
@@ -115,7 +143,7 @@ brokers carry. **What is owed:** nothing enumerates which compose services
 are actually exercised by anything, so this class is not searched, only
 stumbled into.
 
-## OPEN 2026-09-23 — `run_all.py` stops registering tests at `test_34`
+## CLOSED 2026-09-24 — `run_all.py` stopped registering tests at `test_34`
 
 The hero-scenario runner's `TESTS` list ends at `test_34`. Tests `35`
 upward exist on disk and are **not in it**, so they run only when somebody
@@ -126,6 +154,21 @@ green when run by its author and is absent from every subsequent run, so the
 corpus reads as if it were covered. The two Slice 2 tests were registered in
 this dispatch; **the gap from 35 to 49 was not audited** — each needs a
 reason it is or is not runnable in a default pass before being added.
+
+**Closed 2026-09-24 by making the runner discover.** It now globs
+`test_*.py` beside itself and sorts on the numeric prefix, so adding a test
+is `git add` and nothing else. 39 discovered; **15 of them had never been
+run by this runner** (`test_35` through `test_49`). A transitional constant
+`UNRUN_BEFORE_DISCOVERY` names those fifteen so the first discovering runs
+say out loud what had been missing; nothing reads it to decide what to run,
+and it should be deleted once those results are no longer news.
+
+**What is owed, and it is the reason this row does not simply vanish:** the
+fifteen have still not been *audited*. Discovery makes them run; it does not
+establish that each is meaningful in a default pass. The next full-stack run
+is where that is found out, and a test that fails there is now a visible
+fact rather than an absent one — which is the whole point, and also means
+the next suite run may go red for reasons that predate this change.
 
 ## OPEN 2026-09-23 — the compose PDP config is a second copy of the chart's
 
@@ -171,12 +214,26 @@ projector; the gate guards `asset-logistics-status`, which the fusion service
 publishes. So the producer half of Contract B is labelled, and the path from
 that producer to the guarded boundary is **not** demonstrated.
 
-**The exact next step**, so it does not have to be re-derived: run the
-fusion service under compose against a labelled `logistics-sim`, and confirm
-that the labels survive fusion onto `asset-logistics-status` — including the
-case where the site declares no nation, where fusion must continue to refuse
-to default and the gate must refuse the result as `unlabelled`. That last
-case is the one worth building the run for; the happy path is the easy half.
+**Measured 2026-09-24, and the ingress half is now proven.** `test_52`
+sends DIS PDUs at the sidecar and reads `asset-logistics-status` at the far
+end, authoring no label anywhere. A declared asset (`dis:1:1:1000`) arrives
+carrying `ATL` / `[BDR]` and is admitted toward the stand-in; an undeclared
+one (`dis:1:1:1099`) arrives with no label and is refused `unlabelled`. The
+undeclared asset is site 1, which in this fiction correlates perfectly with
+ATL, so every naming habit in the fleet says it is Atlantian and nothing
+read it — which is the property the declaration file exists to protect.
+Red-checked with a declared BDR asset through the same chain: it arrives
+labelled `BDR` and is refused `no_nation_overlap`, a different refusal for a
+different fact.
+
+**What that leaves open is the `logistics-sim` half specifically.** Fusion's
+inputs are `asset-telemetry-windows`, `raw-sensor-stream`,
+`derived-sustainment`, `asset-capability-snapshot` and `asset-cm-state`.
+`logistics-sim`'s outputs are not among them — they are
+`asset-element-telemetry` and `asset-element-inventory`, consumed by the
+projector. So what was proven is that the DIS ingress path labels and that
+fusion propagates; the sim's own labels still reach the projector and stop
+there, and no test yet observes them at a guarded boundary.
 
 ## OPEN 2026-09-23 — the DIS fixture reaches PyPI at container start
 
