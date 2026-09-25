@@ -51,30 +51,52 @@ because a test injects. A compose feed carrying sustainment would close
 that, and would also light up `derived-sustainment` for assets other than
 the ones a test names.
 
-## OPEN 2026-09-24 — ten of fusion's thirteen inputs hold no records under compose
+## OPEN 2026-09-24 — eight of the nineteen wired inputs hold no records under compose
 
-`test_53` discovers fusion's inputs from Restate's `/subscriptions` — 13
-subscriptions, 5 topics, 4 clusters, 5 handlers — and finds that on a
-typical compose stack only three of the thirteen hold any records at all:
-`raw-sensor-stream`, `derived-sustainment` and `asset-telemetry-windows`,
-all on `openddil-edge-01`.
+`test_53` discovers its inputs from Restate's `/subscriptions` rather than
+from a list in the test. On a **full** compose stack that is **19
+subscriptions across 4 clusters, 6 topics and 7 handlers**, and 8 of the 19
+hold no records at all.
 
-The other ten prove nothing, so `test_53` reports SKIP rather than PASS. The
+**An earlier draft of this row said thirteen, and said they were all
+fusion's. Both were wrong, and the mechanism is why we know.** The 13 came
+from a partial stack with `cm-service` down; bringing the stack up whole
+added six subscriptions and two handlers. Two of the seven handlers —
+`observe` and `apply_cm_event` — belong to `cm-service`, not to fusion:
+`raw-sensor-stream` has two independent subscribers. A hand-written list
+would have been wrong in exactly the same way and would have stayed wrong,
+because nothing about it would have changed when the stack did. Discovery
+is not a convenience here; it is the part that noticed.
+
+What is still empty, by group:
+* **`asset-capability-snapshot`** on all three edges — produced by the
+  customer-overlay mapping, which is not part of the open stack.
+* **`cm-events`** on all three edges — nothing under compose files a work
+  order, so `apply_cm_event` has never been exercised here.
+* **`asset-telemetry-windows` on edge-02 and edge-03** — for the structural
+  reason recorded in the CLOSED row above: DIS Entity State PDUs carry no
+  sustainment, so `_buffer_event` never buffers and no window is ever
+  emitted. edge-01 holds records only because `test_53` injects them.
+
+These 8 prove nothing, so `test_53` reports SKIP rather than PASS. That
 distinction is the whole point of the row: **an invariant test that goes
 green over empty topics is the failure this slice is about.** Deny-unlabeled
 means an unlabelled record is a legal answer, so silence and correctness are
 indistinguishable unless coverage is stated separately from content.
 
-What is missing, by group:
-* **edge-02 and edge-03** — the DIS feed under compose addresses edge-01
-  only, so the two sibling edges are wired, subscribed and idle.
-* **`asset-capability-snapshot`** on all three edges — produced by the
-  customer-overlay mapping, which is not part of the open stack.
-* **`asset-cm-state`** on hq — `cm-service` was not running for this
-  measurement; it is a service the open stack does start.
+**A third way to lose coverage, found and fixed while measuring.**
+`asset-cm-state` is `cleanup.policy=compact`, so its offsets are sparse and
+`high_watermark - log_start` counts offsets rather than records. The test
+had been sizing its read from that arithmetic and asking for 221 records
+from a topic compaction had left 16 in; rpk waited for 205 that would never
+arrive and the topic was reported unreadable. Bounding the read with
+`-o :end` instead — the log's own end, which the broker knows — brought hq
+back into coverage. Worth keeping because the symptom wore the costume this
+test is built to strip off: a wired input silently dropping out of coverage
+for a reason with nothing to do with whether its records are labelled.
 
-None of these is a defect on its own. The row exists so that the gap between
-"fusion's inputs" and "fusion's inputs anybody has ever observed" is written
+None of the 8 is a defect on its own. The row exists so the gap between
+"inputs that are wired" and "inputs anybody has ever observed" is written
 down rather than inferred from a green tick.
 
 ## CLOSED 2026-09-23 — `/ontology` was one directory under helm and another under compose
