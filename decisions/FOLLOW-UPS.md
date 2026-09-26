@@ -4,6 +4,176 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-26 — `REGIONAL_HQ_BROKERS` names a tier it does not select, and one consumer reads an empty topic because of it
+
+The variable is read at `openddil-tactical-agents/regional/faust_regional.py:89`
+and set at `openddil-helm/openddil-demo/templates/regional.yaml:88`. For a
+tier-managed region the chart sets it to **the region's own broker**, and says
+so in a comment: *"The name still says HQ because the app calls this source
+`hq`; what it means is 'the cluster holding the state this tier aggregates
+over', and for a tier-managed region that is the region."*
+
+The comment is honest and the name is not. What it selects is **the cluster
+holding the state this tier aggregates over**, which is the region at a
+tier-managed region and HQ everywhere else. That is the "column answering a
+different question" shape in a name: the value is right, the label describes a
+different thing, and every reader has to know the exception.
+
+**It is already misreporting to the operator.** The one startup line for this
+service, measured on the lab at 21:30:27Z:
+
+```
+faust-regional region=region-east edges=['region-east'] hq=openddil-redpanda-region-east:9092
+```
+
+Both fields are wrong in the same way. `hq=` names the region, and `edges=`
+lists the region as its own edge. The single observability line for a service
+whose whole job is knowing which cluster holds what says the opposite of what
+is true.
+
+**And it has a functional consequence, measured today.** `make_hq_source_app`
+(`source_app.py:214-240`) builds **one** Faust App with
+`broker=kafka://{hq_brokers}` and subscribes three topics on it, one of them
+`asset-registry-events` — the ADR-0028 Phase 2 cache that fills in the empty
+`provenance.region_id` that cm-service and logistics-fusion emit. On a
+tier-managed region that subscription therefore lands on the **region** broker.
+Both brokers hold a topic by that name:
+
+| broker | `asset-registry-events` high-watermark |
+|---|---|
+| `openddil-redpanda-hq-0` | **10,989,459** |
+| `openddil-redpanda-region-east-0` | **0** |
+
+So the ADR-0028 fill path is attached to an **empty topic**. This is
+DESIGN-2026-09-07 §"the region's input contract" arriving a third time — a
+consumer at `1/1 Running`, healthy on every probe, subscribed to a topic its
+broker does not hold.
+
+**Stated at its true severity: latent, not currently biting.** 6000 log lines
+carry **no** `missing from asset-registry cache` warning, so nothing needs the
+cache today — the events arriving already carry `region_id`. The hole opens the
+first time one does not, and then it opens silently, because a cache that is
+empty and a cache that is unneeded look identical from outside.
+
+**Owed:** rename to what it selects (`REGIONAL_STATE_BROKERS`, or the app's
+`hq_source` naming changed to match — whichever keeps one word for one thing),
+and decide separately whether `asset-registry-events` should be bridged to the
+region or the registry consumer pinned to HQ. The rename is cosmetic; the
+subscription is not, and fixing the name without the subscription would remove
+the one clue that the second problem exists.
+
+## OPEN 2026-09-26 — one changelog name, two topics, and the dead one is larger
+
+`region-region-east-aggregator-region_region_east_assets_latest-changelog`
+exists on **both** the HQ broker and the region-east broker. The aggregator
+moved to the region's broker; its changelog at HQ was left behind and nothing
+deletes it. Measured today:
+
+| broker | high-watermark | last record written |
+|---|---|---|
+| `openddil-redpanda-hq-0` | **14,368,522** | **2026-09-08 02:51:26Z** |
+| `openddil-redpanda-region-east-0` | 9,362,307 | 2026-09-26 21:59:52Z |
+
+**The dead twin is the larger of the two, by five million records, and is 18.8
+days stale.** That is what makes it a trap rather than litter: asked which of
+two identically-named topics is the live one, size and partition metadata both
+point at the wrong answer, and only a record timestamp distinguishes them.
+
+**It has already cost a fix.** The `dis:1:1:1099` residue tombstone was first
+produced against the HQ twin, where it was an **accepted no-op** — `rpk`
+reported a successful produce to an offset on a topic nothing reads. The fix
+only became real once it was aimed at the region-east broker
+(`RESULT-2026-09-26-residue-cleanup.md`, offset 9345227). A delete that
+succeeds against a dead twin is worse than one that fails, because it reports
+success.
+
+**Owed:** delete the HQ twin, **attended**, once nothing is confirmed to read
+it. "Confirmed" is the work: check consumer groups on the HQ broker for any
+group with an offset on that topic, not just the aggregator's own, since a
+Faust table restore is not the only thing that can be pointed at a changelog.
+Reclaiming 14.4M records of disk is a side benefit; removing the ambiguity is
+the point.
+
+## OPEN 2026-09-26 — the Restate wipe's only record is destroyed by its own success
+
+`openddil-helm/openddil-demo/templates/hook-restate-wipe.yaml` is a
+`pre-install,pre-upgrade` hook with
+`hook-delete-policy: before-hook-creation,hook-succeeded`. It scales each
+Restate StatefulSet to 0 and deletes its PVC — root plus one per tier — and
+prints an accurate summary of exactly what it did:
+
+```
+Restate wipe complete: ${wiped} PVC(s) deleted, ${absent} StatefulSet(s) absent.
+```
+
+That line is the record anyone would want, and **`hook-succeeded` deletes the
+Job that holds it at the moment it succeeds.** The inversion is worth stating
+plainly: because the delete policy fires only on success, **the log survives
+only in the case where the wipe did not work.** The one case you can audit is
+the one that did not happen.
+
+So today the flag is bracketed on one side only. `helm template` shows the hook
+**beforehand** — that is how its scope was verified — and afterwards there is
+nothing at all: no post-deploy check can establish whether state was wiped on
+this revision, how many PVCs went, or whether a tier was silently skipped. The
+hook's own header comment already names this hazard from the other direction
+(*"a mechanism that covers one instance of a thing the chart now renders N of
+is not a partial mechanism, it is an absent one with a reassuring name"*); the
+missing record is what stopped that from being noticed for as long as it was.
+
+**Owed, and worth doing before the work deploy** — that is the cluster where
+`ephemeralOnUpgrade` is **false**, so "did the wipe run?" is a question with
+two plausible answers and no evidence either way. The job writes its outcome
+somewhere durable before exiting: a ConfigMap, or an annotation on the release,
+carrying the timestamp, the wiped and absent counts, and the StatefulSet names
+it acted on.
+
+Two specifics so this does not get built twice:
+
+* **The Role needs one more rule.** It currently grants `statefulsets`,
+  `statefulsets/scale`, `persistentvolumeclaims` and `pods` only — no
+  `configmaps`. Add `create`/`patch`/`get`.
+* **The ConfigMap must be written by the Job at runtime, not rendered as a
+  hook resource.** A ConfigMap rendered beside the Job would carry the same
+  `hook-succeeded` policy and be deleted by the same sweep — reproducing the
+  bug in the fix.
+
+## FALSIFIED 2026-09-26 (opened 2026-09-21) — the relabel prediction, and my report of it
+
+The row *"OPEN 2026-09-21 — the next deploy relabels two simulated assets"*
+predicted that exactly two ids would change `platform_variant` across the
+revision-51 deploy (`dis:1:1:1004` and `dis:2:1:1004`, RCV-M → AH-64E-V6), with
+every other id unchanged. It is left as written, as a dated record, per this
+file's convention.
+
+**What actually happened: all 14 assets resolve to `UNKNOWN`, on all four
+stores.** The realigned tuples and the tuples the lab's simulator emits do not
+intersect at all — arriving ∩ current ontology = **0**, arriving ∩
+removed-by-`be97329` = **8 of 8** — so every asset takes the unconditional
+`.or($doc.mappings._default)` fallback at `sim-dis-mapping.yaml:75`. Full
+measurement, both ends of the path, in
+`openddil-helm/scripts/FINDING-2026-09-26-variant-resolution-is-broken.md`.
+
+**Recorded here because the reporting failed, not only the prediction.** I
+reported the checkback as *"Relabels 2, mismatches 0"* when the log in hand
+already read `UNKNOWN|14`. I read a 2-row relabel out of a 14-row collapse, and
+the contradicting evidence predated the report. The prediction being wrong is
+ordinary; a prediction reported as confirmed against data that said otherwise
+is the failure worth indexing.
+
+`RCV-M` also has no destination: `be97329` removed 11 keys and added 10, and
+its tuple `1_1_225_80_1_1_0` was removed **with no replacement**, so that
+entity cannot resolve by construction. The separate row *"RESOLVED 2026-09-21 —
+RCV-M stays unmapped"* is the decision; this is its consequence arriving.
+
+**Owed:** the simulator-side fix (the SISO-conformant tuple list), and the gate
+that does not exist anywhere — **nothing compares the ontology to what the wire
+actually carries.** `check-ontology-siso.py` verifies the ontology against SISO
+and says so honestly; `ontology_check.py` was meant for this neighbourhood and
+is a no-op (`FINDING-2026-09-26-kind2-munition-resolution.md` §7). Until one of
+them looks at arriving tuples, the lab is **not a valid proving ground for
+anything variant-dependent**.
+
 ## CLOSED 2026-09-24 — the windowing hop drops the releasability labels
 
 `faust_edge._emit_window_for_asset` built a **fresh** `provenance` for each
