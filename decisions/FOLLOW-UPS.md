@@ -302,7 +302,7 @@ projector. So what was proven is that the DIS ingress path labels and that
 fusion propagates; the sim's own labels still reach the projector and stop
 there, and no test yet observes them at a guarded boundary.
 
-## OPEN 2026-09-23 — the DIS fixture reaches PyPI at container start
+## CLOSED 2026-09-26 (opened 2026-09-23) — the DIS fixture reaches PyPI at container start
 
 **Opened, not scheduled.** Noticed while closing the mirror-coverage gap in
 openddil-helm; recorded because the fixture sits just outside what that
@@ -340,6 +340,36 @@ exactly the case the fixture is for: a disconnected lab with no CGF.
    OpenDDIL-owned images, which also removes the per-restart delay.
 3. Either way, keep the version where the pin and the decoder's expectation
    stay visible to the same reader.
+
+**CLOSED 2026-09-26.** Both clauses of close-item 2 are done, and the row is
+closed on a check rather than on an assertion.
+
+The **dependency** is baked — `tools/dis-sim/Dockerfile` — and the baking is
+proved by importing `opendis` under `--network none`, locally and again in CI
+*before* the push, so a build that would still reach PyPI fails in the pipeline
+instead of in a lab. The **generator** deliberately is not baked: it stays in
+the ConfigMap so there is exactly one copy of it, and baking it would make the
+Dockerfile a second place it lives. Close-item 3 therefore still holds — the pin
+and the decoder's expectation stay visible to the same reader.
+
+The registry clause closed 2026-09-25: the image is published to GHCR,
+anonymously pullable (checked against the registry, not assumed — a new GHCR
+package can default to private, which would have arrived as ImagePullBackOff
+with a 401 buried in it), and it is in the mirror inventory tag-pinned rather
+than at `:latest`.
+
+**What keeps it closed is pass 4 of `check-mirror-coverage.sh`**: every image a
+k8s manifest in the bundle example deploys must be in the mirror inventory, at
+the tag the manifest actually deploys. It was watched failing three ways before
+being trusted — inventory row removed, manifest retagged, and pointed at the
+wrong directory — and it carries its own red-check for the sibling-repo-absent
+case, which prints `pass 4: NOT RUN` rather than passing silently.
+
+**The gap this row was opened for is gone, with one edge left stated:** pass 4
+cannot see images deployed by another repo's manifest, and compose images in the
+bundle example are out of scope by a stated comment. So the check that keeps
+this closed is scoped to k8s manifests in that repo, which is where the fixture
+lives.
 
 ## OPEN 2026-09-23 — the per-site entity count and the pin map state the same fact twice
 
