@@ -4,7 +4,7 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
-## IDENTIFIED 2026-09-27 — the zstd producer has a name, and the chart's fix is on the wrong side of the wire
+## FIXED 2026-09-27 — the zstd producer had a name, and the client-side fix is in (two of three)
 
 Closes the open half of *FIXED — zstd on Restate-subscribed topics*, which has
 carried the sentence *"one client chooses zstd"* since August **without ever
@@ -46,11 +46,54 @@ this today — it never received the pin (a chart change), its
 `raw-sensor-stream` still reads `compression.type producer DEFAULT_CONFIG`, and
 the zstd failure reproduces there on demand.
 
-**Owed:** change the three producers to `lz4` and keep the topic pins as the
-belt to that braces. Then re-check whether a current Restate image ships zstd,
-which would retire the constraint rather than defend it in two places.
+**DONE 2026-09-27 — the two live producers, and only those two.**
+`"compression.type"` is `"lz4"` in `openddil-cm-service/src/main.py:59` and
+`openddil-logistics-fusion-service/src/main.py:53`, with the reason beside the
+line: that the topic pin is the *broker-side* mitigation of *that* line, and
+that both should be kept. **The third producer is deliberately unchanged** —
+the `openddil-edge-python` outbox relay is dormant, nothing constructs it, and
+its topic is a constructor argument, so it was outside the two-pod blast radius
+that made this a safe change. It remains the residue of this row.
 
-## OPEN 2026-09-27 — three test helpers that could not fail, and one that could not finish
+**Red-checked on the wire, not by reading the diff.**
+`openddil-demo/tests/hero_scenario_v3/test_55_producer_codec.py` asserts two
+separable things, because either alone is weak: that neither service *declares*
+zstd (read out of the service source, so a future edit goes red here rather than
+on a cluster — and an *absent* `compression.type` fails too, since a producer
+whose codec is unstated is a producer nobody is choosing a codec for), and that
+a record produced with the declared codec through the same client library is
+*stored* with that codec on a topic whose `compression.type=producer`. The
+second is what makes the first load-bearing: it measures the "store whatever the
+client chose" mechanism this whole row rests on instead of assuming it.
+
+It went red in both directions before it went green — reverting cm-service to
+`zstd` fails on the declaration, and pinning the probe topic to `snappy` fires a
+guard that says the test would then be measuring the broker's recompression
+rather than the client's codec.
+
+**A measurement that changed the test, and is worth carrying.** The first
+version failed with *"cm-service declared lz4 but the broker stored none"*,
+which reads as the fix not working. It was not: **librdkafka does not emit a
+compressed batch when compression would not make it smaller**, so a 20-byte
+record produced with `lz4` is stored as `none`. The probe payload is now ~5 KB
+of compressible bytes, which is the only condition under which a codec
+assertion means anything. The consequence reaches past this test and it cuts the
+reassuring way: a service sending small messages may store them as `none`
+whatever it declares, so **the wire cannot prove zstd is absent by sampling
+small records**. `none` is readable by Restate, so this is safe rather than
+dangerous — but it is why the declaration is checked and not only the wire.
+
+**What the check does not establish.** It does not run the services and read
+their real output topics. It cannot, on compose: those services produce only
+when Restate invokes them, and compose's Restate is down on exactly the zstd
+condition this row is about, so `asset-cm-state` carries no record to read. What
+shipped is the decomposition that is runnable today.
+
+**Still owed:** the dormant relay producer, and the re-check of whether a
+current Restate image ships zstd — which would retire the constraint rather
+than defend it in two places.
+
+## FIXED 2026-09-27 — three test helpers that could not fail, and one that could not finish
 
 Found by building `test_54_dis_kind_gate`, not by auditing. All four are the
 house shape: a check whose *mechanism* stopped working while its *verdict*
@@ -97,14 +140,48 @@ from the right so `RF>1` (`[0 1 2]`, one header column, three tokens) does not
 break it again; and it returns `None`, not `0`, when no partition row is seen,
 so *"topic absent"* and *"topic empty"* stop looking identical.
 
-**Owed, and not done here:** a per-test timeout in `run_all.py`, so that a
-future hang costs one test instead of the suite. Also note
-`consume_topic_binary(..., offset=...)` is a **dead parameter** — never read in
-the body — so `offset="-10"` and `offset="start"` have always behaved
-identically and no caller's value should be read as intent. Now documented as
-ignored; it should be deleted once the callers are cleaned up.
+**DONE 2026-09-27 — the per-test timeout, in `run_all.py`.** `run_one` runs the
+test in its own process group and bounds it with
+`HERO_TEST_TIMEOUT_S` (default 300s, printed in the header so the bound is
+visible rather than buried). A hang now costs one test instead of the suite.
 
-## OPEN 2026-09-27 — the kind-gate counter is exported to nobody
+**`TIMEOUT` is its own verdict, not a `FAIL`.** A FAIL means the code under test
+is wrong; a TIMEOUT usually means the *test* is wrong — a consumer waiting on
+records that will never arrive — and collapsing them sends the reader to the
+wrong place. It counts as a failure for the exit code either way, and the
+summary says as much in words when one occurs.
+
+**The part that had to be got right is the kill, not the timer.**
+`subprocess.run(timeout=)` would have reproduced this bug inside its own fix:
+these tests shell out to `docker compose exec … rpk`, so killing the direct
+child leaves rpk holding the stdout pipe and the reap that follows has no
+timeout of its own. The whole tree goes instead — `taskkill /T /F` on Windows,
+`os.killpg` on POSIX.
+
+**Red-checked with a sleeping test that also leaves a grandchild holding the
+inherited stdout pipe**, with a heartbeat file so an orphan is detectable after
+the kill:
+
+| | result |
+|---|---|
+| bounded `run_one`, 12s limit | `TIMEOUT` at **12.3s**, last output captured, **next test still ran**, exit 1 |
+| the grandchild | heartbeat frozen at 496 bytes across 4s after the kill — the tree went, not just the child |
+| old `subprocess.run(timeout=12)`, same fixture | **never returned**; an outer `timeout 70` had to intervene |
+| …and after that outer kill | the grandchild was **still running** and had to be swept by PID |
+
+That last row was unplanned and is the sharper finding: the naive form does not
+merely fail to return, it leaves the thing that wedged it alive on the machine.
+Normal operation was re-checked through the new `run_one` with real tests and
+real compose grandchildren — `test_54` and `test_55` both PASS in 15.0s,
+`TIMEOUT: 0` — and both fixtures were deleted, because a sleeping test left in a
+discovery-based suite slows every run forever.
+
+**Still owed:** `consume_topic_binary(..., offset=...)` is a **dead parameter** —
+never read in the body — so `offset="-10"` and `offset="start"` have always
+behaved identically and no caller's value should be read as intent. It is
+documented as ignored; it should be deleted once the callers are cleaned up.
+
+## PARTLY FIXED 2026-09-27 — the kind-gate counter is read by the pre-flight, and still scraped by nothing
 
 `dis-kind-gate.yaml` counts refused DIS entity kinds into
 `dis_ingress_kind_dropped`, on Redpanda Connect's Prometheus endpoint, which is
@@ -127,10 +204,48 @@ answer an operator will assume. This is why the gate logs at DEBUG *and*
 counts: until something scrapes 4196, the counter is evidence you must go and
 fetch, never evidence that arrives.
 
-**Owed:** a `ServiceMonitor` (or the scrape annotations, whichever the cluster's
-Prometheus is configured for) covering the Connect pods, and one alert on
-`increase(dis_ingress_kind_dropped[1h])` so a feed that starts carrying refused
-kinds says so instead of being silently correct.
+**DONE 2026-09-27 — it is read where somebody already looks.**
+`openddil-helm/scripts/check-advancing.sh` now reads
+`dis_ingress_kind_dropped` off every Connect pod and prints it with its movement
+over the same interval as the stage table. That is the pre-flight run before
+every severance and every recording, so the counter arrives at the one moment it
+changes a decision. **This does not close the row** — a counter read by a script
+a person runs by hand is not a counter anything monitors — but it does retire
+the specific trap above, and it retires it by construction:
+
+| state | printed as |
+|---|---|
+| endpoint unreachable | `UNMEASURED — :4196 unreachable, this is not a zero` |
+| up, no series, gate loaded | `gate loaded, nothing refused since pod start` |
+| up, no series, gate absent | `GATE NOT LOADED — dis-kind-gate.yaml absent from /mappings` |
+| series present | `kind=2  140  +40 over 5s (refusing now)` |
+
+Connect creates a series on its **first increment**, so "no series" really is
+ambiguous between *nothing refused* and *nothing can be refused*. The script
+resolves it by looking for the mapping file itself, which turns the silence into
+a statement — and the first thing that resolution said, on the lab, was
+**`GATE NOT LOADED` on all three edges**: the gate is bundle-only, so the
+running Connect pods carry the previous mapping until the bundle is rebuilt.
+Reading the counter found that; reading the counter's value alone never would
+have.
+
+**Pods are discovered, not listed.** The script's `PROBES` array covers edge-01
+and edge-02; the lab has **three** Connect pods. A hardcoded list would have
+read two of three and printed silence for the one nobody thought about.
+
+**It deliberately does not gate the exit code.** Drops are the gate *working* —
+a feed carrying munitions is supposed to have them refused, so every recording
+with live weapons in it shows a non-zero counter, and a pre-flight that fails on
+correct behaviour is a pre-flight that gets skipped. The same restraint applies
+to the gate being absent: it prints loudly, but that script's exit code means
+"every measured stage advanced", and giving it a second meaning would make a red
+result ambiguous.
+
+**Still owed, and this is what keeps the row open:** a `ServiceMonitor` (or the
+scrape annotations, whichever the cluster's Prometheus is configured for)
+covering the Connect pods, and one alert on
+`increase(dis_ingress_kind_dropped[1h])` so a feed that *starts* carrying
+refused kinds says so between pre-flights instead of being silently correct.
 
 ## OPEN 2026-09-26 — `REGIONAL_HQ_BROKERS` names a tier it does not select, and one consumer reads an empty topic because of it
 
@@ -1757,8 +1872,10 @@ documenting it.
 
 **The client is no longer anonymous (2026-09-27).** *"One client chooses
 zstd"* is now three named producers, and the `lz4` pin turns out to sit on the
-broker side of a client-side cause — see *IDENTIFIED 2026-09-27 — the zstd
-producer has a name*. This row stays FIXED; what it fixed is narrower than it
+broker side of a client-side cause — see *FIXED 2026-09-27 — the zstd producer
+had a name*. Both live producers now declare `lz4`, so the cause is addressed
+where it happens and this row's pin is what it should always have been: the
+belt to that braces. This row stays FIXED; what it fixed is narrower than it
 reads.
 
 ### OPEN — the services are invoked by nothing
