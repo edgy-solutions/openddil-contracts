@@ -1,0 +1,368 @@
+# ADR-0044: An asset that stops reporting is a record, not an absence
+
+## Status
+
+**Proposed — 2026-09-26. Design only. Nothing built, nothing measured.**
+
+This ADR amends `DESIGN-2026-09-26-asset-lifecycle.md` (same day) on one
+point and keeps the rest: the design's `EVICTED` state is **withdrawn**, because
+this ADR decides there are no deletes anywhere. It extends `ADR-0026`
+(OperationalState's orthogonal axes) rather than replacing it, and it changes
+what `ADR-0028`'s registry lineage rule implies for an asset nobody can account
+for.
+
+---
+
+## Context — the archaeology first, because it changes the decision
+
+This ADR was dispatched as a restoration: the original implementation was
+believed to have carried a lifecycle status that the current pipeline lost.
+Both a code sweep and a pickaxe across all fifteen repositories say otherwise,
+and the correction is worth more than the premise was.
+
+**Nothing was lost.** `LifecycleState` was introduced on 2026-05-12 and
+2026-05-13 (`46442ae` *"initialize ontology, baseline definitions, proto
+contracts"*, `697608e` *"Phase 3 + 3.5: CM data model"*) and it is still carried
+at every hop today:
+
+| hop | where |
+|---|---|
+| contract | `proto/openddil/configuration/v1/as_maintained.proto:36-42` |
+| service state machine | `openddil-cm-service/src/events/asset_cm.py` (`decommission()` ~`:229`) |
+| store | `openddil-cm-service/src/as_maintained/store.py:45,121` |
+| projection | `openddil-projector/src/handlers/cm_state.py:78` |
+| schema | `openddil-stack/schema/schema.hcl:238` |
+| rollup | `openddil-tactical-agents/regional/severity.py:49-92`, `aggregator_app.py:255,323` |
+| UI | `openddil-demo/frontend/src/hooks/useCmState.ts:13` |
+
+The destroyed/deactivated signal path was likewise **added**, not removed:
+`1c2d801` and `08900bc` (2026-08-19) map DIS appearance bits onto the health
+axis. There is no removal commit in any repository. The nearest thing found was
+`AUDIT-2026-08-15-guard-mutation-review.md:126` — *"Dropped `lifecycle` from
+`record_to_proto`"* — which is a **deliberate mutation test** whose verdict was
+Red, i.e. the suite caught it. That is the opposite of a regression.
+
+`decommission()` already states this ADR's central rule, in place, since May:
+
+> State is preserved for audit; not cleared.
+
+**So this ADR restores nothing. It has three findings instead, and they are
+better than a restoration would have been, because each is a defect in
+something that works rather than a gap in something absent.**
+
+### Finding 1 — one field, two questions
+
+`LifecycleState` answers two unrelated questions with one enum:
+
+| value | question it actually answers |
+|---|---|
+| `REGISTERED` | is this asset **ours to account for** yet? — *membership* |
+| `ACTIVE` | are we **hearing from it**? — *knowledge* |
+| `STALE` | are we **hearing from it**? — *knowledge* |
+| `DECOMMISSIONED` | is this asset **still ours**? — *membership* |
+
+A single column cannot hold two orthogonal facts, and the cost is not
+theoretical. `region_fleet_summary.proto:21-31` buckets:
+
+```
+degraded : LOGISTICS_SEVERITY_DEGRADED OR
+           CONFIG_STATUS_MINOR_DISCREPANCY OR
+           LIFECYCLE_STALE
+```
+
+**So an edge losing its uplink degrades the regional materiel picture.** A
+knowledge gap is rendered as equipment degradation — `ADR-0035`'s class 2,
+absence rendered as something else — and it is rendered at exactly the tier
+where a commander reads the fleet's readiness. A quiet radio and a broken
+launcher arrive in the same bucket.
+
+### Finding 2 — three consumers, three private lifecycles
+
+Because the field conflates, every reader that needed one axis built its own:
+
+* **fusion** treats silence as a *severity* input: `_eval_staleness`
+  (`rules.py:813-843`) adds a DEGRADED `stale_inputs` constraining factor past
+  `STALE_INPUT_SECONDS` (300) and goes on emitting. This is **correct** and this
+  ADR does not touch it.
+* **the UI** re-derives a five-tier model of its own — `assetTier.ts`:
+  `ACTIVE / DEGRADED / STALE / COMM_LOST / LOST`, computed client-side from
+  sample age against `stale_after_s: 30`, `lost_after_s: 300`. It never reads
+  `lifecycle`. It already makes the distinction this ADR wants — `COMM_LOST`
+  is "silent **and** the edge link is severed", `STALE` is "silent and the link
+  is up" — and it makes it **in a browser**, where no other tier, no rollup and
+  no egress can see it.
+* **the DIS mapping** collapses the strongest available lifecycle signals into
+  the health and power axes: `sim-dis-mapping.yaml:205-250` sends
+  `damage == DESTROYED` to `HEALTH_STATE_FAILED` and `deactivated` to
+  `POWER_STATE_OFF`. A destroyed vehicle is recorded as a vehicle with a fault.
+
+The UI case is the sharp one. **The best model of asset liveness in this system
+runs in the least authoritative place**, and the greying-out an operator
+remembers seeing is real but is a rendering decision, not a fact the fleet
+carries.
+
+### Finding 3 — membership genuinely does not exist
+
+No `remove_entity`, no reporting-status field, no `is_deleted`, no soft-delete,
+no JC3IEDM object-item status anywhere in code. The aggregator's table is
+`store="memory://"` and upsert-only: written at `aggregator_app.py:219,246,263`,
+never `del`, never expired, and `last_updated_ns` is **written in three places
+and read in none**. `prune_older_than()` (`postgres.py:165-175`) is the only
+runtime `DELETE FROM` and it is time-based retention for append-mode tables,
+disabled in practice because `retention_hours` was never set.
+
+So the thing that never existed is not a lifecycle *status*. It is a way to say
+**"this asset is no longer a member of this fleet"** that any reader
+understands.
+
+---
+
+## Decision
+
+### 1. No deletes. Anywhere. Ever, on the asset path.
+
+A logistics system never drops a destroyed vehicle from the fleet; it carries it
+as destroyed until someone writes it off. A record whose status changed is the
+truthful artefact, and a shrinking count with no reason attached is strictly
+worse than a count that is complete and annotated.
+
+This closes the inverse temptation too, and naming it is half the decision:
+**withdrawal cannot be inferred from silence.** A timeout that evicts quiet
+assets deletes the real asset behind the failed uplink, and deletes it silently.
+
+### 2. Two columns, not one
+
+The asset carries **two** status fields, each with its own timestamp:
+
+| column | answers | changed by |
+|---|---|---|
+| **operational status** | what is true of the asset | a signal about the asset: destruction, deactivation, decommissioning, fault |
+| **reporting status** | what is true of our knowledge of it | the arrival or non-arrival of records, per reader |
+
+A destroyed vehicle counts as **destroyed**. A silent one counts as **not
+reporting**. The fleet total counts both, so it stays honest.
+
+The two are genuinely independent, and the case that proves it is the good one:
+**an entity that reports its own destruction is `destroyed` and `reporting` at
+the same instant**, and becomes `destroyed` + `not_reporting` a minute later
+when it stops transmitting. One column cannot express that sequence at all;
+today it renders as `FAILED`, then as `FAILED`-and-DEGRADED-stale, which reads
+as an asset getting worse rather than an asset that is gone and quiet.
+
+`LifecycleState` is not deleted — nothing is. Its membership values keep their
+meaning, its knowledge values (`ACTIVE`, `STALE`) become derivable from the
+reporting column, and the migration path is a separate decision (see §"What
+this does not decide").
+
+### 3. Rollups partition by status, and report the partition
+
+A rollup may not exclude a member without reporting the exclusion. So
+`RegionFleetSummary` gains counts per status rather than folding statuses into
+severity buckets. `LIFECYCLE_STALE` stops contributing to `degraded`: a
+not-reporting asset is counted in the reporting axis, where the reader can see
+that the number is about the radio and not the vehicle.
+
+Two constraints carry over unchanged from `DESIGN-2026-09-26-asset-lifecycle.md`
+§"The rollup side": the new counts partition by the same releasability class
+rule as `asset_count` (per `ADR-0043` §4) and inherit the aggregate label
+convention; and they **do not compose by summing** across tiers while GD-05 is
+open, because a parent counting its children's counts is counting members it
+cannot enumerate.
+
+### 4. Lifecycle is decided at the tier that owns the sensor; staleness at every tier, for its own view
+
+This is the consequence worth stating loudest, because it is what makes a
+severed edge legible instead of alarming:
+
+* **Operational status is owned.** Only the tier that receives the asset's own
+  signal may assert that it is destroyed or deactivated. That assertion
+  propagates as an ordinary labelled record and every other tier adopts it.
+* **Reporting status is local.** Each tier computes it for *its own* feed. When
+  edge-01's uplink is severed, its assets are `not_reporting` **at HQ** and
+  `reporting` **at edge-01**, simultaneously, and both are correct. HQ must not
+  conclude anything about the asset from its own silence.
+
+So a severed edge's assets read **stale at HQ, not dead** — and the thing HQ
+learns is about the link, which is exactly what `edge_buffer_status` already
+tells it and what `assetTier.ts`'s `COMM_LOST` already distinguishes in the
+browser. This decision promotes that distinction out of the browser.
+
+### 5. The UI reads the columns; it stops being the authority
+
+`assetTier.ts` becomes a *renderer* of carried state rather than a classifier
+computing it. Its five tiers survive as presentation — the grey-out, the
+recessed opacity, the `LOST`-hidden-from-3D rule — but the tier is read, not
+derived, so every other tier and the egress see what the operator sees.
+
+### 6. There is no state for "should never have been a member"
+
+`DESIGN-2026-09-26`'s `EVICTED` is withdrawn. Under §1 there is no per-asset
+delete, so an asset that was never real is carried as what it honestly is: an
+asset **not reporting**, of **unknown variant**. The `dis:1:1:1099` residue
+therefore stops being a bug and becomes a true statement about a thing that was
+seen once and never accounted for.
+
+**The cost of this, stated plainly rather than buried:** there is now no way to
+remove one spurious asset. The only real delete in the system is the scenario
+reset (`reset-scenario.sh`), it operates on the **deployment** and never on an
+asset, and it says so in its own header. Between resets, a mistyped entity id
+from a scenario file is permanent.
+
+And that has a second-order obligation which must not be discovered later: a
+carried not-reporting asset of unknown variant is still an **undeclared** asset,
+so the `ADR-0029` completeness gate stays red until it is labelled. "No deletes"
+therefore *forces* a labelling path for residue. Declaring a spurious asset in
+`releasability.yaml` to quiet the gate would launder a mistake into deployment
+data, so the label must carry the honest fact — unknown variant, unaccounted —
+rather than a plausible one. **That path is not designed here and is this ADR's
+largest owed item.**
+
+---
+
+## Alignment declared (ADR-0038 C1 intake)
+
+Two vocabularies are declared, one for the signal and one for the state. Both
+are declared **with their provenance**, because a vocabulary that looks standard
+while being invented is the failure `ADR-0043`'s C1 section names, and this
+corpus has already had "ICD" and "contract" labels turn out to be
+reconstructions.
+
+### The signal — DIS, IEEE 1278.1
+
+Three signals, and what we actually have of each:
+
+| signal | status here |
+|---|---|
+| **entity-state timeout** by the standard's own heartbeat rule | The rule is the standard's. Our thresholds are **local**: `stale_after_s: 30` / `lost_after_s: 300` in `assetTier.ts`, `STALE_INPUT_SECONDS: 300` in fusion. These were sized for a ~1 Hz sim cadence, not derived from the standard's heartbeat, and saying so is the point. |
+| **appearance record: damage and deactivated bits** | Decoded today — `ontology/dis_appearance.yaml:59-82`, `openddil-sensor-ingest/appearance.py:90-116`. **The bit numbering in that YAML is our own artefact and is not verified against the published standard.** It is cited here as our decoder's mapping; checking it against IEEE 1278.1 is owed and cheap. |
+| **Remove Entity PDU** | **Not decoded at all.** The ingest path handles Entity State PDUs; the Simulation Management family is not parsed. So the one signal in DIS that means "this entity is gone" cannot currently reach any tier. This is the largest signal-side gap and it is new work, not a fix. |
+
+One behaviour already correct and worth not breaking: `appearance.py:90` returns
+`{}` for an all-zero appearance field rather than claiming `NONE`, i.e. it
+refuses to report "no damage" when what it has is no information.
+
+### The state — JC3IEDM / MIP
+
+The state vocabulary is aligned to JC3IEDM's object-item model, in which an
+object item carries an **operational status** and a **reporting status**, each
+timestamped — which is precisely the two-column split §2 decides.
+
+**Deliberately not restated here: the exact JC3IEDM attribute names and code
+list values.** I do not have the specification in hand, and writing plausible
+attribute names would produce exactly the artefact this corpus keeps catching —
+something that reads as a standards citation and is a reconstruction. The
+alignment is declared at the level of the model; **binding it to named JC3IEDM
+attributes and code values is a required step before any field name is frozen,
+and it is owed.**
+
+Until then the columns are **OpenDDIL-local names with a declared JC3IEDM
+alignment intent**, which is an honest rung on the provenance ladder and is the
+same one `PLAN-arc2-slice2-opening-package.md` §2.1 used for the system
+principal's identifier.
+
+JC3IEDM appears in this corpus today only as aspiration
+(`DESIGN-2026-09-06-interface-contracts.md:38,53`). This is the first decision
+that would make it load-bearing, which is the reason to be careful about it.
+
+---
+
+## Predicted counts — compose, one entity times out and one is destroyed
+
+The compose declared fleet is **14 assets**: 8 Atlantia (`dis:1:1:1000`–`1007`)
+and 6 Borduria (`dis:2:1:1000`–`1005`), per `ontology/releasability.yaml`.
+
+The case: **`dis:1:1:1003` stops transmitting** (times out), and
+**`dis:1:1:1005` transmits an Entity State PDU with `damage = DESTROYED`** and
+then also stops. Both are Atlantian, so the ATL view sees both and the BDR view
+sees neither except through the shared asset.
+
+### Today — predicted, and the prediction is the defect
+
+| reading | t0 | t0 + 60s | t0 + 20min |
+|---|---|---|---|
+| rows in `telemetry_latest_state` | 14 | 14 | 14 |
+| `dis:1:1:1003` health | `NOMINAL` | `NOMINAL` | `NOMINAL` (last known, forever) |
+| `dis:1:1:1003` logistics severity | nominal | nominal | **DEGRADED** (`stale_inputs`) |
+| `dis:1:1:1003` cm `lifecycle` | `ACTIVE` | `ACTIVE` | **`STALE`** (past 900s) |
+| `dis:1:1:1005` health | `NOMINAL` | **`FAILED`** | `FAILED` |
+| `dis:1:1:1005` logistics severity | nominal | critical/non-op | **DEGRADED-or-worse + `stale_inputs`** |
+| rollup `asset_count` | 14 | 14 | 14 |
+| rollup buckets | 14 nominal | 13 nominal, 1 non-op | **12 nominal, 2 in degraded-or-worse** |
+
+**The defect in one number:** at t0+20min the regional rollup cannot distinguish
+the destroyed vehicle from the one with a quiet radio. Both are in
+degraded-or-worse; nothing carried says which is which; and if the *edge* had
+been severed instead, all 8 ATL assets would land in `degraded` and the region
+would read a materiel crisis caused by a network cable.
+
+### Under this ADR — predicted
+
+| reading | t0 | t0 + 60s | t0 + 20min |
+|---|---|---|---|
+| fleet total | 14 | 14 | **14** |
+| operational: operational | 14 | 13 | 13 |
+| operational: **destroyed** | 0 | **1** (`dis:1:1:1005`) | **1** |
+| reporting: reporting | 14 | **13** | 12 |
+| reporting: **not_reporting** | 0 | **1** (`dis:1:1:1003`) | **2** |
+| `dis:1:1:1005` pair | `operational` + `reporting` | **`destroyed` + `reporting`** | **`destroyed` + `not_reporting`** |
+| `dis:1:1:1003` pair | `operational` + `reporting` | `operational` + **`not_reporting`** | `operational` + `not_reporting` |
+| rollup materiel buckets | 14 nominal | 13 nominal, 1 destroyed | **13 nominal, 1 destroyed** |
+
+The t0+60s column is the whole argument: `destroyed` + `reporting` is a state
+the current model cannot represent, and it is the state an entity is in during
+the second it tells you it was hit.
+
+Note what does **not** move: `dis:1:1:1003`'s operational status stays
+`operational` at every timestep. We never heard it was damaged; we stopped
+hearing from it. Concluding anything else from silence is the eviction mistake.
+
+### The severance case, same fleet
+
+With edge-01's uplink severed and all 8 ATL assets behind it:
+
+| reader | fleet total | not_reporting | materiel picture |
+|---|---|---|---|
+| **edge-01's own view** | 14 | **0** | unchanged — it is hearing from everything |
+| **HQ** | 14 | **8** | **unchanged** — 14 accounted for, 8 unheard |
+| HQ, today | 14 | — | **8 assets in `degraded`** |
+
+Same cluster, same instant, two correct answers, and the one that is wrong today
+is the one a commander reads.
+
+## Acceptance, borrowed deliberately
+
+From `DESIGN-2026-09-26-asset-lifecycle.md`, because the test of a distinction is
+that it is visible:
+
+* *observed 6m ago · `stale_inputs` · DEGRADED · **reporting: not_reporting*** —
+  a real asset behind a quiet uplink. Present, counted, flagged.
+* *destroyed 2026-09-26 14:02 · **operational: destroyed** · asserted by edge-01*
+  — present, counted, and counted as destroyed.
+
+**If a quiet asset and a destroyed asset ever render alike, this failed.** That
+is the same acceptance sentence as the earlier design, with the word "withdrawn"
+replaced by "destroyed" because there is no longer a state that means absent.
+
+## What this does not decide
+
+* **The migration of `LifecycleState`.** Whether the existing enum gains members,
+  splits, or stays as the membership column with reporting beside it. It is a
+  contract change with four readers and it deserves its own decision.
+* **The JC3IEDM binding.** Named attributes and code list values, per §Alignment.
+  Owed before any column name is frozen.
+* **Remove Entity PDU ingest.** Decoding the Simulation Management family is new
+  work of unknown size and is not scoped here.
+* **The residue labelling path**, per §6 — the largest owed item.
+* **Who may assert `destroyed`.** §4 says "the tier that owns the sensor", which
+  is a location, not an authority. Against `ADR-0028` (the production warfighter
+  system is authoritative for asset→edge→region, and OpenDDIL surfaces
+  divergence rather than overriding it), an OpenDDIL-asserted destruction of an
+  asset upstream still lists is a **divergence signal**, not a state change to
+  be applied silently. Unresolved, and inherited unchanged from the earlier
+  design.
+* **Whether a status belongs in the customer egress vocabulary.** FMC has no
+  obvious word for "destroyed but still counted", and inventing one in a
+  connector is the failure `DESIGN-2026-09-06` §Contract A names.
+* **Nothing about rate.** No measurement of how many spurious entities a live DIS
+  multicast environment produces. The cheap thing to know before the work deploy
+  is still the count of `kind=2` Entity State PDUs in one representative run.
