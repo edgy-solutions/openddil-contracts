@@ -4,6 +4,134 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## IDENTIFIED 2026-09-27 — the zstd producer has a name, and the chart's fix is on the wrong side of the wire
+
+Closes the open half of *FIXED — zstd on Restate-subscribed topics*, which has
+carried the sentence *"one client chooses zstd"* since August **without ever
+naming the client.** It is named now, and it is not one client but three.
+
+**Measured, in code, not inferred:**
+
+| producer | line | codec |
+|---|---|---|
+| `openddil-cm-service` | `src/main.py:59` | `"compression.type": "zstd"` |
+| `openddil-logistics-fusion-service` | `src/main.py:53` | `"compression.type": "zstd"` |
+| `openddil-edge-python` outbox relay | `src/openddil_edge/relay_agent.py:76` | `compression_type="zstd"` |
+
+Both services set it explicitly in their `confluent_kafka.Producer` config, and
+cm-service publishes `asset-cm-state` (`src/events/asset_cm.py:564`) — which is
+exactly the topic of the subscription that fails,
+`asset-cm-state -> AssetLogistics/on_cm_state_change`
+(group `fusion-service-cm-state-hq`). The third is an `AIOKafkaProducer` in a
+standalone `python -m openddil_edge.relay_agent` entrypoint that **nothing in
+the repository constructs**, and whose topic is a constructor argument — so it
+produces nothing today and can land on *any* topic the day it is wired. Listed
+because "which clients choose zstd" is the question, and a dormant one still
+answers it.
+
+**The correction worth carrying.** The premise under which this was reopened
+was that *compose's Connect stack* produces the zstd. It does not — Connect is
+not a producer of `asset-cm-state`. The measured answer is better than the
+guess, because a client-side `"zstd"` in two files is a two-line change,
+whereas a negotiated Connect default would have been a settings argument.
+
+**And it relocates the existing fix rather than undoing it.** Pinning
+`compression.type=lz4` on the six subscribed topics works by making the
+*broker* recompress what these clients send. That is a mitigation downstream of
+the cause, so it holds only as long as every subscribed topic carries the pin:
+the failure returns the moment a topic's config drifts back to `producer`, or a
+new subscribed topic is created without it, and it returns as the same
+unkillable restart loop rather than as a config error. Compose demonstrates
+this today — it never received the pin (a chart change), its
+`raw-sensor-stream` still reads `compression.type producer DEFAULT_CONFIG`, and
+the zstd failure reproduces there on demand.
+
+**Owed:** change the three producers to `lz4` and keep the topic pins as the
+belt to that braces. Then re-check whether a current Restate image ships zstd,
+which would retire the constraint rather than defend it in two places.
+
+## OPEN 2026-09-27 — three test helpers that could not fail, and one that could not finish
+
+Found by building `test_54_dis_kind_gate`, not by auditing. All four are the
+house shape: a check whose *mechanism* stopped working while its *verdict*
+stayed agreeable.
+
+**1. `topic_high_watermark` returned 0 for every topic, always.** Its regex
+assumed `PARTITION LEADER EPOCH HIGH-WATERMARK`; current `rpk` prints
+`PARTITION LEADER EPOCH REPLICAS LOG-START-OFFSET HIGH-WATERMARK`, and
+`REPLICAS` renders as `[0]`, which is not `\d+`. It matched **no line** and
+summed **nothing**.
+
+**2. Which made two existing leak assertions unfailable.** `test_02` and
+`test_03` both guard "nothing reached Kafka" with
+`topic_high_watermark(t) or 0`, so both were evaluating `0 > 0` — false by
+construction, therefore passing by construction, for as long as the column
+order has been current. Both now pass *on measurement*: verified after the fix
+with the counters moving 1.0 → 2.0 and the watermark read succeeding.
+
+**3. `consume_topic_binary` and `consume_topic_records` hang instead of
+timing out.** Both computed `start = hw - n` and passed `-n n`, which assumes
+offset 0 is readable. `raw-sensor-stream` carries `retention.ms=86400000`, so
+on compose the log start had advanced to **202** against a high-watermark of
+**211** — nine records. `consume_topic_binary(n=80)` asked from **131** for
+**80**, and rpk delivered nine and then waited forever for seventy-one that
+retention had deleted, because `-n` is a count to *wait for*, not a limit.
+
+`timeout_s` did not save it: measured **110s+ against `timeout_s=20`**, because
+`subprocess.run(timeout=)` kills `docker compose` but not the `rpk` grandchild
+holding the pipe, and the reap that follows has no timeout at all. **Both
+docstrings claimed the exact property they lacked** — *"so we never block
+waiting for records that don't exist."*
+
+**Why this one is the worst of the four.** A test that fails reports. A test
+that hangs reports *nothing about anything*, and `run_all.py` has no per-test
+timeout, so one wedged test wedges the whole discovery-ordered suite — which is
+how this was found. `test_05` sat past 15 minutes and the five tests behind it
+never ran.
+
+**Fixed in `openddil-demo/tests/hero_scenario_v3/_helpers.py`:**
+`_partition_watermarks` became `_partition_offsets` and returns **both**
+bounds; both consumers clamp to `max(log_start, hw - n)` and read an explicit
+**range** `-o start:end`, which exits on its own; the watermark parser indexes
+from the right so `RF>1` (`[0 1 2]`, one header column, three tokens) does not
+break it again; and it returns `None`, not `0`, when no partition row is seen,
+so *"topic absent"* and *"topic empty"* stop looking identical.
+
+**Owed, and not done here:** a per-test timeout in `run_all.py`, so that a
+future hang costs one test instead of the suite. Also note
+`consume_topic_binary(..., offset=...)` is a **dead parameter** — never read in
+the body — so `offset="-10"` and `offset="start"` have always behaved
+identically and no caller's value should be read as intent. Now documented as
+ignored; it should be deleted once the callers are cleaned up.
+
+## OPEN 2026-09-27 — the kind-gate counter is exported to nobody
+
+`dis-kind-gate.yaml` counts refused DIS entity kinds into
+`dis_ingress_kind_dropped`, on Redpanda Connect's Prometheus endpoint, which is
+on by default at `:4196/metrics`. **Nothing scrapes it.** There is no
+`ServiceMonitor` and no `prometheus.io/scrape` annotation anywhere in the
+chart; `openddil-demo/values.yaml:418` carries `httpPort: 4196` and nothing
+collects from it.
+
+So the drop count is real, per-kind, and reachable only by hand:
+
+```bash
+kubectl exec -n openddil <connect-pod> -- \
+  wget -qO- http://localhost:4196/metrics | grep dis_ingress_kind_dropped
+```
+
+**The trap is the failure mode, not the gap.** An absent series and an absent
+scrape are the same empty output, so "no munitions were refused" and "nobody is
+looking" are indistinguishable from the command line — and the first is the
+answer an operator will assume. This is why the gate logs at DEBUG *and*
+counts: until something scrapes 4196, the counter is evidence you must go and
+fetch, never evidence that arrives.
+
+**Owed:** a `ServiceMonitor` (or the scrape annotations, whichever the cluster's
+Prometheus is configured for) covering the Connect pods, and one alert on
+`increase(dis_ingress_kind_dropped[1h])` so a feed that starts carrying refused
+kinds says so instead of being silently correct.
+
 ## OPEN 2026-09-26 — `REGIONAL_HQ_BROKERS` names a tier it does not select, and one consumer reads an empty topic because of it
 
 The variable is read at `openddil-tactical-agents/regional/faust_regional.py:89`
@@ -1426,7 +1554,7 @@ stack invisible because every instrument was green. Full operator account in
 | # | defect | state |
 |---|---|---|
 | 1 | Restate OOMKilled at 1Gi (~1600 restarts) | fixed, 2Gi, 0 restarts |
-| 2 | zstd on Restate-subscribed topics | fixed, `lz4` applied and confirmed |
+| 2 | zstd on Restate-subscribed topics | fixed, `lz4` applied and confirmed; **producer identified 2026-09-27** (3 clients), pin is broker-side |
 | 3 | comment inside a line continuation → whole `topic-init` script unparseable | fixed + guard 4 |
 | 4 | release wedged `pending-upgrade` 8h behind the failed hook | cleared |
 | 5 | `hook-restate-wipe` covered 1 Restate of 4 | fixed, `wipe_one` over all |
@@ -1626,6 +1754,12 @@ Chart now sets explicit `lz4` on all six subscribed topics. **This reaches the
 work cluster on upgrade: P0.1 gate.** Also worth checking whether a current
 Restate image ships zstd, which would retire the constraint instead of
 documenting it.
+
+**The client is no longer anonymous (2026-09-27).** *"One client chooses
+zstd"* is now three named producers, and the `lz4` pin turns out to sit on the
+broker side of a client-side cause — see *IDENTIFIED 2026-09-27 — the zstd
+producer has a name*. This row stays FIXED; what it fixed is narrower than it
+reads.
 
 ### OPEN — the services are invoked by nothing
 
