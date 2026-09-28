@@ -1582,3 +1582,100 @@ the release it was taken from and the standard's own label for it, and CI
 resolves the key against a pinned, hash-verified copy of that release by
 label. A check that asks only whether the key exists is kept, but not
 counted as having checked it.
+
+---
+
+## A measurement is never narrowed to meet a prediction
+
+**When a measurement comes back larger, noisier or simply different from what
+was predicted, the prediction is what gets corrected. Narrowing the query —
+scoping the record set, filtering the rows, shortening the window — until the
+output matches the number that was expected is fitting the measurement to the
+prediction, which is the method run backwards.** The measurement still runs,
+still reports, and now reports the prediction back.
+
+*Earned 2026-09-28, by an egress admission pane that passed all six of its own
+acceptance checks.* The pane exists to render what a release gate admits toward
+a destination, and why the rest was refused. Its spec predicted a 14-asset
+fleet: 8 admitted, 6 refused, all `no_nation_overlap`. The gate, however,
+decides every key that arrives on its source stream — 29 keys, not 14.
+
+The pane took its record set from the ontology declaration instead, and said
+why in its own docstring:
+
+> "Reading the table unfiltered would inflate 'total records' past 14 and mix
+> `unlabelled` refusals into a count the spec fixes at six."
+
+Measured afterwards against the gate's own decision log: `unlabelled` was
+**4533 of its 4594 refusals**. The pane rendered **none** of them. The one
+refusal reason it could not show was the one meaning *a record reached the
+release boundary carrying no releasability label at all* — the refusal that
+points upstream rather than at policy, and so the most useful thing that page
+could say.
+
+**The scoping was not dishonest, and that is the point.** Every sentence in
+that docstring is true. The record set was chosen to match a count the spec
+"fixes", and the spec's count was *mine* — a prediction about a smaller world.
+Re-run unscoped, the numbers were 29 records, 8 admitted, 21 refused: 6
+`no_nation_overlap` and 15 `unlabelled`. **`admitted` did not move.** Widening
+the domain could not widen what was released, because an unlabelled record
+cannot be admitted — which is exactly the property worth having proven, and it
+was unprovable while the domain was scoped.
+
+*The test:* ask what the measurement's **domain** is, and whether the thing
+being measured shares it. If the subject decides over a larger set than the
+check reads, the check is answering a different question — and it will fail in
+one direction only, silently, toward "nothing to see".
+
+*Related:* §*A check tuned until it passes is a check whose green means
+nothing* — this is that principle moved from the check's **parameters** to its
+**domain**, and it is the harder one to spot, because no threshold was touched.
+Also §*"Not found" is not "cleared"*: a row dropped before the predicate runs
+renders as absence, and absence reads as fine.
+
+*And its cost is a rule we already had.* ADR-0044 says that if a quiet asset and
+a destroyed asset ever render alike, the design failed. A record filtered out
+before the gate sees it renders identically to a record that does not exist.
+The same sentence condemns both.
+
+---
+
+## A miss is recorded as a miss
+
+**A prediction that did not come true is evidence, and its value is entirely in
+being written down as wrong.** Quietly amending the prediction, widening its
+band, or restating it to cover what happened destroys the only thing it was for.
+Two predictions that disagree with each other are a finding; a prediction
+retrofitted to the result is a rounding error that has been promoted to a fact.
+
+*Earned across the same night, from three misses that each paid for themselves.*
+
+* Predicted: a produce to a missing topic under `auto_create_topics_enabled=false`
+  fails with a clean error naming the topic. **Measured: it hangs and retries
+  indefinitely, printing nothing.** Recorded as a miss, and it changed an
+  operator instruction — someone told to expect an error would have concluded
+  the setting never applied.
+* Predicted: the chart's `redpanda start --set` carries a cluster property to an
+  existing cluster. **It does not** — cluster properties live in the controller
+  log and are seeded only at first formation. Shipping the chart edit alone
+  would have produced a chart that *claims* a property while every broker keeps
+  ignoring it.
+* Predicted, by me, that a cumulative event log's row count would land within
+  ±20% across a wipe-and-refill. **That band was a category error**, not a near
+  miss: a cumulative log has no expected steady state. The rule was wrong, not
+  the data, and correcting the rule was the whole result.
+
+The third is the one worth keeping, because it shows the direction. **Correcting
+the rule is a result; correcting the artifact is a loss.** When a prediction and
+a measurement disagree, exactly one of them is cheap to change — and that is
+precisely why it must not be the one that moves.
+
+*The test:* before recording a prediction as met, ask whether anything about the
+prediction, the query or the acceptance band was adjusted after the first
+measurement was seen. If so, the honest record is a miss plus what was learned —
+not a pass.
+
+*Related:* §*A check tuned until it passes*, §*A measurement is never narrowed to
+meet a prediction*, and §*Two claims that cannot both be true are a stop signal*.
+A prediction and a measurement that disagree are that stop signal in its most
+ordinary and most ignorable form.

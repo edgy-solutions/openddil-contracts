@@ -2,11 +2,31 @@
 
 ## Status
 
-**Proposed — 2026-09-26. Design only. Nothing built, nothing measured.**
+**Proposed — 2026-09-26. Amended 2026-09-28, on §1 and Finding 3.**
+
+Slice 1 of the decision is now built and unit-tested (the two column pairs, the
+DIS-gated `destroyed` derivation, and an UPDATE-only staleness sweep). It has not
+been run against a live Kafka and Postgres.
+
+**The 2026-09-28 amendment**, prompted by measuring the code this ADR described:
+§1's "no deletes, anywhere, ever" was too strong, and Finding 3's claim that the
+pruner was dormant was **factually wrong** — the asset path has been pruned by
+age hourly all along. Both are corrected in place. The distinction §1 now draws
+is that **retention prunes by age, lifecycle changes status by event, and only a
+terminal status is prunable.**
+
+**Code change this amendment requires, not yet made:** `prune_loop`'s predicate
+must gain the terminal-status condition, so that `asset_ttl_hours` can only ever
+reap an asset whose `operational_status` is terminal, and never one that is
+merely quiet. Until that lands, §1 describes the intended system and not the
+running one — and the honest reading of the gap is that the pruner is still a
+lifecycle.
 
 This ADR amends `DESIGN-2026-09-26-asset-lifecycle.md` (same day) on one
 point and keeps the rest: the design's `EVICTED` state is **withdrawn**, because
-this ADR decides there are no deletes anywhere. It extends `ADR-0026`
+this ADR decides that no status change is expressed as a delete (§1, amended
+2026-09-28: retention still prunes by age, but only a terminal status is
+prunable). It extends `ADR-0026`
 (OperationalState's orthogonal axes) rather than replacing it, and it changes
 what `ADR-0028`'s registry lineage rule implies for an asset nobody can account
 for.
@@ -107,9 +127,31 @@ No `remove_entity`, no reporting-status field, no `is_deleted`, no soft-delete,
 no JC3IEDM object-item status anywhere in code. The aggregator's table is
 `store="memory://"` and upsert-only: written at `aggregator_app.py:219,246,263`,
 never `del`, never expired, and `last_updated_ns` is **written in three places
-and read in none**. `prune_older_than()` (`postgres.py:165-175`) is the only
-runtime `DELETE FROM` and it is time-based retention for append-mode tables,
-disabled in practice because `retention_hours` was never set.
+and read in none**. `prune_older_than()` is the only runtime `DELETE FROM`.
+
+> **Corrected 2026-09-28 — this paragraph was wrong, and §1 was built on it.**
+> It previously read: "it is time-based retention for append-mode tables,
+> disabled in practice because `retention_hours` was never set." Measured
+> directly in `openddil-projector`:
+>
+> * `retention_hours` is the **append-mode** field. The asset path is gated by a
+>   **different** field, `asset_ttl_hours`, and it **is** set — to `24` — on
+>   seven per-asset upsert tables, including `telemetry_latest_state`,
+>   `asset_cm_state` and `asset_logistics_status`. `projector_config.yaml` says
+>   so in its own comment.
+> * `prune_loop` (`src/main.py`) builds **two** target lists, append *and*
+>   upsert, and deletes from both. It is created unconditionally as a task and
+>   runs hourly.
+>
+> So the asset path has been deleted by age all along. The survey concluded the
+> mechanism was dormant by checking a field name that governs a different mode —
+> and the ADR then cited its own conclusion as evidence that deletion-on-silence
+> does not happen here, while it was happening hourly. **§1 is amended
+> accordingly**: the mechanism is not the defect, its predicate is.
+>
+> Filed under §*A reference table is looked up, never recalled* in
+> `PRINCIPLES.md` — a field name one letter of intent away from the right one
+> reads as confirmation, and an ADR is exactly the artefact nobody re-checks.
 
 So the thing that never existed is not a lifecycle *status*. It is a way to say
 **"this asset is no longer a member of this fleet"** that any reader
@@ -119,16 +161,52 @@ understands.
 
 ## Decision
 
-### 1. No deletes. Anywhere. Ever, on the asset path.
+### 1. No deletes on status change. Retention prunes by age, and only a terminal status is prunable.
 
-A logistics system never drops a destroyed vehicle from the fleet; it carries it
-as destroyed until someone writes it off. A record whose status changed is the
-truthful artefact, and a shrinking count with no reason attached is strictly
-worse than a count that is complete and annotated.
+**Amended 2026-09-28.** This section previously read "No deletes. Anywhere. Ever,
+on the asset path." That was too strong, and being too strong is what made it
+false: the system does delete by age, today, and the ADR cited that mechanism as
+dormant (see Finding 3, corrected). The distinction this section failed to draw
+is the one that matters.
+
+**Retention prunes by age. Lifecycle changes status by event. These are
+different mechanisms answering different questions, and reality has both** — a
+destroyed vehicle is carried as destroyed, and years later it is archived. The
+error was never that rows age out; it was that ageing out had become the *only*
+lifecycle, so "silent for a day" meant "gone".
+
+So, precisely:
+
+1. **No status change is ever expressed as a delete.** A logistics system never
+   drops a destroyed vehicle from the fleet; it carries it as destroyed until
+   someone writes it off. A record whose status changed is the truthful
+   artefact, and a shrinking count with no reason attached is strictly worse
+   than a count that is complete and annotated.
+2. **Retention keeps pruning by age**, on its own clock, for its own reason —
+   bounding storage. It is not a lifecycle and must never be read as one.
+3. **Only an asset in a terminal status is eligible for retention. An asset that
+   is still reporting is never prunable, at any age.** This is the rule that
+   makes (2) safe, and it is the whole content of the amendment.
 
 This closes the inverse temptation too, and naming it is half the decision:
 **withdrawal cannot be inferred from silence.** A timeout that evicts quiet
 assets deletes the real asset behind the failed uplink, and deletes it silently.
+Rule 3 is what forbids it: silence is not a terminal status, so a quiet asset
+never becomes prunable by going on being quiet.
+
+**What this changes in the code as it stands.** `asset_ttl_hours: 24` on the
+per-asset upsert tables is currently a crude lifecycle wearing retention's
+clothes — its meaning is "silent for a day means gone". The mechanism stays; its
+predicate changes. Pruning an asset row requires a terminal
+`operational_status`, and `reporting_status` is never a prune input. An asset
+quiet for a year and still reporting nothing terminal stays in the fleet, with
+`not_reporting` on its face, which is the entire point of §2.
+
+**And it removes a trap nobody had noticed.** While age alone was the predicate,
+*every* store baseline had a 24-hour shelf life: a fleet count measured on a
+Friday decays over an idle weekend with no failure anywhere, and reads exactly
+like a failed reset or a stalled projector. Under rule 3 a baseline of reporting
+assets is stable for as long as they report.
 
 ### 2. Two columns, not one
 
@@ -210,8 +288,10 @@ from a scenario file is permanent.
 
 And that has a second-order obligation which must not be discovered later: a
 carried not-reporting asset of unknown variant is still an **undeclared** asset,
-so the `ADR-0029` completeness gate stays red until it is labelled. "No deletes"
-therefore *forces* a labelling path for residue. Declaring a spurious asset in
+so the `ADR-0029` completeness gate stays red until it is labelled. Because no
+status change may be expressed as a delete, and residue carries no terminal
+status for retention to act on, §1 therefore *forces* a labelling path for
+residue. Declaring a spurious asset in
 `releasability.yaml` to quiet the gate would launder a mistake into deployment
 data, so the label must carry the honest fact — unknown variant, unaccounted —
 rather than a plausible one. **That path is not designed here and is this ADR's
@@ -342,6 +422,14 @@ that it is visible:
 **If a quiet asset and a destroyed asset ever render alike, this failed.** That
 is the same acceptance sentence as the earlier design, with the word "withdrawn"
 replaced by "destroyed" because there is no longer a state that means absent.
+
+The amended §1 does not weaken this, and reading it as though it does is the
+mistake to avoid. A *destroyed* asset eventually ages out of retention and then
+renders as absence — that is archival, and it is intended. A *quiet* asset never
+does, at any age, because silence is not a terminal status and retention's
+predicate requires one. The two therefore still diverge, which is what the
+acceptance sentence asks. What would break it is retention reaping on age alone,
+which is what §1 now forbids and what the code still does.
 
 ## What this does not decide
 
