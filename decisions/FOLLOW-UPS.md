@@ -4,6 +4,102 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-27 — `auto_create_topics_enabled=false`, as a revision 52 chart change
+
+**Measured:** the setting appears nowhere in the chart. It is Redpanda's default
+`true`, on all five brokers, by omission rather than by decision.
+
+**Why it is a decision now: it has cost twice, in two different ways.**
+
+*First, the frozen twin.* The cited evidence is *OPEN 2026-09-26 — one changelog
+name, two topics, and the dead one is larger*.
+`region-region-east-aggregator-region_region_east_assets_latest-changelog` exists
+on **both** the HQ and region-east brokers, and the HQ copy is the larger and the
+dead one — 14,368,522 records last written 2026-09-08, against the live 9,362,307
+written the day it was measured. Auto-create is the mechanism that produced it: the
+aggregator's env var is `REGIONAL_HQ_BROKERS`, it once resolved to HQ, and a client
+pointed at the wrong broker **silently materialised a topic there** instead of
+failing. With auto-create off, that misconfiguration is a startup error naming the
+missing topic. With it on, the misconfiguration grew into a 14.4M-record decoy that
+outweighs the real one, and **it already cost a fix**: the `dis:1:1:1099` residue
+tombstone was first produced against the HQ twin, where `rpk` reported a successful
+produce to a topic nothing reads. A delete that succeeds against a dead twin is
+worse than one that fails.
+
+*Second, it aborted a reset.* On 2026-09-27 `reset-scenario.sh` phase 4 deleted
+`edge-01/telemetry-latest-state` and the recreate returned `TOPIC_ALREADY_EXISTS`: a
+consumer touched the topic inside the delete-to-create window and the broker
+materialised it at defaults. **Auto-create is what turns a race into corruption** —
+the topic came back with `cleanup.policy=delete DEFAULT_CONFIG` where the chart
+asks for `compact`, so a latest-state topic silently stopped compacting. Without
+auto-create the recreate would have won and phase 4 would have continued.
+
+Both incidents are the same shape: a client's mistake became a **plausible-looking
+topic** instead of an error.
+
+**Owed, for revision 52.** Add it to the broker start args in
+`openddil-demo/templates/infrastructure.yaml` — **both** arg blocks, edge (~line
+173) and the hub/regional one (~line 329); a change to one is the more dangerous
+half-fix because the brokers would then disagree.
+
+**The risk to test before shipping it, and it is the whole risk.** Turning off
+*implicit* creation must not break *explicit* creation. Three things create topics
+here: the chart's topic-init Job (`rpk topic create`, explicit — safe), Faust's
+changelog and assignor topics, and anything Restate declares for a subscription.
+Faust is the one to verify: it declares topics through an admin `CreateTopics` call
+rather than by producing to a missing name, which is unaffected by this setting —
+but that is a claim about Faust's code, not a measurement, and it must be measured
+before the setting ships. **A reset that cannot recreate a changelog is a worse
+failure than the one this fixes.**
+
+Also verify the mechanism itself rather than assuming it: `auto_create_topics_enabled`
+is a Redpanda *cluster* property, so `redpanda start --set ...` at bootstrap and
+`rpk cluster config set` at runtime are not interchangeable, and which one a
+single-node cluster honours on a fresh volume needs checking on one broker before
+all five.
+
+## OPEN 2026-09-27 — `telemetry-latest-state` carries two different partition counts across five brokers
+
+**Measured**, captured off the live brokers during the 2026-09-27 reset run:
+
+| broker | partitions |
+|---|---|
+| `openddil-redpanda-edge-01-0` | **8** |
+| `openddil-redpanda-hq-0` | **8** |
+| `openddil-redpanda-edge-02-0` | 1 |
+| `openddil-redpanda-edge-03-0` | 1 |
+| `openddil-redpanda-region-east-0` | 1 |
+
+Nobody was looking for this. It surfaced because the reset captures every topic's
+shape off the broker before touching it, and the captures disagreed with each
+other.
+
+**Why it matters, and it is not throughput.** `telemetry-latest-state` is a
+compacted, keyed topic, and **compaction is per partition**. A partition count that
+differs by site means the same logical state topic has different compaction and
+ordering behaviour at different tiers, and any reasoning of the form "the latest
+record for an asset is the last one on the topic" holds at three sites and not at
+the other two. It also makes an operator's cross-site comparison of lag or
+watermarks not a like-for-like reading.
+
+**It has already constrained a repair.** When edge-01's copy was auto-created at 1
+partition during the reset abort, restoring it to 8 in place was **refused**:
+adding partitions under live traffic redistributes by key hash, and compaction
+cannot reconcile a key that now exists in two partitions. So edge-01 is currently
+at 1 partition against a chart asking for 8 — a divergence left deliberately,
+because the only correct repair is a delete-and-recreate.
+
+**Owed:** decide what the count *should* be, per tier, on purpose — and say so in
+the chart rather than leaving it to whatever created each topic first. Then
+reconcile the five brokers to it. The decision is the work; 8 everywhere and 1
+everywhere are both defensible and the present split is not.
+
+**Where to look first:** the chart's topic-init Job passes `-p` per topic
+(`infrastructure.yaml`, the `setargs` translation near line 704), so compare what
+it asks for against all five captures. If the Job asks for one number and two
+brokers hold another, the topics predate the Job's current spec — which would make
+this the same class as *TOPIC_SPECS drift* rather than a chart bug.
+
 ## FIXED 2026-09-27 — the zstd producer had a name, and the client-side fix is in (two of three)
 
 Closes the open half of *FIXED — zstd on Restate-subscribed topics*, which has
