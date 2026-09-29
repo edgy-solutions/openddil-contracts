@@ -4,6 +4,60 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-28 — the lab's shared `dis-sim-src` is 50 days behind the source it is copied from
+
+**Measured on the lab, 2026-09-28:** ConfigMap `dis-sim-src` was created
+2026-08-09T03:29Z and carries one key, `dis_sim.py`. Both running sims
+(`dis-sim-edge-northpoint`, `dis-sim-edge-capeverdant`) mount it at `/src`, and
+the file each one is running hashes identical to it (`9a68907b…`). The repo's
+`tools/dis-sim/dis_sim.py` in openddil-customer-bundle-example hashes
+`1794f385…` — 195 diff lines, and it predates the platform pin map entirely.
+
+**So the risk is not a restart; it is a refresh.** A plain restart re-runs the
+same 50-day-old file the sims are already running (measured: they last started
+2026-09-28T02:56Z on exactly that content). The hazard is the other order: the
+moment anyone refreshes `dis-sim-src` from the repo, every future restart of
+either sim runs code it has never run, at an unannounced time, with no deploy
+event marking the change. The API cannot say when the ConfigMap was last
+written — `managedFields` is empty — so its age is the only provenance there is.
+
+A second thing a restart does that the running pods did once and will do again:
+each sim's command `pip install`s `opendis==1.0` from PyPI at start, on
+`python:3.11-slim`, not the published `dis-sim:1.0` image that bakes it in. A
+restart depends on the network in a way the running pods no longer show.
+
+**The fixture is deliberately not on it.** `dis-sim-fixture-undeclared` mounts
+its own `dis-sim-src-fixture` (created 2026-09-28, hashes the repo's current
+file) so the one unlabelled asset could be added without touching what the
+other two run.
+
+**Owed, not done here:** move the two sims to the published `dis-sim:1.0` image
+and the current source as one deliberate, predicted change — a planned roll
+with a before/after on the store counts — rather than letting a refresh arm it.
+
+## OPEN 2026-09-28 — `tools/dis-sim/deploy.sh` run against the lab points both sims at nothing
+
+**Measured on the lab, 2026-09-28:** `deploy.sh` in
+openddil-customer-bundle-example applies `k8s/dis-sim.yaml`, which targets
+`openddil-sensor-ingest-edge-northpoint` and `openddil-sensor-ingest-edge-capeverdant`
+— the example bundle's two edges. **Neither Service exists on the lab**
+(`kubectl get svc` → NotFound, both). The lab runs Deployments of the same two
+names, pointed at `openddil-sensor-ingest-edge-01` and `-edge-02`.
+
+The script does three things in one run, and on the lab all three land together:
+recreates `dis-sim-src` from the repo (the refresh the row above warns about),
+applies the manifest (repointing both sims at Services that do not exist), and
+`rollout restart`s both. The result is a lab with nothing arriving at edge-01 or
+edge-02 — which presents as a pipeline fault, not a deploy mistake, and the 24h
+asset prune then decays the stores to look like one.
+
+**Owed: a guard, not a warning.** `deploy.sh` should refuse to apply when the
+`DIS_TARGET_HOST` Services the manifest names are absent from the target
+namespace — `kubectl get svc` on each before anything is written, non-zero exit
+naming the missing one. A comment or an echoed warning is the thing that did not
+stop this being nearly run once already. Verify the guard by pointing it at the
+lab and requiring it to fail.
+
 ## OPEN 2026-09-27 — `auto_create_topics_enabled=false`, as a revision 52 chart change
 
 **Measured:** the setting appears nowhere in the chart. It is Redpanda's default
