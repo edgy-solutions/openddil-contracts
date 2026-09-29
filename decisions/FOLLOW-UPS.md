@@ -4,6 +4,36 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-29 — after a restate wipe, edge-01's first logistics emission per asset carries no releasability label
+
+**Measured on the lab, 2026-09-29, chart 0.1.62 (revision 57):** the upgrade's
+pre-upgrade restate wipe cleared logistics-fusion's Virtual Objects. Each asset's
+next emission on hub `asset-logistics-status` is `is_initial: true`,
+`status_revision: 1`, DEGRADED on `stale_inputs` ("No telemetry observed for this
+asset yet"). For the edge-01 lineage that record's `provenance` carries
+`producer_id`/`edge_id`/`region_id` and **no `originator_nation`, no
+`releasable_to`**: 11 records across all eight `dis:1:1:1000–1007`, offsets
+199099–199185, 19:04:16–19:05:05Z, inside the upgrade window. The next record
+per key is labelled again. The edge-02 lineage's 18 `is_initial` records in the
+same window are all labelled.
+
+**The egress gate refused all 11 as `unlabelled`, which is correct fail-closed
+behaviour** and is why the sink carries 1–2 fewer records per admitted key than
+the source. The hub store read labelled again when measured (label rows
+unchanged), so the window is seconds long, but any reader during it, including
+deny-unlabeled enforcement at the store, sees those assets as unlabelled. The
+same instant re-fired a severity-transition tactical event for `dis:1:1:1002`
+(hub `tactical_events` 4 → 5). Only this upgrade is measured; that earlier
+wiped upgrades did the same is expected but not shown. Of the four prior
+events, one (05:12Z 09-28) sits two minutes after revision 56 and the others do
+not line up with an upgrade.
+
+**Owed, not done here:** find why edge-01's initial emission drops the label
+and edge-02's keeps it (both are the same service). Prediction to test first:
+the label is copied from the input record that triggers the VO, and edge-01's
+first trigger after a wipe is a record without provenance. Verify by
+predicting per-lineage `is_initial` label counts before the next wiped upgrade.
+
 ## OPEN 2026-09-28 — the lab's shared `dis-sim-src` is 50 days behind the source it is copied from
 
 **Measured on the lab, 2026-09-28:** ConfigMap `dis-sim-src` was created
