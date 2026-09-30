@@ -136,6 +136,14 @@ lab and requiring it to fail.
 
 ## OPEN 2026-09-27 — `auto_create_topics_enabled=false`, as a revision 52 chart change
 
+**Update 2026-09-30: the setting shipped two ways; the explicit-creation risk below is still unmeasured.**
+- *Fresh cluster formation:* the broker start arg `--set redpanda.auto_create_topics_enabled=false` (0f01ae0). On `persistence.redpandaUseEmptyDir=true` every broker restart re-forms the cluster, so this is the path that holds there. The lab read 5/5 false before anything else existed.
+- *A cluster that persists:* a post-install/post-upgrade hook Job, `hook-redpanda-auto-create-off.yaml` (chart 0.1.63). It sets the property and reads it back on every broker's Admin API, and fails unless N/N read false.
+  - Red check on the lab: one broker flipped to true made assert-only read 4/5 and exit 1.
+  - After the 0.1.63 upgrade: 5/5 false, and the flipped broker was restored.
+  - Making hq reachable at all needed the hq admin Service to target 9644, the port Redpanda actually listens on.
+- *Still open:* Faust's changelog recreation with auto-create off. The first reset after the change aborted in phase 4 before any delete (a proxy-fronted consumer the census cannot see), so no topic has yet been deleted and recreated under `false`.
+
 **Measured:** the setting appears nowhere in the chart. It is Redpanda's default
 `true`, on all five brokers, by omission rather than by decision.
 
