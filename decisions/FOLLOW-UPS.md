@@ -4,6 +4,30 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-29 — the identity pods roll on every helm upgrade, whether or not policy changed
+
+**Measured on the lab, 2026-09-29, revision 56 → 57:** six pods rolled that the
+render diff said would not: `topaz-hq`, `pep`, `keycloak` and the three
+`tier-pep-<id>`. Each pod template carries
+`openddil.io/policy-revision: {{ .Release.Revision }}`
+(openddil-helm `templates/releasability.yaml` ×3, `templates/tier-node.yaml` ×1),
+so the pod spec changes on every revision by construction. The annotation's
+reason is sound for Topaz: the policy bundle is a rolling tag, and a stale bundle
+is stale enforcement. It was applied to the PEP and Keycloak too, where the
+revision number is not what changes.
+
+**Why it is a row:** Keycloak runs start-dev on in-memory H2 and the PEP holds
+session handles in memory (both say so in the chart), so every upgrade, including
+one that changes nothing about identity or policy, signs every user out. Also,
+`helm template` always renders revision 1, so a pre-deploy render diff cannot
+see this roll. The lab's P7 prediction missed by exactly these six pods. Predict
+pod rolls from `helm get manifest --revision N`, not from a render.
+
+**Owed, not done here:** key the roll on what actually changes (a checksum of the
+bundle reference / realm import / PEP config) rather than on the release
+revision, per component. Until then, count these six in every roll prediction
+and schedule four-profile re-login after every upgrade.
+
 ## OPEN 2026-09-29 — after a restate wipe, edge-01's first logistics emission per asset carries no releasability label
 
 **Measured on the lab, 2026-09-29, chart 0.1.62 (revision 57):** the upgrade's
@@ -28,11 +52,33 @@ wiped upgrades did the same is expected but not shown. Of the four prior
 events, one (05:12Z 09-28) sits two minutes after revision 56 and the others do
 not line up with an upgrade.
 
-**Owed, not done here:** find why edge-01's initial emission drops the label
-and edge-02's keeps it (both are the same service). Prediction to test first:
-the label is copied from the input record that triggers the VO, and edge-01's
-first trigger after a wipe is a record without provenance. Verify by
-predicting per-lineage `is_initial` label counts before the next wiped upgrade.
+**Which component emitted them (read from code 2026-09-29, not yet from the
+lab):** logistics-fusion, `_recompute_and_maybe_emit`
+(`openddil-logistics-fusion-service/src/workflows/asset_logistics.py:491`). It is
+the only producer on `asset-logistics-status`; the projector only consumes it.
+The label is copied from the VO's `_KEY_RELEASABILITY` state and is omitted
+when that state is empty, deliberately (ADR-0029 §3, "no else-branch and no
+default"). Five handlers refresh that state from their input before emitting
+(`on_telemetry_window`, `on_cm_state_change`, `on_proprietary_update`,
+`on_derived_sustainment`, `on_capability_snapshot`). **`on_timer` (line 477)
+does not**: it recomputes with `force_emit=True` straight from state.
+
+**Inference, not measured:** a scheduled `on_timer` that outlives the state it
+was scheduled against (reset-scenario.sh:2268 records that a `state clear`
+leaves the next tick scheduled) emits `is_initial`, "no telemetry observed
+yet", and unlabelled, because it finds no telemetry and no label in state.
+That matches all three properties of the 11 records. It does not yet explain
+why edge-02's lineage kept its labels. If the upgrade's wipe removed the
+scheduled invocations too, this inference is wrong and the first trigger was
+a labelled-less input instead.
+
+**Owed, not done here:** (1) read the fusion log line at :645, which carries
+`trigger=`, for the next wiped upgrade; prediction: every unlabelled
+`is_initial` record is `trigger=timer`, and every labelled one is not.
+(2) Predict per-lineage `is_initial` label counts before that upgrade. The fix
+is not chosen here; the candidates are skipping the emission when state is
+empty, or having `on_timer` emit nothing until an input has refreshed
+provenance.
 
 ## OPEN 2026-09-28 — the lab's shared `dis-sim-src` is 50 days behind the source it is copied from
 
