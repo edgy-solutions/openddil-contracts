@@ -521,6 +521,54 @@ message OperationalState {
   // separate IDLE / SCAN / TRACK modes.
   bool actively_receiving = 4;
   bool actively_transmitting = 5;
+
+  // ADR-0044 lifecycle slice "A". Independent of the four axes above: those
+  // answer "how is this entity performing", this answers "does this entity
+  // still exist". A producer sets it only on an actual signal ABOUT the
+  // entity — never from silence, and never inferred from health_state (see
+  // OperationalStatus below for why FAILED health is not a proxy for
+  // destroyed). See ADR-0044 §Alignment: OpenDDIL-local names with a
+  // declared JC3IEDM alignment intent, NOT a JC3IEDM binding — the exact
+  // JC3IEDM attribute names and code list values are deliberately not
+  // restated here; binding to them is a required step still owed.
+  OperationalStatus operational_status = 6;
+}
+
+// ADR-0044 lifecycle slice "A" — see OperationalState.operational_status
+// above. OpenDDIL-local names with a declared JC3IEDM alignment intent
+// (object-item operational status), not a JC3IEDM binding: the alignment is
+// declared at the level of the model, not the code list.
+enum OperationalStatus {
+  // No claim. NOT "operational" — the absence of a signal is not itself a
+  // signal, so a producer that has nothing to say about existence leaves
+  // this UNSPECIFIED rather than asserting OPERATIONAL by default. Silence
+  // must never be read as a claim (ADR-0044 §1's "withdrawal cannot be
+  // inferred from silence" applies here as much as to reporting_status).
+  OPERATIONAL_STATUS_UNSPECIFIED = 0;
+
+  // The entity is claimed to still exist and function. Like UNSPECIFIED,
+  // this is a claim a producer makes deliberately — it is not the default
+  // to assume for an entity that simply hasn't reported anything terminal.
+  OPERATIONAL_STATUS_OPERATIONAL = 1;
+
+  // The entity's own signal reported its destruction (e.g. DIS damage
+  // bits — see ADR-0044 §Alignment, "appearance record: damage and
+  // deactivated bits"). Asserted by the tier that received that signal.
+  OPERATIONAL_STATUS_DESTROYED = 2;
+
+  // The entity's own appearance said it withdrew from the simulation on
+  // its own terms (DIS appearance "deactivated" bit). Distinct from
+  // REMOVED below: this authority is the entity itself, still transmitting
+  // a signal about itself.
+  OPERATIONAL_STATUS_DEACTIVATED = 3;
+
+  // A simulation manager's Remove Entity PDU said this entity is gone.
+  // Kept distinct from DEACTIVATED because the authority is different — a
+  // simulation manager asserting removal is not the entity reporting on
+  // itself, and ADR-0044 leaves "who may assert operational status" open
+  // (§Alignment: Remove Entity is not decoded at all yet). Collapsing the
+  // two into one value would erase that open question rather than carry it.
+  OPERATIONAL_STATUS_REMOVED = 4;
 }
 
 // =============================================================================
