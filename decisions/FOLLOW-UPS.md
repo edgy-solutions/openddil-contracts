@@ -4,6 +4,14 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-09-30 — reset phase 4 cannot quiesce a consumer that reaches its broker through toxiproxy
+
+**Measured on the lab, 2026-09-30:** the first reset since the egress gate was deployed (chart 0.1.62) aborted in phase 4. The live-consumer assertion held for 180s on `group=egress-gate-c2 topics=asset-logistics-status broker=hq owners=PROXY/openddil-toxiproxy`. The census attributes a consumer to the pod that owns the source IP the broker sees, and a proxied client's source IP is the proxy's. So the derived quiesce set can never contain the gate.
+
+The assertion did its job: nothing was deleted, and every quiesced workload was restored. But phase 3 had already cleared Restate, so an abort here leaves a half-reset deployment: Restate empty, topics and stores intact. On the lab, Restate rebuilt its tables within a minute.
+
+**Needs a decision:** resolve proxy listeners to their client Deployments in the census; or declare the gate as a floor entry; or quiesce by label. Scaling toxiproxy down is not an option, because it severs every proxied path. Separately, consider running the live-consumer assertion before phase 3, so an abort leaves nothing half-done.
+
 ## OPEN 2026-09-29 — the identity pods roll on every helm upgrade, whether or not policy changed
 
 **Measured on the lab, 2026-09-29, revision 56 → 57:** six pods rolled that the
@@ -80,7 +88,13 @@ is not chosen here; the candidates are skipping the emission when state is
 empty, or having `on_timer` emit nothing until an input has refreshed
 provenance.
 
-## OPEN 2026-09-28 — the lab's shared `dis-sim-src` is 50 days behind the source it is copied from
+## PARTLY CLOSED 2026-09-30 (was OPEN 2026-09-28) — the lab's shared `dis-sim-src` is 50 days behind the source it is copied from
+
+**Update 2026-09-30: refreshed deliberately, with a prediction; the image half is still owed.**
+- `dis-sim-src` now carries bundle-example ef53bc7's `dis_sim.py` (byte-compared), and both fleet sims were restarted.
+- Predicted and measured: 2 pods rolled; the fixture was untouched. All 14 fleet assets read their pinned platform, where before all 14 read `UNKNOWN`; only the fixture had resolved. Entity 1004 moved from RCV-M to AH-64E-V6 at both sites. Callsigns are unchanged (the marking follows the entity id, which equals the index for a contiguous fleet). Store counts were unchanged.
+- The refresh is no longer armed for an unannounced restart: the file a restart runs is the file measured running.
+- **Still owed:** move both sims to the published `dis-sim:1.0` image. They still `pip install opendis==1.0` from PyPI on every start.
 
 **Measured on the lab, 2026-09-28:** ConfigMap `dis-sim-src` was created
 2026-08-09T03:29Z and carries one key, `dis_sim.py`. Both running sims
