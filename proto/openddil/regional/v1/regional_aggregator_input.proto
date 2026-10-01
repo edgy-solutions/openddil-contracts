@@ -81,5 +81,13 @@ message RegionalAggregatorInput {
     // test fixtures. region-wear-trends ships with this input wired but
     // not driving emissions in §B; full join verification deferred to #11.
     openddil.logistics.v1.WindowedTelemetry asset_telemetry_windows = 13;
+
+    // ADR-0044 §3. From the edge's telemetry-latest-state (EntityTelemetryEvent).
+    // Forwarded by the source App ONLY when operational_state.operational_status
+    // is DESTROYED, DEACTIVATED or REMOVED (openddil.telemetry.v1.OperationalStatus) —
+    // every other value (OPERATIONAL, UNSPECIFIED, absent) is dropped at the
+    // source App and never reaches this envelope. Consumed by:
+    // region-fleet-summary (destroyed/deactivated/removed partitions).
+    openddil.telemetry.v1.EntityTelemetryEvent operational_claim = 14;
   }
 }

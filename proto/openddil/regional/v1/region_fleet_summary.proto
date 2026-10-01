@@ -43,6 +43,18 @@ message RegionFleetSummary {
 
   google.protobuf.Timestamp observed_at = 7;
 
+  // ADR-0044 §3: terminal operational-status partitions. nominal/degraded/
+  // critical/non_operational above now count only assets WITHOUT a terminal
+  // operational-status claim; these three fields count the assets that have
+  // one. asset_count is the whole partition (buckets + terminal), so a
+  // destroyed asset stays in asset_count.
+  //
+  // Reporting status is deliberately NOT here — it is per-reader (ADR-0044
+  // §4), not a region-wide count; follow-up.
+  uint32 destroyed = 8;
+  uint32 deactivated = 9;
+  uint32 removed = 10;
+
   // Origin-node provenance (ADR-0023 Phase 6b §A/§B). Stamped by
   // faust-regional aggregator with producer_id="regional-aggregator",
   // region_id mirrored to the provenance block for projector consistency
