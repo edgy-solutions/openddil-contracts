@@ -80,4 +80,7 @@ message ManualDiscrepancyRaised {
   string description = 1;
   string severity = 2;                              // "MINOR" | "MAJOR" | "CRITICAL"
   string recommended_action = 3;
+  string source = 4;                                // opaque origin label; cm-service never interprets it
+  string component = 5;                             // BOM slot_id this report concerns
+  string fault_code = 6;                             // non-empty groups reports into one episode
 }

@@ -148,4 +148,22 @@ message ConfigurationDiscrepancy {
   // proto-only change here ships a no-op that passes every check. See
   // ADR-0018 §Amendment 2026-08-15 for the five sites an edit requires.
   AdvisoryProvenance advisory_provenance = 9;
+
+  // Episode keying — see ADR-0018 §Amendment 2026-08-15. Additive; absent
+  // on rows written before episode keying, which decode as the unkeyed manual-discrepancy
+  // shape (component/fault_code empty, sources empty).
+  string component              = 10; // BOM slot_id this discrepancy concerns
+  string fault_code             = 11; // non-empty groups reports into one episode
+  repeated DiscrepancySource sources = 12; // every report that contributed to this episode
+}
+
+// One report that contributed to an episode-keyed ConfigurationDiscrepancy
+//. `source` is an opaque label — cm-service stores it and never
+// interprets it.
+message DiscrepancySource {
+  string source                        = 1;
+  string reported_by                   = 2;
+  string event_id                      = 3;
+  google.protobuf.Timestamp reported_at = 4;
+  string description                   = 5;
 }
