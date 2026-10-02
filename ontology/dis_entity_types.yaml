@@ -91,6 +91,20 @@ mappings:
     siso_ref: "SISO-REF-010-v37"
     siso_description: "M1151A1 Integrated Armor Protection (IAP)"
 
+  # SISO names this tuple only as a radar vehicle on a tracked carrier. The
+  # pairing with the MRAD_Sensor baseline is curated here, not given by SISO.
+  # No CM or CBM schema exists for a sensor yet, so both say so (null).
+  "1_1_225_9_1_7_0":
+    platform_variant: "MRAD_Sensor"
+    platform_family: "Radar"
+    nomenclature: "Radar, Multi-Mission, Ground"
+    cm_schema: null
+    default_baseline: "MRAD_Sensor-Baseline-2026.1"
+    cbm_schema: null
+    domain_authority: null
+    siso_ref: "SISO-REF-010-v37"
+    siso_description: "Radar vehicles"
+
   # ===========================================================================
   # U.S. Army — Aviation
   # kind=1 (Platform), domain=2 (Air)
