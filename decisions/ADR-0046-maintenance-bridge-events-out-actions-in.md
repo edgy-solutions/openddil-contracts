@@ -1,225 +1,285 @@
-# ADR-0046 — The maintenance bridge: events out through the gate, actions in as local decisions
+# ADR-0046 — Release by kind, intake by kind: one gate, destinations as registry entries
 
 ## Status
 
-**PROPOSED — 2026-10-02. Awaiting approval; nothing here is built.** Extends
-`openddil:ADR-0031` (the reasoning-plane seams). It adds a second seam:
-ADR-0031 lets an agent read the tier, and this ADR sends a maintenance event
-out to the workflow plane and takes an approved action back in.
+**PROPOSED-v2 — 2026-10-03. Awaiting approval.** This replaces PROPOSED (2026-10-02). Extends `openddil:ADR-0031`.
+
+v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
+`maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
+consumer, no domain and no endpoint. Maintenance is the first instantiation, and it lives entirely in a deployment
+overlay. The other side of the seam has accepted the same shape:
+- events enter its intake as a declared kind;
+- its workflow is declarative;
+- the record it decides is an artifact OpenDDIL polls or is called back with.
 
 ### Decisions taken for this pass, recorded as such
 
-These are inputs to this ADR, not conclusions it argues for:
-
-1. **The workflow runs in iagent. OpenDDIL holds no workflow state.** Approval
-   routing, pending tasks, escalation and timers live in the iagent workflow
-   definition (`iagent:ADR-0039`) and its decision records (`iagent:ADR-0034`).
-   OpenDDIL holds the event it sent, the action it received, and the local
-   decision it made about that action. Nothing in OpenDDIL says "awaiting
-   approval".
-2. **Per-tier iagent is the design; a single instance is this pass.** Each tier
-   would eventually reach its own reasoning plane, as in ADR-0031. In this pass
-   one iagent instance (the hub's) serves every tier.
-3. **The maintenance beat is shown connected**, separate from the severance
-   rehearsals. `sever-tier.sh` is not changed to exempt anything. A severed tier
-   queues events at its gate's output, like every other egress.
-4. **Action-record vocabulary:** work orders aligned to ASD S5000F concepts,
-   faults to MIMOSA CBM concepts, declared under `ADR-0038` C1 (§Alignment
-   declared below). The alignment is by concept name only. The field
-   definitions are ours.
-5. **The first asset is a medium-range air defense radar (MRAD).** It joins the
-   lab fleet as one pinned id with a SISO radar entity type, declared in
-   `releasability.yaml`. The failure is a discrete fault in one **array
-   module**. A maintainer reports it through the UI as a CM discrepancy, and a
-   BIT-style telemetry fault is a second source. It is not a wear path.
+These are inputs, not conclusions:
+1. **The workflow runs in the reasoning plane. OpenDDIL holds no workflow state.** Approval routing, pending tasks
+   and timers live in the consumer's workflow definition and decision records. OpenDDIL holds three things: the record
+   it released, the artifact it took in, and its own local decision about that artifact.
+2. **One consumer instance serves every tier in this pass.** Per-tier instances are the design (ADR-0031).
+3. **The beat is shown connected.** `sever-tier.sh` is unchanged. A severed tier queues at its gate output, like any
+   other egress.
+4. **Alignment is by concept name only, under ADR-0038 C1**, and it is declared in the overlay's kind schemas (§3).
+5. **The first instantiation is a medium-range air defense radar (MRAD):**
+   - one pinned id with a SISO radar entity type, declared ATL in `releasability.yaml`;
+   - a discrete fault in one array module;
+   - two sources for the same fault: a maintainer's report in the edge UI (a CM discrepancy) and a BIT-style
+     telemetry fault.
 
 ## Context
 
-OpenDDIL already sends state out through one gate: the C2 egress gate
-(`openddil:ADR-0043`) reads a source topic and decides each record against one
-destination subject's nations. It writes the admitted records to a sink topic
-and logs every decision, admitted or refused, as one JSON line. The gate is
-generic: source topic, sink topic, and destination are configuration
-(`egress/main.py`).
+There is one egress gate (`openddil:ADR-0043`):
+- `EgressGate.for_destination(dest).decide(label, key)` decides a record's label against one destination's nations;
+- it applies the deny-unlabelled floor;
+- it logs one JSON decision line per record.
 
-Maintenance needs the same gate in both directions:
-- **Out:** a fault on an asset needs a decision from people who are not at the
-  tier: what to do, with which parts, and who approves.
-- **In:** that decision has to come back to the tier that owns the asset. It
-  is recorded there as that tier's own decision, and then sent on to whatever
-  system tracks the work.
+In v1 a new destination meant a new gate deployment with its own source and sink topics. It also meant per-destination
+code in the pane API (`RECORD_SOURCE`). A third consumer would have meant a third copy. The gate's predicate was
+already generic, but everything around it was not.
 
-ADR-0031's addendum already drew the division this ADR depends on:
-- **OpenDDIL holds STATE**: what is wrong with this asset now.
-- **The reasoning plane holds KNOWLEDGE**: what the manual says to do about it.
+**What v1's build left in code, which v2 retires.** These are measured on compose and pushed, but not on any lab:
+- openddil-stack: a `maintenance_actions` table;
+- openddil-demo `egress/pane_api.py`: `RECORD_SOURCE = {"system:mmis-stand-in": _fetch_maintenance_actions}`;
+- the `MaintenanceActionsPane` component;
+- two system subjects in `policy/users.yaml`.
 
-The workflow (who must approve) is a third thing. Decision 1 puts it in iagent.
+§7 says what each becomes.
 
 ## Decision
 
-### 1. Event out: a fault, with the asset's current picture
+### 1. A destination is a registry entry
 
-One `MaintenanceEvent` per **fault episode**, minted at the owning tier.
-
-| field | meaning |
-|---|---|
-| `event_id` | minted by the owning tier; stable for the episode |
-| `kind` | `cm_discrepancy` or `lifecycle_transition` |
-| `asset_id`, `owning_tier` | the subject asset and the tier that owns it (ADR-0028's static assignment) |
-| `fault` | `item` (generic item name, e.g. "array module", plus position), `fault_code`, `observed_at` |
-| `sources[]` | one entry per independent report: `source` = `maintainer_report` or `bit_telemetry`; `reported_by` (a subject `sub` or a sensor id); `observed_at`; the row it came from |
-| `picture.readiness` | the asset's current operational and reporting status (ADR-0044's two columns) |
-| `picture.factors` | the asset's current constraining factors, as the tier computes them |
-| `picture.lifecycle` | the lifecycle state, as ADR-0044 stores it |
-| `picture.spare` | for the faulted item: `on_hand_here`, `nearest_site_with_stock`, `as_of` (from the spare-parts stand-in) |
-| `picture.battle_condition` | from the readiness rollup at the owning tier |
-| `label` | `originator_nation`, `releasable_to`, from the asset's declaration in `releasability.yaml` |
-| `provenance` | the rows the picture was read from, each with its key and timestamp |
-
-**One fault, one event, however many sources.** The episode key is
-`(asset_id, fault.item, fault.fault_code)` while the episode is open. A second
-source inside an open episode is appended to `sources[]` and published as a
-revision of the same `event_id`. Events are counted by distinct `event_id`, and
-sources are counted separately. A BIT fault and a maintainer report of the same
-fault are one event with two sources.
-
-### 2. Every event goes out through the gate
-
-A second instance of the egress gate, configured for maintenance:
-- source `maint-events`
-- sink `egress-maint-events`
-- destination `system:maint-iagent`
-
-The gate decides each event exactly as it decides a C2 record: on the record's
-label against the destination subject's nations. It applies the same
-deny-unlabelled floor and logs one decision line per event. iagent's starter
-reads the sink topic. The transport binding beyond the sink topic is not
-decided here: no iagent instance is reachable from a deployed tier yet, so the
-binding is settled when one is.
-
-**Red-check**, carried by the build: an event about a BDR-originated asset,
-offered to a destination entitled to ATL only (`system:c2-stand-in-atl`, the
-existing ATL-only subject), is refused, and the refusal is logged.
-
-### 3. Destinations are subjects in the registry
-
-There is no `destinations.yaml`. A destination is a **system principal** in
-`policy/users.yaml` (`openddil:ADR-0043`). The header comment of that section
-records that such an identifier is asserted by deployment configuration. This
-ADR adds two such principals:
-
-| subject | nations | receives |
-|---|---|---|
-| `system:maint-iagent` | `[ATL, BDR]` | maintenance events (the workflow plane) |
-| `system:mmis-stand-in` | `[ATL, BDR]` | released maintenance actions (the stand-in maintenance-management system) |
-
-Both carry the existing caveat of that section: link authentication (mTLS or a
-service identity) is out of scope, and the identifier is asserted by deployment
-configuration.
-
-### 4. Action in: a work order with its approval chain embedded
-
-iagent returns one `MaintenanceAction` per decided work order.
+`destinations.yaml` is a new registry, the destination counterpart of `users.yaml`, which keeps people. Each entry
+has:
 
 | field | meaning |
 |---|---|
-| `action_id`, `event_id` | the action, and the event it answers |
-| `asset_id`, `owning_tier`, `label` | copied from the event; the tier refuses an action whose label differs from its event's |
-| `work_order.task` | what is to be done (e.g. remove and replace the array module at a position) |
-| `work_order.task_refs[]` | the manual nodes the task cites: the graph URI (the identifier, per ADR-0031's addendum), plus the data-module code as display provenance |
-| `work_order.parts[]` | `item`, `part_ref`, `quantity`, `source_site` |
-| `work_order.outcome` | `approved` or `rejected`. These are final values only: there is no pending state in OpenDDIL |
-| `approval_chain[]` | ordered steps: `step`, `role`, `approver_sub`, `decision`, `decided_at`, and a reference to iagent's decision record for that step |
-| `provenance` | iagent workflow definition id and version, instance id, the manual nodes consulted |
+| id | `system:<name>`, asserted by deployment configuration (the ADR-0043 caveat carries over: no link authentication yet) |
+| `nations` | the destination's entitlement; the gate's only input from the entry |
+| `accepts` | the kind names this destination may be released (§3); a release of any other kind is refused |
+| `transport` | `topic: <name>` or `http: {url, auth_ref}`; `auth_ref` names a credential and never holds it |
+| `intake` | optional: `{poll: {url, interval_s}}` or `{callback: {path}}`, the artifacts this destination returns (§5) |
+| `trust_on_behalf_of` | optional, default false (§6) |
 
-**Approvers are resolved from the subject registry.** Every `approver_sub` must
-resolve to a row in `policy/users.yaml`, and that subject must be entitled to
-the action's label by the same predicate the read path uses. If any approver
-fails to resolve or is not entitled, the action is refused at the tier, and the
-refusal is logged.
+- **The repository ships the registry's shape and one generic entry,** `system:c2-stand-in-atl`, moved from
+  `users.yaml`. Every other entry comes from the deployment overlay.
+- **The overlay holds:**
+  - the consumer's id and `[ATL, BDR]`;
+  - its intake URL, kind names and subscription;
+  - the maintenance-management stand-in.
+- The chart renders the overlay's entries into topaz's data next to the shipped ones (`data.openddil.destinations`).
+  The pod's policy checksum hashes them.
+- **Topaz reads its registries only at start.** A registry change rolls topaz (the checksum), and that roll is part of
+  every prediction. Reloading without a restart is a later mechanism, not this pass.
 
-### 5. Every action is a local decision at the owning tier
+`releasability.rego` resolves a destination's nations from `data.openddil.destinations[id]`. During the move it also
+reads a `system:` row left in `users.yaml`. An unknown destination still resolves to the empty set and is refused.
 
-The owning tier decides each arriving action and logs one decision line. The
-line has the same shape as the gate's (`decision_id`, `allowed`, `reason`, the
-record key) and adds the approver chain's subjects. The decision is stored
-locally at that tier, so the record of what was approved survives severance of
-the tier.
+### 2. One gate, routes as configuration
 
-An action the tier admits is then **released through the gate toward
-`system:mmis-stand-in`**:
-- a third gate instance, source `maint-actions-decided`, sink
-  `egress-mmis-actions`;
-- the maintenance pane on the hub reads what that gate released, filtered by
-  viewer nations like the C2 pane, with withheld shown as a count of
-  unlabelled records only.
+The gate is one process with a **route table**. Each route has:
 
-### 6. The fleet addition keeps both partitions
+| field | meaning |
+|---|---|
+| `source` | a topic of release requests |
+| `kind` | the declared kind the route carries |
+| `destination` | a registry id |
+| `sink` | where admitted records go, taken from the destination's `transport` |
 
-The MRAD gets one pinned id in edge-01's entity range and is declared
-ATL-originated in `releasability.yaml`:
-- **No asset belongs to two edges** (`test_49`): the id is in edge-01's range
-  only.
-- **The nation partition** (`demos/releasability-partition.sh`) still splits
-  into a non-empty ATL side and a non-empty BDR side.
+- The C2 path becomes one route: source `asset-logistics-status`, sink `egress-c2-status`.
+- With no route table, the gate's environment variables give exactly that single route, so today's deployment is
+  unchanged.
+- Adding a destination is a registry entry plus a route, and it needs no new deployment.
+
+The decision line is unchanged, plus `kind` and `route`. Its `allowed` / `reason` vocabulary is unchanged. Two
+reasons are added:
+- `kind_not_accepted`: the destination's `accepts` does not list the kind;
+- `schema_invalid`: the record does not validate against its kind (§3).
+
+### 3. Kinds are declared schemas in the overlay
+
+A **kind** is a JSON Schema document in the overlay, plus four declarations the code reads:
+
+| declaration | example (the maintenance instantiation) |
+|---|---|
+| `key` | the JSON pointer of the record's stable id (`/event_id`) |
+| `label` | the pointer to `{originator_nation, releasable_to}` (`/label`) |
+| `owning_tier` | the pointer to the tier that owns the subject (`/owning_tier`) |
+| `episode` | optional: the pointers whose tuple names one episode (`/asset_id`, `/fault/item`, `/fault/fault_code`) |
+
+The code knows a kind only as a name, a schema and these pointers. This pass declares two:
+- **`MaintenanceFaultEvent`**, which keeps v1 §1's fields:
+  - `event_id`, `asset_id`, `owning_tier`;
+  - `fault {item, fault_code, observed_at}`;
+  - `sources[]`;
+  - `picture {readiness, lifecycle, factors, spare, battle_condition}`;
+  - `label`, `provenance`.
+- **`MaintenanceAction`**, which keeps v1 §4's fields:
+  - `action_id`, `event_id`, `asset_id`, `owning_tier`, `label`;
+  - `work_order {task, task_refs[], parts[], outcome}`;
+  - `approval_chain[]`, `on_behalf_of`, `provenance`.
+
+Each schema carries its C1 alignment as an annotation (`x-alignment`), by concept name only (§Alignment declared).
+
+### 4. Outbound: release to a destination by kind
+
+A record is released by publishing a **release request** on a route's source topic. The request is the record itself.
+The gate reads the route's kind, then for each record:
+1. checks the record against the kind's schema;
+2. checks the kind against the destination's `accepts`;
+3. reads the label at the kind's `label` pointer;
+4. decides it exactly as it decides a C2 record.
+
+An admitted record goes to the destination's transport. The event is a record like any other: the gate has no
+event-specific path.
+
+**The assembler** produces the release request. It is generic code with overlay configuration.
+- **On** a trigger: a CM discrepancy that the CM service records (§8).
+- **It builds** a record of the configured kind from the asset's **picture**:
+  - readiness (`telemetry_latest_state`'s ADR-0044 columns);
+  - lifecycle (`asset_cm_state.lifecycle`);
+  - the rollup and constraining factors (`asset_logistics_status`);
+  - spares (the parts-availability records, by site and item).
+  The picture is a generic read of the asset. The kind's schema decides which sections the record carries.
+- **One episode, one record.** The record key is a uuid5 of the kind's episode tuple and the owning tier:
+  - a second source inside an open episode is appended to `sources[]` and released as a revision with the same key;
+  - records are counted by distinct key, and sources separately.
+- **Where it runs in this pass:** on the hub, reading the replicated CM topic. The key is deterministic, so a per-tier
+  assembler later mints the same key.
+
+**Red-check (carried by the build):** a route to an ATL-only destination refuses a record whose label is BDR, and logs
+the refusal.
+
+### 5. Inbound: artifact intake by kind
+
+A destination with `intake` returns artifacts of a declared kind.
+- **First pass: poll.** The intake GETs the destination's `intake.poll.url` every `interval_s`.
+- **Later: callback.** When a route from the consumer to the tier exists, it POSTs to `intake.callback.path` behind the
+  PEP.
+
+For each artifact, the intake:
+1. validates it against its kind;
+2. checks that its label equals the label of the record it answers. It refuses a mismatch;
+3. resolves every approver subject in the artifact's chain against `users.yaml`, and requires each to be entitled to
+   the label by the read path's predicate. An unresolved or unentitled approver refuses the artifact;
+4. **logs a local decision at the owning tier.** The line has the gate's shape (`decision_id`, `allowed`, `reason`,
+   key), plus the approvers' subjects. The decision and the artifact are stored at that tier in a generic
+   `intake_records` table (kind, key, label, body, decision), so the record survives severance;
+5. publishes an admitted artifact as a release request on the route toward the next destination. In this pass that is
+   the maintenance-management stand-in (`accepts: [MaintenanceAction]`). It goes through the same gate.
+
+The hub pane reads what the gate released toward a destination, as the C2 pane does:
+- **the pane is a generic released-records pane,** configured with a destination and a kind;
+- it is filtered by the viewer's nations;
+- withheld records are shown only as a count of unlabelled records.
+
+### 6. Delegation
+
+An artifact names the human it acts for (`on_behalf_of`, a subject).
+- **This pass:** the intake trusts `on_behalf_of` **by configuration**, and only from a destination whose entry sets
+  `trust_on_behalf_of: true`. Every approver is still resolved and entitlement-checked (§5.3).
+- **The design:** OAuth 2.0 token exchange (RFC 8693). The consumer presents an actor token and the subject's token,
+  and the tier verifies both instead of trusting a field.
+- The gap is the ADR-0043 caveat over again: the link is not authenticated yet.
+
+### 7. What v1's build becomes
+
+| v1 artifact | v2 |
+|---|---|
+| `system:maint-iagent`, `system:mmis-stand-in` in `users.yaml` | removed; overlay entries in `destinations.yaml` |
+| `system:c2-stand-in-atl` in `users.yaml` | moved to the shipped `destinations.yaml` |
+| `maintenance_actions` table | replaced by `intake_records` (kind, key, label, body jsonb, decision jsonb, decided_at); one new migration creates it and drops the old table, which never reached a lab |
+| `RECORD_SOURCE` in pane_api | removed; the pane reads the gate's released records for the requested destination, with no per-destination code |
+| `MaintenanceActionsPane` | a generic `ReleasedRecordsPane(destination, kind)`, mounted from runtime configuration |
+| v1 §2's second and third gate instances | retired: one gate with routes (§2) |
+
+### 8. The fleet addition, and the two sources of one fault
+
+**The MRAD:**
+- one pinned id in edge-01's range;
+- a SISO radar entity type, added to `dis_entity_types.yaml` under the ontology's own CI;
+- declared ATL in `releasability.yaml`;
 - `dis:1:1:1099` stays undeclared.
 
-Adding the asset changes the measured baseline (the fleet counts at hq, edge-01
-and region-east, the C2 pane, and the TAK picture). Those changes are predicted
-at the build, not assumed unchanged.
+Both partitions hold:
+- no asset belongs to two edges (`test_49`);
+- the nation partition has non-empty ATL and BDR sides.
+
+**Source 1: a maintainer's report.** A form on the asset's page in the edge UI takes:
+- the component;
+- a fault code from a short list (overlay configuration);
+- free text.
+
+It produces a CM discrepancy with `source: maintainer_report` and `reported_by`. The reporter's subject comes from the
+PEP (`X-OpenDDIL-Subject`), never from the form. This is the first write path through the PEP: it is gated on an
+authenticated subject, and its own decision line is logged.
+
+**Source 2: BIT telemetry.** A BIT-style telemetry fault for the same component and fault code produces the same
+discrepancy with `source: telemetry_bit`. dis-sim injects it on a schedule.
+
+**One discrepancy, two sources.** The CM service keys a fault discrepancy on `(asset, component, fault_code)`. Both
+sources land on one discrepancy with two `sources[]` entries, so the assembler releases one record.
+
+### 9. Dry-run ground truth, shared with the consumer side
+
+**The fault code is `MRAD-ARR-0417`** (an array module fault). The mock manual (six synthetic S1000D data modules,
+model ident `ODMRAD`) carries it in its fault isolation module. The four options the consumer is expected to propose,
+with the module codes each cites, are in the ground-truth file handed over with the fixture. They are recorded here by
+outline:
+1. no fault confirmed after a BIT re-run: return to service and monitor;
+2. reseat the module connector and re-run BIT;
+3. replace the array module from a spare on hand;
+4. replace the array module with a spare from the nearest site with stock.
+
+Options 3 and 4 cite the same procedures and parts. They differ only in the event's `picture.spare`. A dry run
+passes when the consumer proposes exactly these four for an event with this fault code.
+
+**This list is a draft.** It was derived from the fixture's isolation tree and the spares picture, and it becomes
+ground truth when both sides confirm it.
 
 ### Noted for later, not built
-
-For a radar, battle condition should include **the coverage lost if a section
-is taken down for the repair**. That is a future input to `picture` and to the
-approval workflow, and it is not in this pass.
+- Registry reload without a topaz restart.
+- Callback intake (needs a route from the consumer to the tier).
+- Token exchange (§6).
+- A per-tier assembler.
+- For a radar, battle condition should include the coverage lost while a section is down for repair.
 
 ## Alignment declared (ADR-0038 C1 intake)
 
-Two vocabularies are declared, by concept name only. **No schema text, element
-names or code lists from either specification are copied here.** I do not have
-either specification in hand. Writing plausible element names would produce
-the artefact this corpus keeps catching: something that reads as a standards
-citation and is a reconstruction.
+**By concept name only.** No schema text, element names or code lists from either specification are copied here or
+into the overlay's schemas.
 
-| our record | aligned to | concepts named |
+| kind (overlay) | aligned to | concepts named |
 |---|---|---|
-| `MaintenanceAction.work_order` | ASD S5000F (in-service data feedback) | maintenance task, the event that triggered it, the parts it consumed, who authorised it |
-| `MaintenanceEvent.fault` and `sources[]` | MIMOSA CBM (OSA-CBM) | state detection (the BIT source), health assessment (the fault on an item), advisory (the returned work order) |
+| `MaintenanceAction.work_order` | ASD S5000F (in-service data feedback) | maintenance task, triggering event, parts consumed, authorisation |
+| `MaintenanceFaultEvent.fault`, `sources[]` | MIMOSA CBM (OSA-CBM) | state detection (BIT), health assessment (the fault on an item), advisory (the returned work order) |
 
-The field names in §1 and §4 are **OpenDDIL-local names with a declared
-alignment intent**. Binding them to named S5000F and MIMOSA elements is owed
-before any field is frozen, the same rung ADR-0044 stands on for JC3IEDM.
+The field names are OpenDDIL-local, with a declared alignment intent. Binding them to named elements is owed before any
+field is frozen.
 
 ## Consequences
 
 ### Positive
-- The gate stays the only way out, in both directions. No new egress path has
-  its own authorisation logic.
-- The owning tier's decision log names who approved the work, as that tier's
-  own record, and it survives severance.
-- OpenDDIL keeps no workflow engine. Changing the approval process is an edit
-  to iagent's workflow definition, not an OpenDDIL release.
+- One gate and one predicate. A new consumer is a registry entry, a route and a kind schema, with no code change.
+- No OpenDDIL repository names the consumer, the domain or an endpoint.
+- The owning tier's log names who approved the work, as that tier's own record, and the record survives severance.
 
 ### Negative
-- A single iagent instance means a severed tier cannot raise a work order until
-  it is reconnected. Events queue at the tier's gate output. That is this pass's
-  instantiation, not the design.
-- System principals remain asserted by configuration (§3).
-- Approver resolution couples the action path to the subject registry being
-  current at the owning tier. A tier with a stale registry refuses
-  newly-onboarded approvers, which is the safe failure.
+- Topaz must roll on every registry change until reload exists.
+- The overlay now carries real behaviour (kinds, routes, endpoints). It needs a home with review, and ADR-0036's work
+  overlay is still doctrine only.
+- `on_behalf_of` is trusted by configuration in this pass.
+- One consumer instance: a severed tier queues until it is reconnected.
 
 ### Neutral
-- The C2 pane and the maintenance pane are the same mechanism with different
-  destinations. A third destination is configuration, not code.
+- The C2 pane and the released-records pane are one mechanism with two configurations.
 
 ## Related
-- `openddil:ADR-0031`: the reasoning-plane seams, and its 2026-09-08 addendum (state vs knowledge, graph URIs)
-- `openddil:ADR-0043`: one predicate, two subjects (the egress gate)
-- `openddil:ADR-0044`: lifecycle columns (readiness and lifecycle in `picture`)
-- `openddil:ADR-0028`: asset registry lineage (`owning_tier`)
-- `openddil:ADR-0038`: C1 intake (§Alignment declared)
-- `iagent:ADR-0034`: decision records (the approval chain's references)
-- `iagent:ADR-0039`: workflow definitions (where the approval process lives)
-- `iagent:ADR-0035`: the process plane and the data plane
+- `openddil:ADR-0031` (reasoning-plane seams; state vs knowledge)
+- `openddil:ADR-0043` (one predicate, two subjects; the gate)
+- `openddil:ADR-0044` (lifecycle and readiness columns)
+- `openddil:ADR-0028` (owning tier)
+- `openddil:ADR-0036` (overlays)
+- `openddil:ADR-0038` (C1 intake)
