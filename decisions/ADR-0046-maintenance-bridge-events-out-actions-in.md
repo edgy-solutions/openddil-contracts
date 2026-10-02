@@ -190,7 +190,7 @@ An artifact names the human it acts for (`on_behalf_of`, a subject).
 |---|---|
 | `system:maint-iagent`, `system:mmis-stand-in` in `users.yaml` | removed; overlay entries in `destinations.yaml` |
 | `system:c2-stand-in-atl` in `users.yaml` | moved to the shipped `destinations.yaml` |
-| `maintenance_actions` table | replaced by `intake_records` (kind, key, label, body jsonb, decision jsonb, decided_at); one new migration creates it and drops the old table, which never reached a lab |
+| `maintenance_actions` table | replaced by `intake_records` (kind, key, label, body jsonb, decision jsonb, decided_at); one new migration creates it and drops the old table; the old table did reach a deployed environment, empty (0 rows), so dropping it loses nothing |
 | `RECORD_SOURCE` in pane_api | removed; the pane reads the gate's released records for the requested destination, with no per-destination code |
 | `MaintenanceActionsPane` | a generic `ReleasedRecordsPane(destination, kind)`, mounted from runtime configuration |
 | v1 §2's second and third gate instances | retired: one gate with routes (§2) |
