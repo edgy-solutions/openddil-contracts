@@ -1,6 +1,9 @@
 # DESIGN 2026-10-01 — Contract A to Cursor on Target: the first thin connector
 
-**Status:** compose-only. Built and measured in the demo stack, not deployed to any cluster.
+**Status:** built and measured in the demo stack, then deployed with chart 0.1.70 (`egress.tak.enabled`) and
+measured on a cluster: the TAK server's picture holds 8 uids, exactly the 8 admitted records, and 0 for the refused
+ones. A reader pod without the readers-only label cannot connect. The adapter logged 0 skips and 0 fatals. The
+bundled TAK server has no web UI, so nothing is routed behind the PEP for it; the picture is read over the CoT stream.
 **Builds on:** DESIGN-2026-09-06-interface-contracts.md §1 (the thin egress connector), ADR-0043
 (the C2 egress gate), ADR-0029 (labels as authorship claims), ADR-0044 (lifecycle columns).
 
