@@ -2,7 +2,7 @@
 
 ## Status
 
-**PROPOSED-v2 — 2026-10-03. Awaiting approval.** This replaces PROPOSED (2026-10-02). Extends `openddil:ADR-0031`.
+**ACCEPTED (v2) — approved 2026-10-03.** This replaces PROPOSED (2026-10-02). Extends `openddil:ADR-0031`.
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -141,7 +141,10 @@ event-specific path.
   - readiness (`telemetry_latest_state`'s ADR-0044 columns);
   - lifecycle (`asset_cm_state.lifecycle`);
   - the rollup and constraining factors (`asset_logistics_status`);
-  - spares (the parts-availability records, by site and item).
+  - spares (the parts-availability records, by site and item): one row per site, each with its stock, lead time and
+    the system its figures come from, plus the nearest row with stock. Nearest is the spares source's own configured
+    nearest-first order, published on its records; the assembler copies that row and adds no rule of its own. It is
+    null when no site in that order has stock, and absent when the part is unknown.
   The picture is a generic read of the asset. The kind's schema decides which sections the record carries.
 - **One episode, one record.** The record key is a uuid5 of the kind's episode tuple and the owning tier:
   - a second source inside an open episode is appended to `sources[]` and released as a revision with the same key;
@@ -166,7 +169,10 @@ For each artifact, the intake:
    the label by the read path's predicate. An unresolved or unentitled approver refuses the artifact;
 4. **logs a local decision at the owning tier.** The line has the gate's shape (`decision_id`, `allowed`, `reason`,
    key), plus the approvers' subjects. The decision and the artifact are stored at that tier in a generic
-   `intake_records` table (kind, key, label, body, decision), so the record survives severance;
+   `intake_records` table (kind, key, label, body, decision), so the record survives severance.
+   **This pass:** the intake runs at the hub, beside the egress, so `intake_records` is in hub postgres with
+   `owning_tier` as a column. Storage at the owning tier stays the design; until it lands, a severed tier does not
+   hold its own decisions;
 5. publishes an admitted artifact as a release request on the route toward the next destination. In this pass that is
    the maintenance-management stand-in (`accepts: [MaintenanceAction]`). It goes through the same gate.
 
