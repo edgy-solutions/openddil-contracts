@@ -2,6 +2,10 @@
 
 ## Status
 
+**SUPERSEDED by ADR-0047 (2026-10-03).** `asset_id` is opaque inside the system;
+correlation belongs to the boundary mapper; the interior resolver below is
+withdrawn. Kept for the history.
+
 Proposed — 2026-05-13. **Stub.** Promoted from a follow-up note in the
 Phase 3 close-out. This ADR documents a known limitation, not a finalized
 decision; it will be revisited when the identity-resolver service is
