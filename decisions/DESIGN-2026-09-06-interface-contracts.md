@@ -1,6 +1,8 @@
 # DESIGN — interface contracts A and B (opening package)
 
 **Status: PLAN ONLY. Nothing built. Go-signal reserved.**
+*Amended 2026-10-03: Contract B read side has a mechanism decision and a
+conformance kit; see the amendment at the end. Everything else stands.*
 Written 2026-09-06. Records the addendum decisions taken the same day.
 
 Two contracts, in opposite directions, and the reason they are one package
@@ -222,3 +224,52 @@ against it rather than becoming it.
   pre-empt that conversation with a guess.
 * **Egress gating.** Nothing crosses ungated, and the gate is Slice 2's
   own opening package — this one assumes it rather than specifying it.
+
+---
+
+## Amendment 2026-10-03 — Contract B read side: mechanism and conformance kit
+
+**Mechanism.** For the first integrator the read side is a Redpanda
+Connect pipeline in the integrator's private overlay, not `dlt`. The
+source is the system of record's published API where one exists; failing
+that, its database as a read-only change feed or a read-only cursor poll,
+with the overlay recording that binding to vendor tables couples the
+adapter to the vendor's schema. Either form is one input block of the same
+pipeline. The three read-side constraints in §2 are unchanged: read-only
+by credential, the catalog shape is the contract, and extraction lag is
+data.
+
+**The catalog shape.** The element planes (`asset-element-telemetry`,
+`asset-element-inventory`) are the landing point, and the record is their
+existing envelope plus additive blocks:
+
+* `sustainment_id` beside `asset_id`, both carried from an asserted
+  mapping table, neither derived (§3);
+* `site` as a declared field, since `asset_id` is opaque and never parsed
+  (ADR-0047);
+* releasability labels under `provenance`, from a site-to-nation table
+  with no default row;
+* `extraction` — cursor and extraction time on every record (§2);
+* `operational.readiness` — the source's asserted FMC/PMC/NMC with its
+  constraining factors, kept apart from the severity fusion derives;
+* `extras` — fields with no contract home, declared organic, which no
+  consumer may bind to.
+
+**Conformance (§4).** The kit is
+`openddil-customer-bundle-example/conformance/contract-b/`: a validator
+whose every rule has a red case, a synthetic replay fixture, and a runbook
+that ends in a fixed counts block. CI fails if any rule lacks a red case
+and an empty input exits non-zero, so an empty run cannot read as a pass.
+It contains no target-system knowledge; the integrator's tables live in
+the overlay.
+
+**Not yet met.**
+
+* *Both identifiers survive every hop:* they survive adapter → topic. The
+  projector has no column for `sustainment_id` and drops it at landing.
+* *Labels survive every hop:* telemetry labels land; the inventory handler
+  does not fill `inventory_items` label columns, so inventory rows land
+  unlabelled.
+* *Degraded write path:* no write side is built; the kit covers reads only.
+* The verb set (§5) is still undecided.
+
