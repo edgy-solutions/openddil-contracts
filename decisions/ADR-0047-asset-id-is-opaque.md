@@ -67,7 +67,41 @@
 
 ## Inventory and replacements
 
-*(Filled as the replacements land.)*
+CI enforces this. `tools/check_asset_id_opaque.py` runs in every OSS repo through the reusable
+workflow `.github/workflows/asset-id-opaque.yml`. A canary step plants a parse first and requires the
+check to catch it. Exceptions live in each repo's `.asset-id-allowlist`, one line each, with a reason
+that starts with `mapper:`, `validation:`, `source-sim:` or `pending:`.
+
+### Replaced (phase 1)
+
+| Site | Was | Now reads |
+|---|---|---|
+| projector `edge_assignment.py` | `asset_id_prefix` strategy (longest prefix) | removed; a config naming it fails at startup. Use `static` (exact ids) or provenance `edge_id`/`region_id` set by the boundary mapper |
+| asset registry `edge_assignment.py`, `registry_app.py` | same strategy; static branch compared against an unused method name | same removal; static branch matches `static_map` |
+| demo `RegionalSustainmentPosture.tsx`, `LocalFleetRadar.tsx` | short label cut from the id | `assetCallsign()`, the declared callsign |
+| demo `releasability-partition.sh` | grep on the id | the shape body's `value.asset_id` and `value.originator_nation` |
+| demo hero-scenario tests 05, 06, 08, 09, 10 | id substring | `dis_entity_id.entity` equality |
+| helm `check-enumeration-coverage.sh` | `asset_id LIKE 'dis:%'` | `provenance->>'source_protocol'` |
+| sensor-ingest multicast site filter test | record-key prefix | the record value's `dis_entity_id.site` |
+| customer bundle mappings | callsign and edge chosen from the id downstream | callsign declared by the boundary mapper; prefix chain entry removed; CM seed selects by `platform_variant` |
+
+### Allowed, not parses
+
+- Charset and length validation at a trust boundary: the gateway's discrepancy body check, and the
+  frontend's `?asset=` parameter check.
+- Whole-id SQL literal quoting in a shape `where` clause.
+- The DIS simulator formatting the ids it emits.
+
+### Pending (phase 2, allowlisted as `pending:`)
+
+- Element-bearing asset discovery by an id suffix: the logistics simulator's
+  `match_asset_id_suffix`, and the frontend's `endsWith('_Sensor')` in the asset page and the
+  diagnostic canvas. The replacement is discovery by `platform_variant`. That needs the boundary to
+  stop collapsing a chassis variant into the sensor variant, which is a decision.
+- Munition → launcher linkage by id substring (`munitionAsset.ts`). It needs a declared launcher
+  field, and the upstream feed emits none today.
+- Element-telemetry shape filter `asset_id LIKE <literal>`, which becomes `=` with the discovery
+  change.
 
 ## Related
 

@@ -1,0 +1,64 @@
+name: asset_id is opaque
+
+# Fails on a new place that parses asset_id (ADR-0047). Interior code may
+# compare, key, store and display an asset id. It may not split, slice,
+# regex, prefix-check or LIKE-query it. Exceptions live in the calling
+# repo's .asset-id-allowlist, one line each with a reason.
+#
+# Every OSS repo calls this workflow (workflow_call), so the checker has
+# one copy. The canary step plants a parse in a scratch directory first:
+# a run that cannot fail on purpose is not a check.
+
+on:
+  workflow_call:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src
+
+      - uses: actions/checkout@v4
+        with:
+          repository: edgy-solutions/openddil-contracts
+          path: checker
+          sparse-checkout: tools
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # In this repo, run the checker from the commit under test, not main.
+      # (It skips its own two files by resolved path, so the copy that runs
+      # is the copy that is exempt.)
+      - name: Select checker
+        run: |
+          if [ "$GITHUB_REPOSITORY" = edgy-solutions/openddil-contracts ]; then
+            echo "TOOLS=src/tools" >> "$GITHUB_ENV"
+          else
+            echo "TOOLS=checker/tools" >> "$GITHUB_ENV"
+          fi
+
+      - name: Canary (the check must fail on a planted parse)
+        run: |
+          mkdir -p "$RUNNER_TEMP/canary"
+          printf 'site = asset_id.split(":")[1]\n' > "$RUNNER_TEMP/canary/planted.py"
+          set +e
+          python "$TOOLS/check_asset_id_opaque.py" --root "$RUNNER_TEMP/canary"
+          rc=$?
+          set -e
+          if [ "$rc" != 1 ]; then echo "canary: expected exit 1, got $rc"; exit 1; fi
+          echo "canary: planted parse caught (exit 1)"
+
+      - name: Checker tests
+        if: github.repository == 'edgy-solutions/openddil-contracts'
+        run: python -m unittest discover -s "$TOOLS" -p 'test_*.py'
+
+      - name: Check
+        run: python "$TOOLS/check_asset_id_opaque.py" --root src
