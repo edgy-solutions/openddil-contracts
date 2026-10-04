@@ -48,7 +48,8 @@ jobs:
       - name: Canary (the check must fail on a planted parse)
         run: |
           mkdir -p "$RUNNER_TEMP/canary"
-          printf 'site = asset_id.split(":")[1]\n' > "$RUNNER_TEMP/canary/planted.py"
+          # The name is an argument, so this file never holds the parse itself.
+          printf 'site = %s.split(":")[1]\n' asset_id > "$RUNNER_TEMP/canary/planted.py"
           set +e
           python "$TOOLS/check_asset_id_opaque.py" --root "$RUNNER_TEMP/canary"
           rc=$?
