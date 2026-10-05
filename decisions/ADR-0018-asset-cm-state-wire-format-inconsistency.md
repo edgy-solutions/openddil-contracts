@@ -6,6 +6,8 @@ Accepted — 2026-05-14. **Amended 2026-08-15** — the deferral stands
 unchanged; one consequence it had no cause to flag is now stated, because
 it silently invalidates a natural way of changing this path. See
 [Amendment](#amendment-2026-08-15-the-proto-is-not-the-wire).
+**Amended 2026-10-05:** a manual report with no fault code keeps its component. See
+[Amendment 2026-10-05](#amendment-2026-10-05-a-report-with-no-fault-code-keeps-its-component).
 
 ## Context
 
@@ -314,6 +316,33 @@ trigger's second clause (*"a third consumer is proposed"*) remains unfired
 at the topic level: `asset-cm-state` still has exactly two direct
 consumers, the projector and fusion's Restate subscription. The three UI
 surfaces read Postgres, not the topic.
+
+## Amendment 2026-10-05: a report with no fault code keeps its component
+
+### What changed
+cm-service had two paths for a manual discrepancy:
+- **with a fault code**, the episode path: id = uuid5 of `episode|asset|component|fault_code`, the component and code
+  kept, and one `sources[]` entry per report;
+- **without a fault code**, the older path, kept byte-identical when the episode path was added: id = uuid5 of
+  `manual|asset|description`, no component, no sources.
+
+So a maintainer who reported "something is wrong with the cooling fan" without a listed code lost the component they
+had picked. That is a valid observation and must keep it.
+
+**The rule now:**
+- **No code, with a component** → the episode path, with `fault_code` empty: id = uuid5 of
+  `episode|asset|component|`, the component kept, one source entry per report. Two such reports on the same component
+  of the same asset are one discrepancy with two sources, like coded reports.
+- **No code and no component** → the older path, unchanged.
+
+### Why this is allowed under the additive-only constraint
+`component`, `fault_code` and `sources` already exist on `DiscrepancyRecord`, with defaults. No field is added,
+removed or renamed. Replayed Restate state deserializes as before.
+
+### What it does to existing state
+A no-code discrepancy already in durable state keeps its old `manual|` id. A new no-code report on the same component
+does not merge into it; it opens an episode-path discrepancy. Restate is wiped on every upgrade of the reference
+deployment, so this is visible only in a deployment that keeps CM state across the upgrade.
 
 ## Notes for future maintainers
 
