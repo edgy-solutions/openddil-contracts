@@ -273,3 +273,34 @@ the overlay.
 * *Degraded write path:* no write side is built; the kit covers reads only.
 * The verb set (§5) is still undecided.
 
+
+---
+
+## Amendment 2026-10-05 — Contract B: the per-site parts plane
+
+The element planes carry what an asset holds; neither carries what a site
+holds. ADR-0046's spares section needs one row per site with stock, lead
+time and source system, so a site's part stock is its own plane.
+
+**The plane.** Topic `parts-availability`, one record per site and part,
+key `site:part_ref`. It is keyed by site and part, not by asset, so it
+carries no `asset_id` or `sustainment_id`. Every other block of the
+2026-10-03 shape applies unchanged: `site` declared, labels under
+`provenance`, `observed_at_ns`, `extraction`, and `extras`. Its own
+fields:
+
+* `part_ref` (and an optional `item` description);
+* `on_hand`, a non-negative count;
+* `lead_time_days`, absent when the source has no figure — never 0 and
+  never null, since 0 is a real lead time;
+* `source`, the system the figures come from;
+* `nearest_site_with_stock` and `nearest_on_hand`: the source's own
+  nearest-first answer, published on its records and never computed by a
+  consumer. Null when no site in the source's order has stock, and then
+  `nearest_on_hand` is absent.
+
+A site the source has no stock figure for gets no record. An unknown
+count is not zero.
+
+**Conformance.** The Contract B kit validates this plane, with a red case
+for each of its rules, beside the two element planes.
