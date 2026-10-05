@@ -3,6 +3,8 @@
 ## Status
 
 **ACCEPTED (v2) — approved 2026-10-03.** This replaces PROPOSED (2026-10-02). Extends `openddil:ADR-0031`.
+**Amended 2026-10-05:** a refusal for an unknown answered record is provisional. See
+[Amendment 2026-10-05](#amendment-2026-10-05-a-refusal-for-an-unknown-answered-record-is-provisional).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -289,3 +291,37 @@ field is frozen.
 - `openddil:ADR-0028` (owning tier)
 - `openddil:ADR-0036` (overlays)
 - `openddil:ADR-0038` (C1 intake)
+
+## Amendment 2026-10-05: a refusal for an unknown answered record is provisional
+
+### What happened
+An artifact can name an answered record that the intake has not seen yet. When the answers topic is empty, the intake
+counts as caught up, so it refuses the artifact `answered_record_unknown`. The unchanged-by-hash skip then never
+decides that artifact again.
+
+After a reset, the intake comes back with the producers and its answers topic is empty. It refused every action within
+2 s. The record they answered arrived about two minutes later. The refusals stayed, so the admitted action was never
+admitted. An earlier run passed only because a separate defect made the intake wait.
+
+### The rule
+- A refusal for an unknown answered record is **provisional**. It is stored and logged as a refusal
+  (`allowed: false`, `reason: answered_record_unknown`) and carries `provisional: true` and `provisional_since`.
+- The hash skip does not apply to a provisional refusal. Each poll re-decides it:
+  - when the record has arrived, the artifact goes through the remaining steps like a fresh one;
+  - while it has not arrived, nothing is logged or stored again.
+- After `answers.provisional_timeout_s` (per intake entry, default 900 s) the refusal becomes **final**:
+  `provisional: false`, with a detail that names the timeout. The reason code is unchanged; no new vocabulary.
+- Every other decision carries `provisional: false` explicitly.
+- A stored `answered_record_unknown` row without the flag predates this rule. It counts as provisional, with its
+  `decided_at` as the start. Refusals already held therefore resolve by the same path; none is cleared by hand.
+
+### Why the timeout is final, not indefinite
+An action that names a record which never comes must not stay undecided forever. The final refusal states how long the
+intake waited. The pane can then tell "not yet" apart from "never arrived".
+
+### What does not change
+- The order of the steps, the label rule, the approver rule and the gate.
+- The `deferred` path for a process that has not caught up.
+- A restart is covered by the same rule: the answers topic is re-read from the log start, and a provisional row is
+  re-decided on the next poll.
+
