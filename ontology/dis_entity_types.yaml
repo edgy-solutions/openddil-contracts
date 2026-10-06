@@ -105,6 +105,22 @@ mappings:
     siso_ref: "SISO-REF-010-v37"
     siso_description: "Radar vehicles"
 
+  # SISO's category-level air and missile defence entry, not a named system:
+  # the pairing with MRAD_Interceptor (the launcher that fires the MRAD
+  # radar's interceptors) is curated here, and choosing a named launcher
+  # tuple would claim a system this variant is not. Launchers carry no
+  # element array, and no CM, CBM or baseline exists for one yet (null).
+  "1_1_225_28_0_0_0":
+    platform_variant: "MRAD_Interceptor"
+    platform_family: "Air Defense"
+    nomenclature: "Launcher, Interceptor, Multi-Mission, Ground"
+    cm_schema: null
+    default_baseline: null
+    cbm_schema: null
+    domain_authority: null
+    siso_ref: "SISO-REF-010-v37"
+    siso_description: "Air Defense / Missile Defense Unit Equipment"
+
   # ===========================================================================
   # U.S. Army — Aviation
   # kind=1 (Platform), domain=2 (Air)
