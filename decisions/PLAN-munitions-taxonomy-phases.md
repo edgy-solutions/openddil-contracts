@@ -104,6 +104,13 @@ transport, not an outcome.
 **[ratified 2026-08-11]** — Phase 6 was **parked 2026-07-14**, to be
 revisited only if the upstream feed gains termination events.
 
+**[accepted 2026-10-06, ADR-0048]**: Phase 6 is **un-parked for the DIS path
+only**. A DIS Detonation PDU carries `detonationResult`, which is a real
+termination event, so the reason for parking does not apply there. Launches
+and detonations are decoded at ingress and recorded one row per event, and
+the timeout outcome is `unresolved` (no termination seen), never a failure or
+a miss. The upstream feed path stays parked on the original reason.
+
 > **No memory-class items remain in this document.** Both were confirmed by
 > the roadmap holder on 2026-08-11 and are now citable to this record.
 
