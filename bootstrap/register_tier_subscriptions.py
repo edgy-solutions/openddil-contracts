@@ -107,6 +107,13 @@ def _subscriptions(tier_id: str) -> list[Subscription]:
                       f"fusion-service-capability-{tier_id}"),
         Subscription("asset-cm-state", "AssetLogistics/on_cm_state_change",
                       f"fusion-service-cm-state-{tier_id}"),
+        # Fusion gets launch counts from its own subscription to
+        # effector-events, keyed by launcher asset id — not from the
+        # tier projector's table. Not in RAW_INGEST_TOPICS below: like
+        # asset-capability-snapshot above, this is not a relayed raw
+        # topic a non-direct-ingest tier must stay off.
+        Subscription("effector-events", "AssetLogistics/on_effector_event",
+                      f"fusion-service-effector-{tier_id}"),
     ]
 
     if DIRECT_INGEST:
