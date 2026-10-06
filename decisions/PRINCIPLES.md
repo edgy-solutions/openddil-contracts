@@ -1679,3 +1679,45 @@ not a pass.
 meet a prediction*, and §*Two claims that cannot both be true are a stop signal*.
 A prediction and a measurement that disagree are that stop signal in its most
 ordinary and most ignorable form.
+
+---
+
+## Offsets only grow
+
+**A topic's offsets never go backwards. Empty it in place; never delete and
+recreate it under the same name.**
+
+Every consumer that has read a topic remembers a number in it. Deleting and
+recreating the topic restarts its offsets at 0 under the same name, and every
+remembered number is now ahead of the log. Each consumer then decides alone what
+that means, and the broker cannot tell you which decision it made.
+
+The instance that earned this: Restate's Kafka ingress deduplicates per
+(consumer group, topic, partition), with the offset as the sequence number.
+After the scenario reset recreated its compacted topics, every new record sat
+below the old high mark, so every one was a "duplicate" and was dropped, with no
+error and no failed invocation. The consumer group stayed Stable and committed
+with near-zero lag. Root fusion stopped receiving CM state and registry events
+for what would have been about two days, and the reset reported every predicted
+zero as met. Only a full wipe of Restate's own storage cleared it, which is why
+an upgrade appeared to fix what a reset alone broke.
+
+So emptying is a trim, never a recreate. A compacted topic gains `delete` in its
+cleanup policy just long enough to trim its prefix to the high watermark, then
+gets its own policy back. The log is empty, and the next record takes the next
+number.
+
+*The test:* after anything that empties a topic, every subscriber that has been
+offered input since must show work done since. Count it on the consumer's side
+(invocations, rows, commits of its own state), never on the broker's side. Lag
+measures what the broker handed over, not what the consumer kept.
+
+*Generalizes to* any consumer that checkpoints or deduplicates by offset outside
+the broker: stream-processor state stores, external offset tables, source
+connectors' offset topics. Recreating a topic is a migration for every one of
+them, including the ones whose memory the broker cannot see.
+
+*Related:* §*A key change is a migration, not an edit* (the same shape: a change
+under an unchanged name), §*"Not found" is not "cleared"*, and §*A probe must
+fail distinguishably from its own zero* (lag reads zero for a stalled consumer
+and for a caught-up one).
