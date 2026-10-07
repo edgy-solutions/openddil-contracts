@@ -532,6 +532,62 @@ message OperationalState {
   // JC3IEDM attribute names and code list values are deliberately not
   // restated here; binding to them is a required step still owed.
   OperationalStatus operational_status = 6;
+
+  // ADR-0044 amendment: "posture, a third column" — a THIRD lifecycle axis,
+  // independent of operational_status and reporting_status above: a moving
+  // launcher is still operational and reporting. Decided ONCE, at the
+  // owning (edge) tier, by a per-asset state machine with history; every
+  // other tier stores the decided value and none re-derives it. Does NOT
+  // feed readiness. See the ADR-0044 amendment for the full state machine
+  // and alignment notes.
+
+  // The entity's own appearance said whether its launcher is raised (DIS
+  // land-platform appearance bit — see
+  // openddil/ontology/dis_appearance.yaml, "1_1" -> launcher). optional so
+  // the edge state machine can tell "this platform has no launcher bit at
+  // all" (unset) from "this platform's launcher bit read false" (false) —
+  // the same no-claim-from-silence distinction operational_status above
+  // relies on.
+  optional bool launcher_raised = 7;
+
+  // The decided posture value. Set only by the owning tier's state machine;
+  // every other tier stores it unchanged.
+  PostureStatus posture_status = 8;
+
+  // When the current posture_status began, per the owning tier's state
+  // machine clock (the record's own event time, not wall clock) — not when
+  // this tier first observed it.
+  google.protobuf.Timestamp posture_since = 9;
+}
+
+// ADR-0044 amendment: "posture, a third column" — see
+// OperationalState.posture_status above. march_ordered/moving/emplacing
+// declare "temporarily not operational" doctrinal intent for the weapon
+// function (the march-order and emplacement phases of a displacing
+// launcher); emplaced declares "operational" intent. Intent for egress
+// mapping only — operational_status above is never changed by posture.
+// Same discipline as OperationalStatus below: OpenDDIL-local names with a
+// declared alignment intent, not a binding to any attribute name or code
+// value (none asserted here; binding is a required step still owed).
+enum PostureStatus {
+  // No claim. Cold start (no prior state) with no launcher-raised signal,
+  // or a platform with no launcher bit at all, both land here — never
+  // guessed from a single reading (see the state machine in the ADR-0044
+  // amendment).
+  POSTURE_STATUS_UNSPECIFIED = 0;
+
+  // Stationary, launcher raised: ready to fire.
+  POSTURE_STATUS_EMPLACED = 1;
+
+  // Stationary, launcher stowed, not yet moving: preparing to displace.
+  POSTURE_STATUS_MARCH_ORDERED = 2;
+
+  // In transit between positions.
+  POSTURE_STATUS_MOVING = 3;
+
+  // Just stopped, launcher not yet raised: preparing to fire from the new
+  // position.
+  POSTURE_STATUS_EMPLACING = 4;
 }
 
 // ADR-0044 lifecycle slice "A" — see OperationalState.operational_status

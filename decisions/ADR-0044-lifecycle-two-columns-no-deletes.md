@@ -454,3 +454,105 @@ which is what §1 now forbids and what the code still does.
 * **Nothing about rate.** No measurement of how many spurious entities a live DIS
   multicast environment produces. The cheap thing to know before the work deploy
   is still the count of `kind=2` Entity State PDUs in one representative run.
+
+---
+
+## Amendment: posture, a third column
+
+**2026-10-06.** A launcher displaces: it stows, moves, stops, and raises again.
+None of that is "did this entity stop responding" (reporting) or "does this
+entity still exist and function" (operational) — a moving launcher is fully
+operational and fully reporting the whole time it is moving. It is a third,
+independent fact, and this amendment gives it its own column rather than
+folding it into either of the two §2 already drew:
+`posture_status = emplaced | march_ordered | moving | emplacing | unspecified`.
+
+### Why a column, not a status value
+
+§2 ("Two columns, not one") exists because collapsing two orthogonal questions
+into one field forces every reader to disentangle them again downstream. Adding
+posture as a value *inside* `operational_status` or `reporting_status` would
+repeat exactly that mistake a third time — "emplacing" is not a degree of
+reporting, and "moving" is not a degree of being operational. The column is
+new; the discipline is the one §2 already decided.
+
+### States and the transition table
+
+Five states, one of them the explicit no-claim state:
+
+| state | meaning |
+|---|---|
+| `unspecified` | No claim. Cold start with no launcher-raised signal yet, or a platform with no launcher bit on its domain at all. Never guessed from a single reading. |
+| `emplaced` | Stationary, launcher raised: ready to fire. |
+| `march_ordered` | Stationary, launcher stowed, not yet moving: preparing to displace. |
+| `moving` | In transit between positions. |
+| `emplacing` | Just stopped, launcher not yet raised: preparing to fire from the new position. |
+
+Decided per record by a state machine with two inputs — `launcher_raised`
+(`true` / `false` / absent, where absent means "this domain has no launcher bit
+at all", not "unknown this tick") and `speed` (derived from
+`kinematics.velocity.ecef`, never from `ground_speed`, which this pipeline never
+populates) — against two configurable holds (`POSTURE_MOVE_HOLD_S`,
+`POSTURE_STOP_HOLD_S`) and a speed threshold (`POSTURE_MOVE_SPEED_MPS`;
+defaults 10s / 20s / 1.0 m/s, env-overridable). First matching row wins:
+
+| From | Reading | To |
+|---|---|---|
+| any but moving | moving held ≥ moveHoldSeconds | moving |
+| moving | stationary held ≥ stopHoldSeconds, launcher_raised false | emplacing |
+| moving | stationary held ≥ stopHoldSeconds, launcher_raised true | emplaced |
+| emplacing, unspecified, march_ordered | stationary, launcher_raised true | emplaced |
+| emplaced | launcher_raised false | march_ordered |
+| cold start (no prior state) | stationary, stowed | unspecified (never guessed) |
+| any | launcher_raised absent (no launcher bit on this platform) | only `moving` or `unspecified`: moving by the speed rule; after stopHold, stationary → unspecified |
+| speed absent this record | — | no motion update; hold whatever motion state was already held |
+
+**Power plant is not a gate.** The state machine never reads
+`power_state`/`power_plant_on` as a precondition for any row above. That is a
+choice, not an oversight: power is already its own orthogonal axis (field 1 of
+`OperationalState`), and gating posture on it would re-collapse two facts the
+rest of this ADR keeps apart — a launcher could in principle report posture
+while its power axis is in `STANDBY`, and the state machine
+should not have an opinion about that.
+
+### Decided at the owning tier; carried, not re-derived
+
+Same discipline as Decision 4: posture is decided **once**, at the edge tier
+that owns the sensor (`openddil-tactical-agents/edge/posture.py`, called from
+`faust_edge.py`), by a per-asset state machine with history (the `asset_state`
+Faust Table, extended with the posture fields — defaults so a changelog record
+written before this amendment still loads, as a cold start). Every other tier
+(projector, store, every bridged topic reader) stores the decided value
+unchanged; none re-derives it. A reset trims the changelog, so after a reset
+every asset cold-starts `unspecified` again — the same externally-visible
+effect retention's age-based pruning has elsewhere in this ADR, from an
+unrelated cause.
+
+### Does not feed readiness
+
+`posture_status` is not an input to any readiness/FMC-NMC-PMC computation at
+any tier. A `moving` or `emplacing` launcher is exactly as operational and as
+reporting as an `emplaced` one; readiness already has its own two columns for
+those questions, and posture answering a third question is not a signal that
+either of them should change.
+
+### Alignment declared (ADR-0038 C1 intake)
+
+By concept name only, with provenance stated the same way §Alignment above
+states it for the signal and state vocabularies — no attribute names or code
+list values asserted, because the specification is not in hand:
+
+`march_ordered` and `emplacing` follow the doctrinal march-order and
+emplacement phases of a displacing launcher. Against JC3IEDM's object-item
+operational-status intent: `march_ordered` / `moving` / `emplacing` declare
+**"temporarily not operational" intent for the weapon function**; `emplaced`
+declares **"operational" intent**. This intent is for **egress mapping only**
+— `operational_status` itself is never changed by posture, exactly as the
+state-machine's own transition table never reads or writes it.
+
+**Deliberately not asserted:** any JC3IEDM attribute name or code list value.
+Binding this intent to named attributes is a required step still owed, the
+same gap §Alignment already names for the two existing columns. Snapshots of
+an asset's state at the moment of march order and at the moment of emplacement
+are named here as **owed, not built** — a natural follow-on once the egress
+mapping above exists to snapshot against.

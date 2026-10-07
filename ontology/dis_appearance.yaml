@@ -64,6 +64,14 @@ appearance:
     firepower_kill: { bit: 2 }
     power_plant:    { bit: 21 }
     deactivated:    { bit: 22 }
+    # "launcher raised" -- feeds the posture state machine's
+    # launcher_raised input (ADR-0044 amendment, "posture, a third
+    # column"). Bit 15 is OUR OWN artefact and is NOT verified against the
+    # published standard, same as the other land bits above (see ADR-0044:
+    # "the bit numbering in that YAML is our own artefact ... not verified
+    # against the published standard"). Cited here as this decoder's
+    # mapping; checking it against IEEE 1278.1 is owed and cheap.
+    launcher:       { bit: 15 }
 
   "1_2":
     _comment: "Platform / Air"
