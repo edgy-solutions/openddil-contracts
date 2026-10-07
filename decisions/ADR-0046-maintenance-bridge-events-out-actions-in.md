@@ -148,8 +148,10 @@ event-specific path.
     nearest-first order, published on its records; the assembler copies that row and adds no rule of its own. It is
     null when no site in that order has stock, and absent when the part is unknown.
   The picture is a generic read of the asset. The kind's schema decides which sections the record carries.
-- **One episode, one record.** The record key is a uuid5 of the kind's episode tuple and the owning tier:
+- **One episode, one record.** The record key is a uuid5 of the kind's episode tuple, the owning tier and the time
+  the episode was first observed:
   - a second source inside an open episode is appended to `sources[]` and released as a revision with the same key;
+  - a fault that clears and reappears, or recurs after the stores are emptied, is a new episode with a new key;
   - records are counted by distinct key, and sources separately.
 - **Where it runs in this pass:** on the hub, reading the replicated CM topic. The key is deterministic, so a per-tier
   assembler later mints the same key.
