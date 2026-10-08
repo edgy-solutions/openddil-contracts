@@ -310,6 +310,13 @@ message AssetIdentity {
   string configuration_baseline = 8;  // e.g., "M1A2-SEPv3-Baseline-2024.2"
   string cbm_schema             = 9;  // e.g., "abrams-canbus-v3"
   string domain_authority       = 10; // e.g., "TACOM", "AMCOM", "JPO"
+
+  // Which part of its platform this record describes, when one upstream
+  // entity is mapped to more than one record (e.g. a site's chassis and its
+  // sensor). Set by the boundary mapper, which is the only place that knows;
+  // interior code reads this instead of inspecting asset_id (ADR-0047).
+  // UNSPECIFIED = the record is the platform itself.
+  AssetSubsystem subsystem = 11;
 }
 
 // The DIS EntityType 7-tuple per IEEE 1278.1 / SISO-REF-010.
@@ -328,6 +335,11 @@ message DisEntityId {
   uint32 site        = 1;
   uint32 application = 2;
   uint32 entity      = 3;
+}
+
+enum AssetSubsystem {
+  ASSET_SUBSYSTEM_UNSPECIFIED = 0;
+  ASSET_SUBSYSTEM_SENSOR      = 1;
 }
 
 enum ForceAffiliation {
