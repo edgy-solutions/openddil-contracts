@@ -92,16 +92,22 @@ that starts with `mapper:`, `validation:`, `source-sim:` or `pending:`.
 - Whole-id SQL literal quoting in a shape `where` clause.
 - The DIS simulator formatting the ids it emits.
 
-### Pending (phase 2, allowlisted as `pending:`)
+### Phase 2 (closed): the parses that waited on a declared field
 
-- Element-bearing asset discovery by an id suffix: the logistics simulator's
-  `match_asset_id_suffix`, and the frontend's `endsWith('_Sensor')` in the asset page and the
-  diagnostic canvas. The replacement is discovery by `platform_variant`. That needs the boundary to
-  stop collapsing a chassis variant into the sensor variant, which is a decision.
-- Munition → launcher linkage by id substring (`munitionAsset.ts`). It needs a declared launcher
-  field, and the upstream feed emits none today.
-- Element-telemetry shape filter `asset_id LIKE <literal>`, which becomes `=` with the discovery
-  change.
+- Element-bearing asset discovery by an id suffix: the logistics simulator's suffix filter, and the
+  frontend's `endsWith('_Sensor')` in the asset page and the diagnostic canvas. The chassis and the
+  sensor keep sharing a `platform_variant`. Instead, the boundary mapper declares the sensor record
+  on `AssetIdentity.subsystem` (`ASSET_SUBSYSTEM_SENSOR`; unset means the platform itself). It is
+  carried to `telemetry_latest_state.subsystem`. The simulator's profile key is `match_subsystem`.
+- Munition → launcher linkage by id substring (`munitionAsset.ts`). `effector_launch` now records
+  the Fire's munition entity (`munition_asset_id`), and a munition's launcher and firing are read
+  from its launch row. A munition with no launch row has no declared launcher, and is shown that way
+  rather than guessed. A feed that emits no Fire events therefore gives no launcher linkage until
+  its boundary emits launch records.
+- Element-telemetry shape filter `asset_id LIKE <literal>`: the whole id is the literal and no part
+  of it is read. It is allowlisted as validation.
+
+The checker now fails on any `pending:` entry, so the allowlist holds boundary entries only.
 
 ## Related
 
