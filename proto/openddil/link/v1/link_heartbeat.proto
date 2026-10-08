@@ -1,0 +1,32 @@
+syntax = "proto3";
+package openddil.link.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// =============================================================================
+// LINK HEARTBEAT — per-tier proof that the path toward HQ is reachable
+// =============================================================================
+//
+// One record per relay heartbeat period. Each tier's link monitor produces it
+// onto that tier's OWN broker, on the `link-heartbeat` topic, keyed by link_id.
+// The tier's existing relay (bridge or uplink) carries it toward HQ along the
+// same path as the data, so seeing one arrive at HQ is evidence that the whole
+// path is reachable right now.
+//
+// Arrival time is what counts, and the receiver measures it on its own clock.
+// emitted_at comes from the sender's clock and is informational only; never
+// use it to decide whether a link is up.
+message LinkHeartbeat {
+  string link_id = 1;                       // the emitting tier's id, e.g. an edge id
+  google.protobuf.Timestamp emitted_at = 2; // sender's clock, informational only
+  LinkTraffic traffic = 3;                  // whether data was flowing when emitted
+  int64 bridge_lag = 4;                     // relay consumer-group lag at emit time; -1 = unknown
+}
+
+// Whether the tier's source topics were moving, so a quiet link can be told
+// apart from a broken one.
+enum LinkTraffic {
+  LINK_TRAFFIC_UNSPECIFIED = 0;  // not yet measured (under one window) or unreadable
+  LINK_TRAFFIC_ACTIVE = 1;       // source topics advanced inside the idle window
+  LINK_TRAFFIC_IDLE = 2;         // source topics did not advance for the whole window
+}
