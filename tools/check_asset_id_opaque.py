@@ -28,7 +28,10 @@ ALLOWLIST FORMAT
   `#` comments and blank lines are ignored. An entry matches a finding when
   the path is equal and the substring appears in that finding's source
   line. The reason must start with `mapper:`, `validation:`, `source-sim:`
-  or `pending:`; anything else is a usage error. Allowlist entries that
+  or `pending:`; anything else is a usage error. `pending:` is recognised
+  but no longer accepted: any `pending:` entry fails the run (exit 1), so
+  only boundary entries (mapper:/validation:/source-sim:) may remain.
+  Allowlist entries that
   match no finding are stale and must be removed -- the allowlist only
   shrinks. There is no inline escape hatch; the allowlist file is the only
   way to exempt a line, so every exception lives in one place.
@@ -36,7 +39,8 @@ ALLOWLIST FORMAT
 EXIT CODES (precedence 3 > 1 > 2)
   3  usage error (bad allowlist reason, bad CLI args), or zero files
      scanned -- an empty scan is not a pass.
-  1  at least one unallowlisted finding.
+  1  at least one unallowlisted finding, or at least one `pending:`
+     allowlist entry.
   2  at least one stale allowlist entry (and no usage error, no new
      finding).
   0  otherwise.
@@ -425,7 +429,8 @@ def main(argv: list[str] | None = None) -> int:
         (allowlisted_findings if matched else new_findings).append(finding)
 
     stale_entries = [e for e, u in zip(entries, used) if not u]
-    pending_count = sum(1 for e in entries if e.reason.startswith("pending:"))
+    pending_entries = [e for e in entries if e.reason.startswith("pending:")]
+    pending_count = len(pending_entries)
 
     files = files_scanned
     total = len(findings)
@@ -435,7 +440,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if usage_error or files == 0:
         exit_code = 3
-    elif new:
+    elif new or pending_count:
         exit_code = 1
     elif stale:
         exit_code = 2
@@ -453,6 +458,7 @@ def main(argv: list[str] | None = None) -> int:
             "exit_code": exit_code,
             "new_findings": [f.__dict__ for f in new_findings],
             "stale_entries": [e.__dict__ for e in stale_entries],
+            "pending_entries": [e.__dict__ for e in pending_entries],
             "usage_errors": parse_errors,
         }
         print(json.dumps(payload, indent=2))
@@ -461,6 +467,11 @@ def main(argv: list[str] | None = None) -> int:
             print(f"usage error: {err}", file=sys.stderr)
         if files == 0 and not usage_error:
             print("usage error: no files scanned", file=sys.stderr)
+        for e in pending_entries:
+            print(f"PENDING (not allowed): {e.path}	{e.substring}")
+        if pending_entries:
+            print("Pending allowlist entries are no longer accepted: only boundary "
+                  "entries (mapper:/validation:/source-sim:) may remain.")
         if new:
             for f in new_findings:
                 print(f"{f.path}:{f.line}: [{f.pattern}] {f.text.strip()}")

@@ -158,15 +158,27 @@ class AllowlistTests(unittest.TestCase):
             code, out = _run(root)
             self.assertEqual(code, 3, out)
 
-    def test_pending_reason_is_counted(self):
+    def test_pending_entry_fails(self):
         with tempfile.TemporaryDirectory() as d:
             root = pathlib.Path(d)
             _write(root, "a.py", "tail = asset_id[4:]\n")
             _write(root, ".asset-id-allowlist",
                    "a.py\tasset_id[4:]\tpending: follow-up ticket OPEN-1\n")
             code, out = _run(root)
-            self.assertEqual(code, 0, out)
+            self.assertEqual(code, 1, out)
+            self.assertIn("PENDING (not allowed): a.py\tasset_id[4:]", out)
             self.assertIn("pending=1", out)
+
+    def test_mapper_entry_for_same_finding_passes(self):
+        with tempfile.TemporaryDirectory() as d:
+            root = pathlib.Path(d)
+            _write(root, "a.py", "tail = asset_id[4:]\n")
+            _write(root, ".asset-id-allowlist",
+                   "a.py\tasset_id[4:]\tmapper: constructs the id\n")
+            code, out = _run(root)
+            self.assertEqual(code, 0, out)
+            self.assertNotIn("PENDING", out)
+            self.assertIn("pending=0", out)
 
     def test_missing_allowlist_file_is_empty_allowlist(self):
         with tempfile.TemporaryDirectory() as d:
