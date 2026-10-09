@@ -68,6 +68,8 @@ message ElementRollup {
   google.protobuf.Timestamp observed_at = 7;     // the snapshot's own observation time
   optional double core_temp_c = 8;               // asset-level readouts, when the snapshot carries them
   optional double uptime_hours = 9;
+  // The snapshot's condition, copied so the uplink carries what moved the asset.
+  openddil.telemetry.v1.Condition condition = 10;
 }
 
 // Output record on topic `asset-telemetry-windows`, keyed by asset_id.

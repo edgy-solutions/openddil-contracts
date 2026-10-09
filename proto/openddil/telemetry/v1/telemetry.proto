@@ -570,6 +570,13 @@ message OperationalState {
   // machine clock (the record's own event time, not wall clock) — not when
   // this tier first observed it.
   google.protobuf.Timestamp posture_since = 9;
+
+  // Resolved by the ingest sidecar, which keeps the per-entity state the
+  // three sources need (appearance, emission, data health). Rides on this
+  // Entity State record because latest-state is compacted per asset: a
+  // separate record for an emission-only or data-only claim would replace
+  // this one. Absent = no source claimed anything. See Condition below.
+  Condition condition = 10;
 }
 
 // ADR-0044 amendment: "posture, a third column" — see
@@ -756,6 +763,58 @@ enum HealthState {
   // PowerState.OFF: OFF is "commanded down," FAILED is "broken and can't
   // come up."
   HEALTH_STATE_FAILED = 4;
+}
+
+// =============================================================================
+// CONDITION — what each declared source currently claims, and the worst
+// =============================================================================
+//
+// Several independent sources can say something about one entity's condition:
+// the Entity State appearance bits, Electromagnetic Emission PDUs, and a Data
+// PDU health datum. Each is kept as its own claim with its own provenance and
+// the worst wins, so a consumer can say what moved the asset, not just that it
+// moved.
+//
+// The numbers on ConditionLevel are ORDINAL ONLY. The order that resolves
+// "worst" is declared in openddil/ontology/dis_condition.yaml `level_order`
+// (worst first), not inferred from the numbers, so it can be curated by PR
+// without a wire change.
+//
+// An absent Condition means no source claimed anything. Absence is not
+// health (same convention as the *_UNSPECIFIED values above). health_state
+// and power_state are unchanged by Emission and Data claims; those move only
+// the condition.
+
+enum ConditionSource {
+  CONDITION_SOURCE_UNSPECIFIED = 0;
+  CONDITION_SOURCE_APPEARANCE_DAMAGE = 1;   // Entity State appearance, damage bits
+  CONDITION_SOURCE_APPEARANCE_POWER = 2;    // Entity State appearance, power plant / deactivated bits
+  CONDITION_SOURCE_EMISSION = 3;            // Electromagnetic Emission PDU against the declared baseline
+  CONDITION_SOURCE_DATA_HEALTH = 4;         // Data PDU health datum
+}
+
+enum ConditionLevel {
+  CONDITION_LEVEL_UNSPECIFIED = 0;
+  CONDITION_LEVEL_NOMINAL = 1;
+  CONDITION_LEVEL_DEGRADED = 2;
+  CONDITION_LEVEL_CRITICAL = 3;
+  CONDITION_LEVEL_NOT_EMITTING = 4;
+  CONDITION_LEVEL_SENSOR_FAILED = 5;
+  CONDITION_LEVEL_DEACTIVATED = 6;
+  CONDITION_LEVEL_DESTROYED = 7;
+}
+
+message ConditionClaim {
+  ConditionSource source = 1;
+  ConditionLevel level = 2;
+  string detail = 3;                          // human-readable evidence, e.g. "2/4 beams", "health 41"
+  google.protobuf.Timestamp observed_at = 4;  // when the source last said it
+}
+
+message Condition {
+  ConditionLevel level = 1;                   // the worst claim
+  repeated ConditionSource moved_by = 2;      // every source at that level
+  repeated ConditionClaim claims = 3;         // every source that currently claims anything, nominal included
 }
 
 // =============================================================================
