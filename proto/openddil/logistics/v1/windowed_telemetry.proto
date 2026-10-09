@@ -53,6 +53,23 @@ message ComponentWearTrend {
   ScalarTrend remaining_useful_life = 3;         // rate at which RUL decreases
 }
 
+// Asset-level rollup of one per-element snapshot, derived at the owning edge.
+// The per-element tree never leaves that edge; this rollup is what crosses
+// the uplink. Thresholds are on element health (higher is worse): critical
+// above 0.97, degraded above 0.90 up to 0.97 -- the same bands the
+// telemetry card uses when it reads the elements directly.
+message ElementRollup {
+  string profile_name = 1;                       // element profile the snapshot came from
+  uint32 element_count = 2;
+  uint32 critical_count = 3;
+  uint32 degraded_count = 4;
+  double avg_temp_c = 5;                         // mean over elements that carry a temperature
+  double avg_load_pct = 6;                       // mean over elements that carry a load
+  google.protobuf.Timestamp observed_at = 7;     // the snapshot's own observation time
+  optional double core_temp_c = 8;               // asset-level readouts, when the snapshot carries them
+  optional double uptime_hours = 9;
+}
+
 // Output record on topic `asset-telemetry-windows`, keyed by asset_id.
 // Compacted? No — windows are time-series; cleanup.policy=delete (24h).
 message WindowedTelemetry {
@@ -74,6 +91,9 @@ message WindowedTelemetry {
   // fusion service can evaluate them without a second consumer of Silver.
   // Format: "subsystem_id:health" (e.g., "POWERPLANT:DEGRADED").
   repeated string active_fault_codes_latest = 13;
+
+  // Present only for assets with an element profile.
+  ElementRollup element_rollup = 14;
 
   google.protobuf.Timestamp computed_at = 20;
 
