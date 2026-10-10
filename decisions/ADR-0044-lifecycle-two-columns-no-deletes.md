@@ -556,3 +556,45 @@ same gap §Alignment already names for the two existing columns. Snapshots of
 an asset's state at the moment of march order and at the moment of emplacement
 are named here as **owed, not built** — a natural follow-on once the egress
 mapping above exists to snapshot against.
+
+## Amendment: deactivated is reversible; destroyed and removed are not
+
+**2026-10-10.** Section 2 made `operational_status` move only on a signal, and
+every implementation read that as "a terminal value is permanent". For
+`destroyed` and `removed` it should be. For `deactivated` it is wrong:
+deactivation is a state an entity enters and leaves (DIS sets and clears the
+appearance record's deactivated bit on the same entity), so a row that can
+never leave it misreports every entity that was switched off and on again.
+
+### The rule
+
+| status | what returns it to `operational` |
+|---|---|
+| `deactivated` | the asset **reappears**: a record carrying the asset's own kinematics and no terminal claim |
+| `destroyed` | only a reset (which empties the stores) or an explicit restore. A destroyed entity keeps transmitting (section 2), so a later record proves nothing. No restore action exists today, so for now that means reset only |
+| `removed` | only a reset. A Remove Entity has no undo on the wire: bringing the entity back would take a Create Entity, which is a new entity |
+
+Silence still changes nothing. A record without kinematics is not an
+appearance. Neither is a status-only record, nor a record that carries any
+terminal claim.
+
+### Where it is decided
+
+The rule is the same at every reader, and it is decided from the record, not
+from local history:
+
+* **Stores** (projector, every tier). On a full-row record with no claim, the
+  upsert rewrites `operational_status` from `deactivated` to `operational` and
+  stamps `operational_status_at`. It leaves any other value alone. The
+  condition is evaluated against the stored row in the same statement, so two
+  readers can never disagree about what they last stored.
+* **Regional rollup.** The edge source forwards terminal claims as before,
+  and also forwards an *appearance*. It forwards one immediately after it
+  has forwarded a `deactivated` claim for that asset, and otherwise at most
+  once per interval per asset; the interval is what covers a source restart.
+  The aggregator clears `deactivated` only for an asset it already holds. An
+  appearance never creates an entry, because entries are what the rollup
+  counts.
+
+Section 1 rule 3 (only terminal rows are prunable) is unchanged. A revived row
+is `operational` again, so it stops being eligible for pruning.
