@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted — 2026-05-14
+Accepted — 2026-05-14. **Amended 2026-10-10 — one severable proxy per
+uplink; the shared `hq-link` proxy is retired; see §Amendment.**
 
 ## Context
 
@@ -92,6 +93,61 @@ with its own consumer-group lag — and the three views would show
 genuinely different numbers. That is a deliberate future decision, not a
 bug. This note exists so no one later mistakes the lockstep regional/HQ
 numbers for a wiring error.
+
+## Amendment 2026-10-10 — one link per uplink, and HQ's broker is not a link
+
+**What the chart topology is now.** The Kubernetes chart runs the
+multi-echelon shape the single-hop note above anticipated: edges under a
+region, the region under HQ, and edges attached to HQ directly. Each child
+tier's uplink to its parent is its own hop: its own bridge and consumer
+group, its own toxiproxy proxy (`uplink-<child id>`), and its own listener
+on the parent broker, advertised at that proxy's address so the child's
+produce traffic really crosses it. That is the advertised-address lesson
+above, applied once per uplink.
+
+**`hq-link` was never a WAN link.** `redpanda-hq` advertised
+`toxiproxy:8474` on its PLAINTEXT listener, so every HQ-local Kafka client
+reached its own broker through `hq-link`: the HQ projector with its link
+monitor, the hub services, egress and the simulators. Disabling `hq-link`
+did not cut any child off from HQ. It cut HQ off from its own broker, and
+HQ's links all read down because HQ could no longer read, not because a
+child was unreachable. `redpanda-hq` now advertises its own Service on
+PLAINTEXT, and the `hq-link` proxy is gone. HQ has no uplink.
+
+**The severable-hop rule, restated.** Each uplink is severable on its own,
+by disabling that uplink's proxy. Cutting one leaves its siblings and the
+parent's own clients reading. The verification rule stands unchanged: a cut
+is proven by watching data stop on that hop and keep flowing on the others,
+not by the proxy's state.
+
+**Who can cut what.** A tier's gateway may toggle its own uplink and its
+direct children's uplinks, and nothing else. The child's screen shows the
+link as "uplink to <parent>"; the parent's screen shows one row per child.
+Both ends address the same proxy. Any authenticated subject the PDP knows
+may use the toggle, because this is demo apparatus, not an operational
+control. The capability is off by default (`linkControl.enabled`). Off
+means no proxy, bridges dial the parent broker directly, and the gateway
+serves no link routes. The hop itself (bridge, consumer group, buffer)
+exists either way.
+
+**Degrading a link, not only cutting it.** The same per-uplink proxy carries
+latency, jitter and bandwidth toxics on its upstream stream (child to
+parent, the direction the bridge produces). A slow link is still up:
+reachability does not change. The delay shows as the link's data age, the
+gap between the parent projector's tick and the sender's heartbeat time.
+Both clocks are server-side.
+
+**Reachability per link.** Each tier with children monitors heartbeat
+arrival from them (`link_status` at the region for its edges, and at HQ for
+every tier below it). The indicators stay observed, never commanded: a
+restored toggle reads down until heartbeats cross the link again. HQ freezes
+only when every link it monitors reads down, and the overlay says "all links
+down". It no longer reads the buffer row of whichever edge is attached to it.
+
+**What this supersedes.** The single-hop note no longer holds for the
+chart: each hop's buffer is its own consumer group's lag, and the views
+differ. The compose topology keeps its single proxy for now. Bringing it in
+line is a recorded follow-up.
 
 ## Consequences
 
