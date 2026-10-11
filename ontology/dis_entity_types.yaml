@@ -32,6 +32,10 @@
 #     enumerates one airframe twice (MQ-9A: Reaper and Predator B).
 #   - The `_default` entry must always be present and must not be removed.
 #   - cbm_schema and default_baseline may be null for platforms not yet onboarded.
+#   - deployment_signal is optional; one of launcher_bit | emission. Absent =
+#     this variant has no deployment phase, so posture never reads emplaced
+#     for it. Consumed by the ingress mapper, which passes only the declared
+#     signal to the posture state machine (ADR-0044 amendment).
 #
 # Country codes (selected, per SISO-REF-010-v37 enum 29):
 #   225 = United States of America
@@ -97,6 +101,7 @@ mappings:
   "1_1_225_9_1_7_0":
     platform_variant: "MRAD_Sensor"
     platform_family: "Radar"
+    deployment_signal: "emission"
     nomenclature: "Radar, Multi-Mission, Ground"
     cm_schema: null
     default_baseline: "MRAD_Sensor-Baseline-2026.1"
@@ -113,6 +118,7 @@ mappings:
   "1_1_225_28_0_0_0":
     platform_variant: "MRAD_Interceptor"
     platform_family: "Air Defense"
+    deployment_signal: "launcher_bit"
     nomenclature: "Launcher, Interceptor, Multi-Mission, Ground"
     cm_schema: null
     default_baseline: null

@@ -598,3 +598,62 @@ from local history:
 
 Section 1 rule 3 (only terminal rows are prunable) is unchanged. A revived row
 is `operational` again, so it stops being eligible for pruning.
+
+## Amendment: the deployment signal is per variant
+
+**2026-10-10.** The posture amendment above gave the state machine one
+deployment input, `launcher_raised`, and the decoder fed it for every land
+platform whose appearance was decoded. Two things were wrong with that, both
+measured on a live fleet:
+
+- A sensor displaces too, but it has no launcher. A stationary radar never
+  read `emplaced`, however long it radiated from one position.
+- Any land platform whose source sends appearance at all (a damage claim is
+  enough) decodes the launcher bit as `false`. A damaged tank that stopped went
+  `moving → emplacing`, a deployment phase a tank does not have.
+
+**Decision.** Each platform variant declares which deployment signal it has, if
+any, in `ontology/dis_entity_types.yaml` (`deployment_signal`, curated by PR
+like the variant itself):
+
+| `deployment_signal` | input | true means | false means |
+|---|---|---|---|
+| `launcher_bit` | `launcher_raised` (appearance) | launcher raised | launcher stowed |
+| `emission` | `emitting` (Electromagnetic Emission PDU) | radiating: at least one beam | an explicit EE with no beams: deliberately not radiating |
+| absent | none | — | — |
+
+The ingress mapper, where the variant is resolved, passes through only the
+declared signal; the other is deleted, never defaulted. The state machine reads
+one input, the deployment signal, through the same transition table as before
+with "launcher raised / stowed" read as "deployment signal true / false". So
+the rule is: **stationary with the variant's deployment signal → emplaced;
+stationary without it → unspecified, as before.** A variant with no declared
+signal never leaves `moving` / `unspecified`, which is the row the table
+already had for "no launcher bit on this platform".
+
+**Silence is not a signal.** `emitting` is set only from an EE PDU seen within
+the emitter's baseline `silence_after_s`. No EE at all is the absence of a
+claim (`emitting` unset): posture does not move, and the condition decoder
+still reads it `SENSOR_FAILED` once armed. Only the explicit zero-beam EE, the
+emitter's own statement that it is not radiating, is `false`; the condition
+decoder reads that `NOT_EMITTING`, not `SENSOR_FAILED`. An unexplained silence
+therefore never march-orders a radar, and a radar that stows deliberately is
+never reported failed.
+
+The sequence for a displacing sensor is then the launcher's, with the signal
+swapped: emplaced and radiating → goes silent (zero-beam EE) → `march_ordered`
+→ moves → `moving` → stops → `emplacing` → radiates → `emplaced`.
+
+### Alignment declared (ADR-0038 C1 intake)
+
+By concept name only, as the posture amendment's own declaration: a sensor's
+`march_ordered` / `emplacing` follow the doctrinal emission-control and
+emplacement phases of a displacing sensor, with radiating as its deployed
+state the way a raised launcher is a launcher's. The same JC3IEDM
+operational-status intent applies, for egress mapping only.
+
+**Deliberately not asserted:** any JC3IEDM attribute name or code list value,
+any DIS emitter-system enumeration as the meaning of "deployed", or a
+beam-function filter (a search beam and a track beam count the same here).
+Which beams make an emitter "radiating" for a given variant is owed when a
+variant needs the distinction.

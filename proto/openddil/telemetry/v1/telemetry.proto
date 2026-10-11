@@ -559,8 +559,18 @@ message OperationalState {
   // the edge state machine can tell "this platform has no launcher bit at
   // all" (unset) from "this platform's launcher bit read false" (false) —
   // the same no-claim-from-silence distinction operational_status above
-  // relies on.
+  // relies on. Passed only for variants whose deployment_signal is
+  // `launcher_bit` (ontology/dis_entity_types.yaml).
   optional bool launcher_raised = 7;
+
+  // The entity's own Electromagnetic Emission PDU said whether its emitter is
+  // radiating: true = at least one beam; false = an explicit EE with no beams
+  // (a deliberate statement that it is not radiating); unset = no claim (no EE
+  // within the emitter's silence window; silence is never a signal). Feeds the
+  // edge posture state machine only for variants whose deployment_signal is
+  // `emission` (ontology/dis_entity_types.yaml); see the ADR-0044 amendment
+  // "the deployment signal is per variant".
+  optional bool emitting = 11;
 
   // The decided posture value. Set only by the owning tier's state machine;
   // every other tier stores it unchanged.

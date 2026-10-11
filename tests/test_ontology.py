@@ -71,3 +71,38 @@ def test_no_null_platform_variant_except_default(ontology):
 def test_default_platform_variant_is_unknown(ontology):
     assert ontology["mappings"]["_default"]["platform_variant"] == "UNKNOWN", \
         "_default.platform_variant must be 'UNKNOWN'"
+
+
+VALID_DEPLOYMENT_SIGNALS = {"launcher_bit", "emission"}
+EXPECTED_DEPLOYMENT_SIGNALS = {
+    "MRAD_Sensor": "emission",
+    "MRAD_Interceptor": "launcher_bit",
+}
+
+
+def _declared_signals(ontology):
+    return {
+        e["platform_variant"]: e["deployment_signal"]
+        for e in ontology["mappings"].values()
+        if "deployment_signal" in e
+    }
+
+
+def test_deployment_signal_values_are_valid(ontology):
+    bad = {
+        k: e["deployment_signal"]
+        for k, e in ontology["mappings"].items()
+        if "deployment_signal" in e
+        and e["deployment_signal"] not in VALID_DEPLOYMENT_SIGNALS
+    }
+    assert not bad, f"invalid deployment_signal values: {bad}"
+
+
+def test_mrad_deployment_signals(ontology):
+    declared = _declared_signals(ontology)
+    assert declared.get("MRAD_Sensor") == "emission"
+    assert declared.get("MRAD_Interceptor") == "launcher_bit"
+
+
+def test_no_other_entry_declares_deployment_signal(ontology):
+    assert _declared_signals(ontology) == EXPECTED_DEPLOYMENT_SIGNALS,         "deployment_signal set changed; update EXPECTED_DEPLOYMENT_SIGNALS deliberately"
