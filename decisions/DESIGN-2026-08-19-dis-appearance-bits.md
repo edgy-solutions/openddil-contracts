@@ -185,7 +185,7 @@ literal. The lab's only DIS producer never populates the field.
 
 ```
 records sampled   : 3000
-distinct entities : 8   (both edges: NORTHPO, CAPEVER, ATLAS, BEDROCK, SYLVAN)
+distinct entities : 8   (both edges: five callsign stems)
 appearance values : {0: 3000}
 ```
 

@@ -40,7 +40,7 @@ Two adjacent observations forced the question into design space:
 A naive first pass added a single `SubsystemState` enum to the proto
 mirroring the customer's eight values. That worked for the customer but
 locked the canonical Silver model to one source's combined-state
-vocabulary — actively hostile to DIS, AFSim, VRForces, or any future
+vocabulary — actively hostile to DIS, AFSim, the co-located simulator, or any future
 adapter whose state encoding looks different. The first commit went out;
 the rework went in before deployment.
 
@@ -102,7 +102,7 @@ mappings:
   (passive/active/scan/track) → `functional_mode`; `damage_state` →
   `health_state`.
 
-- **VRForces**: entity damage states (none/slight/destroyed) →
+- **Co-located simulator**: entity damage states (none/slight/destroyed) →
   `health_state`; behavior activity → `functional_mode`.
 
 - **Any future source**: populates whichever axes it carries;
@@ -331,7 +331,7 @@ is the entire verification story (ADR-0037 clause 3).
 ### Positive
 
 1. **Adapter independence.** A new source — DIS gateway, AFSim
-   integration, VRForces feed — adds an adapter that decomposes its
+   integration, co-located simulator feed — adds an adapter that decomposes its
    source vocabulary into the canonical 3 axes. Fusion rules don't
    change. SPA cascade doesn't change. Same architectural shape that
    `projector/edge_assignment` strategies and `platform_variant_aliases`

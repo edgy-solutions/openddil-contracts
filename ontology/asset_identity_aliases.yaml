@@ -28,19 +28,19 @@ aliases:
     # the platform instance within that node.
     #
     # TODO: Populate with real site/application values from exercise EXORD.
-    #       The entries below are illustrative (VR-Forces default site=1, app=1).
+    #       The entries below are illustrative (common simulator default site=1, app=1).
 
     - dis_entity_id: { site: 1, application: 1, entity: 4773 }
       canonical_asset_id: "USA-ARMY-1HBCT-M1A2-4773"
-      notes: "1st HBCT, M1A2 SEPv3 hull #4773 (VR-Forces simulation)"
+      notes: "1st HBCT, M1A2 SEPv3 hull #4773 (simulation)"
 
     - dis_entity_id: { site: 1, application: 1, entity: 4774 }
       canonical_asset_id: "USA-ARMY-1HBCT-M1A2-4774"
-      notes: "1st HBCT, M1A2 SEPv3 hull #4774 (VR-Forces simulation)"
+      notes: "1st HBCT, M1A2 SEPv3 hull #4774 (simulation)"
 
     - dis_entity_id: { site: 1, application: 1, entity: 8001 }
       canonical_asset_id: "USA-ARMY-CAB-AH64-8001"
-      notes: "Combat Aviation Brigade, AH-64E tail #8001 (VR-Forces simulation)"
+      notes: "Combat Aviation Brigade, AH-64E tail #8001 (simulation)"
 
   # Additional feed sections (proprietary:, sim_a:, etc.) are appended by
   # the customer overlay at deploy time. See:

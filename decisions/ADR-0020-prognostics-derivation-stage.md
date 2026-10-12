@@ -161,7 +161,7 @@ not a measurement of it.**
    **Still ceilinged by coefficient uncertainty:** a perfect fit to a
    trend built on unvalidated coefficients is a precise projection of an
    unvalidated model.
-3. **Coefficient validation (this ADR's AFSIM / VR-Forces gate) →
+3. **Coefficient validation (this ADR's simulator-validation gate (AFSIM or the co-located simulator)) →
    removes the ceiling.** This is the step that makes *any* computed
    confidence trustworthy rather than merely arithmetic. Step 2 without
    step 3 produces a number that is defensible about its own fit and
@@ -207,7 +207,7 @@ oracle, and there never was one.**
 
 This is not a gap to be filled — it is a **sequence**. A real
 measured-sustainment asset is implemented *after* the derivation approach is
-validated end-to-end against **AFSIM / VR-Forces** and its potential is
+validated end-to-end against **AFSIM or the co-located simulator** and its potential is
 demonstrated. The oracle is deliberately downstream, gated on proving the
 concept first. Building it now would be building a validator for a
 mechanism nobody has yet shown is worth validating.
@@ -227,9 +227,9 @@ synthetic data.** Stated plainly, so it is never overstated:
   there is no ground truth to check them against.
 
 Validation against measured truth is an **explicitly deferred future
-phase**, gated on AFSIM / VR-Forces. This framing is not a hedge — it is the
+phase**, gated on AFSIM or the co-located simulator. This framing is not a hedge — it is the
 accurate description, and it is a legitimate thing to build: the point is
-proving the *mechanism* works so the AFSIM / VR-Forces validation work can
+proving the *mechanism* works so the validation work (AFSIM or the co-located simulator) can
 be justified. **The engine is the work; the engine is the value.** The
 oracle was only ever for validation, and validation is downstream.
 
@@ -244,7 +244,7 @@ scenario *is* the oracle — for the *mechanism*.
 
 This tests that the engine computes correctly **given its coefficients**.
 It does **not** test whether the coefficients are *correct* — that is the
-deferred AFSIM / VR-Forces validation. Two different claims; the Phase 5
+deferred simulator validation (AFSIM or the co-located simulator). Two different claims; the Phase 5
 tests make only the first. (The earlier draft's "System A calibration
 oracle" test path is deleted — it was never real. The scripted-scenario
 approach was always the cleaner one.)
@@ -332,7 +332,7 @@ applied at the next contract boundary) and does not need a separate ADR.
 - The engine is buildable *now* — it has no blocked dependency. The oracle
   was the only thing that ever looked like a blocker, and it was never
   real.
-- AFSIM / VR-Forces validation, when it comes, inherits a working,
+- Simulator validation (AFSIM or the co-located simulator), when it comes, inherits a working,
   isolated, testable engine rather than building derivation reactively
   under its own schedule pressure.
 - The isolation seams mean a later extraction into a standalone service is
@@ -380,7 +380,7 @@ applied at the next contract boundary) and does not need a separate ADR.
   moves it to Accepted. The one substantive correction from the stub: there
   is no System A calibration oracle — see [No oracle — by
   design](#no-oracle--by-design).
-- The oracle / validation phase is **AFSIM / VR-Forces-gated** and
+- The oracle / validation phase is **gated on simulator validation (AFSIM or the co-located simulator)** and
   deliberately downstream. When it lands, the `confidence` field and the
   `MEASURED` half of the provenance marker get real meaning; until then
   they are forward-looking placeholders.

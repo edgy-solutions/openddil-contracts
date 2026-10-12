@@ -62,7 +62,7 @@ conformance claim.
 | **2 — Data manipulation** | **Implemented** | Bloblang structure→Silver semantics; `faust-edge` windowing; ADR-0013 Quantity normalization; ADR-0026's decomposition of source vocabularies onto canonical axes |
 | **3 — State detection** | **Implemented** | `logistics-fusion` evaluators emitting `ConstrainingFactor` per non-nominal axis; `cm-service` compliance state; `assetTier` liveness classification |
 | **4 — Health assessment** | **Partial** | Severity roll-ups (`overall_severity`, `overall_status`) and the CM/operational quadrant model give an *assessed condition*. What is absent is **diagnosis** — fault-cause attribution. The system says *what is wrong*, not *why* |
-| **5 — Prognostics assessment** | **Partial — mechanism built, prediction not** | ADR-0020's derivation engine is **built and closed** (Phase 5): wear accumulators, remaining-life fractions, `ORIGIN_DERIVED` stamping. What is missing is a **time horizon with uncertainty** — the engine reports *fraction remaining against authored coefficients*, not *fails at H+N, ±M*. Coefficients are unvalidated by design (AFSIM / VR-Forces gated) and `confidence` is an acknowledged placeholder |
+| **5 — Prognostics assessment** | **Partial — mechanism built, prediction not** | ADR-0020's derivation engine is **built and closed** (Phase 5): wear accumulators, remaining-life fractions, `ORIGIN_DERIVED` stamping. What is missing is a **time horizon with uncertainty** — the engine reports *fraction remaining against authored coefficients*, not *fails at H+N, ±M*. Coefficients are unvalidated by design (gated on AFSIM or the co-located simulator) and `confidence` is an acknowledged placeholder |
 | **6 — Advisory generation** | **Partial — rule-based, shipping, unprovenanced** *(corrected 2026-08-12)* | `cm-service`'s discrepancy analyzer machine-generates recommended actions from baseline-vs-as-maintained comparison; they persist and render in the maintainer drill-in and in an HQ panel titled *"Enterprise CM Recommendations."* Narrow (CM domain, rule-based, no prognostic input) and carrying **no provenance whatever** — `Discrepancy.recommended_action` is a bare string. **This row read "Not implemented" as first published; AUDIT-2026-08-12 F1 falsified it** |
 | **Information presentation** | **Implemented** | The COP, governed by ADR-0035's claim classes |
 | **External system interfaces** | **Implemented, reference-only** | Egress connectors; `CmEvent.work_order_ref` carries a foreign reference to an **externally created** work order. The system points at maintenance actions; it does not originate them |
@@ -142,7 +142,7 @@ does not become the system of record for the resulting order.
 
 **What it is not.** Not automated maintenance execution. Not authoritative
 work-order ownership (see the boundary above). Not validated life
-prediction until the AFSIM / VR-Forces gate ADR-0020 defines is passed; a
+prediction until the simulator-validation gate (AFSIM or the co-located simulator) ADR-0020 defines is passed; a
 horizon computed from authored coefficients is a horizon-shaped number and
 must render as one (ADR-0035 class 1's *modelled-not-measured* treatment).
 
@@ -155,7 +155,7 @@ mechanism with `model_artifact_hash` stamping for ML units.
 
 **Trigger to schedule.** Either half moves independently. Prognostic
 prediction is gated on the validation phase ADR-0020 already names
-(AFSIM / VR-Forces), because a horizon without validated coefficients
+(AFSIM or the co-located simulator), because a horizon without validated coefficients
 overclaims in a way a fraction does not. Advisory generation is gated on
 a deployment asking for it — and on C4 being settled first, since
 advisory provenance is the expensive thing to retrofit.

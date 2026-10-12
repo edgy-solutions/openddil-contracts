@@ -355,7 +355,7 @@ enum ForceAffiliation {
 // =============================================================================
 
 message Provenance {
-  // The system that produced this event (e.g., "vrforces-bridge-01").
+  // The system that produced this event (e.g., "dis-bridge-01").
   string producer_id = 1;
 
   // The original protocol/source (e.g., "DIS/IEEE-1278.1", "MAVLink", "STANAG-4586").
@@ -498,7 +498,7 @@ message RelayHop {
 //   * DIS (IEEE 1278) EntityState `appearance` bits + EmissionSystem
 //     system_status -> map to power_state + health_state + actively_*
 //   * AFSim (AFRL) platform.is_on() + sensor.mode() + damage -> all 3 axes
-//   * VRForces (MAK) entity damage states + behaviors -> power + health
+//   * Co-located simulator entity damage states + behaviors -> power + health
 //   * Proprietary sensor feeds emitting a single combined-state enum (OFF /
 //     STANDBY / OPERATE / OPERATE_RX_ONLY / DEGRADED / SHUTDOWN / etc.) ->
 //     decomposed into the 3 axes by their ingest mapping

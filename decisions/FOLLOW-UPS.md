@@ -98,7 +98,7 @@ provenance.
 
 **Measured on the lab, 2026-09-28:** ConfigMap `dis-sim-src` was created
 2026-08-09T03:29Z and carries one key, `dis_sim.py`. Both running sims
-(`dis-sim-edge-northpoint`, `dis-sim-edge-capeverdant`) mount it at `/src`, and
+(the two example edge simulators' Deployments) mount it at `/src`, and
 the file each one is running hashes identical to it (`9a68907b…`). The repo's
 `tools/dis-sim/dis_sim.py` in openddil-customer-bundle-example hashes
 `1794f385…` — 195 diff lines, and it predates the platform pin map entirely.
@@ -129,7 +129,7 @@ with a before/after on the store counts — rather than letting a refresh arm it
 
 **Measured on the lab, 2026-09-28:** `deploy.sh` in
 openddil-customer-bundle-example applies `k8s/dis-sim.yaml`, which targets
-`openddil-sensor-ingest-edge-northpoint` and `openddil-sensor-ingest-edge-capeverdant`
+the two example edge ingest Deployments
 — the example bundle's two edges. **Neither Service exists on the lab**
 (`kubectl get svc` → NotFound, both). The lab runs Deployments of the same two
 names, pointed at `openddil-sensor-ingest-edge-01` and `-edge-02`.
@@ -1041,7 +1041,7 @@ Since openddil-customer-bundle-example 29beeb6, dis-sim gets the platform
 for an entity id from `DEFAULT_ENTITY_PLATFORMS` (or
 `DIS_ENTITY_PLATFORMS_PATH`). How many entities it builds is still a
 separate number: `--entities` / `DIS_ENTITIES`, set per site in
-`tools/dis-sim/k8s/dis-sim.yaml` (8 at northpoint, 6 at capeverdant). The
+`tools/dis-sim/k8s/dis-sim.yaml` (8 at one lab site, 6 at the other). The
 map already says which ids exist at each site. The count repeats it.
 
 **The count should derive from the map**: for the site and app dis-sim is
@@ -1150,7 +1150,7 @@ It covers the next rollout of openddil-customer-bundle-example 77d8657
 (dis-sim's list, 11 → 10 types) together with the ontology.
 
 **The fleet count does not change: 14 before, 14 after.** dis-sim creates
-`DIS_ENTITIES` entities (8 at northpoint, 6 at capeverdant, per dis-sim's
+`DIS_ENTITIES` entities (8 at one lab site, 6 at the other, per dis-sim's
 `k8s/dis-sim.yaml`) and assigns types round-robin,
 `types[index % len(types)]`. The number of entities is
 set by that variable, not by the length of the list. With 8 and 6 entities
