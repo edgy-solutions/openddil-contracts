@@ -5,6 +5,8 @@
 **ACCEPTED (v2) — approved 2026-10-03.** This replaces PROPOSED (2026-10-02). Extends `openddil:ADR-0031`.
 **Amended 2026-10-05:** a refusal for an unknown answered record is provisional. See
 [Amendment 2026-10-05](#amendment-2026-10-05-a-refusal-for-an-unknown-answered-record-is-provisional).
+**Amended 2026-10-13:** a record's key names one event; an optional `episode_id` names its episode. See
+[Amendment 2026-10-13](#amendment-2026-10-13-one-key-per-event-the-episode-as-its-own-field).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -327,3 +329,36 @@ intake waited. The pane can then tell "not yet" apart from "never arrived".
 - A restart is covered by the same rule: the answers topic is re-read from the log start, and a provisional row is
   re-decided on the next poll.
 
+
+## Amendment 2026-10-13: one key per event, the episode as its own field
+
+### What happened
+§4 gave every record of an episode the same key: the opening, each revision and the re-send on a posture change. A
+forward route that dedupes on the key then logged every record after the first as a duplicate and never sent it. The
+consumer could not tell a revision from a re-delivery, because both carried the same id.
+
+### The rule
+- A kind may declare a fifth pointer, **`episode_id`**. When it does:
+  - the episode identity of §4 (the uuid5 of the episode tuple, the owning tier and the first observation, unchanged)
+    is written at `episode_id`;
+  - the `key` pointer carries the id of **this event**. The opening event's id equals its `episode_id`. A revision's
+    id is a uuid5 of the episode and its source set. A re-send on a posture change gets a uuid5 of the episode and
+    that transition.
+- Every id is deterministic: a re-emission after a restart repeats its id and is still a duplicate.
+- The Kafka message key stays the `episode_id`, so the events of one episode stay in order on one partition.
+- A kind that declares no `episode_id` behaves as before: `key` is the episode identity.
+- Records are counted by distinct `episode_id` (§4's "records are counted by distinct key" reads as episodes).
+- The maintenance instantiation declares it: `MaintenanceFaultEvent` gains a required `episode_id` (uuid).
+  `MaintenanceAction` may carry the `episode_id` of the episode it answers.
+
+### The consumer's case key
+The consumer opens one case per event id and has not yet routed revisions into an open case. Until it confirms that
+it keys cases on `episode_id`, the route to it **dedupes on `episode_id`** and names the case by `episode_id`. It
+therefore receives only each episode's opening, as before; the opening's event id equals its episode id, so no case
+already opened changes key. A route to a stand-in consumer can omit the dedupe and receive every event. When the
+consumer confirms, its route dedupes on the event id. That is a deployment setting, not a code change.
+
+### What does not change
+- The episode tuple, the owning tier, the first-observation rule, and when an episode opens or closes.
+- The gate and its order of checks. The intake's answered-record rule, which still matches the action's answered
+  pointer against the kind's `key` (the event the action answers).
