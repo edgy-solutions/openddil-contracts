@@ -657,3 +657,89 @@ any DIS emitter-system enumeration as the meaning of "deployed", or a
 beam-function filter (a search beam and a track beam count the same here).
 Which beams make an emitter "radiating" for a given variant is owed when a
 variant needs the distinction.
+
+## Amendment: the move panel is a derivation, not a snapshot
+
+**2026-10-13.** The posture amendment named snapshots at march order and at
+emplacement as owed. This amendment pays that debt without storing a snapshot:
+the picture at march order is **derived as of the march-order instant** from
+append-only and declared inputs, by one derivation that every tier runs against
+its own store. A region's picture is therefore exactly what the region has
+received, and the same picture recomputes after a cut heals without anyone
+writing a correction.
+
+### The transition is an event, not only a column
+
+`posture_status` lives on the compacted latest-state topic, and compaction
+keeps the last value per asset. Behind a cut the region receives the asset's
+state after the heal, not the `march_ordered` and `moving` it passed through.
+So the edge, at the moment the state machine changes state, also emits a
+`openddil.posture.transition` CloudEvent on the append-only tactical-events
+topic, forwarded on every hop like any tactical event:
+
+- `data`: `from`, `to`, `at` (the edge **sample** time of the reading that
+  decided it, not the emit time), `motion_since`, `motion`, `deploy_signal`,
+  `speed_mps`, `edge_id`, `region_id`, and the nation labels when the asset
+  carries them.
+- `id`: a UUIDv5 of the asset, the new state and `at`. A replay after a restart
+  produces the same id, so a store that keys on it records the transition once.
+- No severity. It is a fact about the asset, not an alert; feed views exclude
+  the `openddil.posture.` prefix.
+
+The posture column remains the decided current value (Decision 4: decided once,
+carried). The events are its history, and the only input the derivation reads
+for timing.
+
+### What the picture is, by phase
+
+An episode is the latest `march_ordered` transition and the transitions after
+it, up to the next `march_ordered`. Every value below is either a value with
+its source and time or an absence that names the missing input. Nothing is
+filled in.
+
+- **Rounds remaining.** The effector ledger replayed as of the instant: fires
+  count as expended at their launch time, a received resupply lowers expended
+  (floored at zero) at its receive time, fire first on a tie, and remaining is
+  the declared load minus expended. Resupply needed its own append table
+  (`effector_resupply`, one row per event and munition key): the ledger's
+  current count alone cannot be replayed to a past instant.
+- **Fuel for the move.** The declared tank minus the declared burn per km times
+  the unit's declared planned distance, all three overlay values, with the stated
+  assumption of a full tank at march order. No fuel level is reported on the
+  wire, and any missing input names itself.
+- **Spares travelling.** The parts-availability rows for the unit's site. The
+  stand-in publishes them only at HQ (`parts_availability`, upserted per site
+  and part), so the edge and the region say that the stand-in is held at HQ.
+  They do not show an empty list.
+- **Maintenance deferred.** Open discrepancies detected at or before march
+  order. Closure is absence, and no work order is on record, so the panel says
+  so.
+- **Timings.** Time to march order is the start of motion minus march order.
+  Time to emplace is emplaced minus the halt. Both are edge sample times,
+  measured against a standard per variant that the overlay declares.
+- **During the move**, the same picture is frozen at march order. The edge
+  adds its uplink and buffer. Region and HQ add their own reporting status
+  for the members, with the last position held while not reporting.
+- **At emplacement**, readiness counts only when it was computed at or after
+  emplacement. Readiness has no location input, and the panel says that too.
+  The deferred rows that are still open become due. Resupply received since
+  march order is shown as applied.
+
+The declared inputs (load per asset or variant, standards per variant, units
+with their members and planned distance) reach the browser through the
+deployment document the chart renders, and are empty when undeclared.
+
+### Alignment declared (ADR-0038 C1 intake)
+
+By concept name only, as above:
+
+- The JC3IEDM operational-status intent per phase is the one the posture
+  amendment declared. It is for egress mapping only, and readiness, not
+  posture, decides.
+- A discrepancy carried across a move is an S5000F deferred maintenance task.
+- March-order and emplacement times are doctrinal timings that the overlay
+  declares, not values asserted here.
+
+**Deliberately not asserted:** any JC3IEDM or S5000F attribute name or code
+value, and any doctrinal timing as a default. A variant with no declared
+standard shows that absence.
