@@ -62,16 +62,14 @@ appearance:
       values: { 0: NONE, 1: SLIGHT, 2: MODERATE, 3: DESTROYED }
     mobility_kill:  { bit: 1 }
     firepower_kill: { bit: 2 }
-    power_plant:    { bit: 21 }
-    deactivated:    { bit: 22 }
+    power_plant:    { bit: 22 }
+    deactivated:    { bit: 23 }
     # "launcher raised" -- feeds the posture state machine's
     # launcher_raised input (ADR-0044 amendment, "posture, a third
-    # column"). Bit 15 is OUR OWN artefact and is NOT verified against the
-    # published standard, same as the other land bits above (see ADR-0044:
-    # "the bit numbering in that YAML is our own artefact ... not verified
-    # against the published standard"). Cited here as this decoder's
-    # mapping; checking it against IEEE 1278.1 is owed and cheap.
-    launcher:       { bit: 15 }
+    # column"). These positions are checked against IEEE 1278.1 Land/Air
+    # Platform appearance (launcher 16, frozen 21, power plant 22, state 23)
+    # and were previously one bit low.
+    launcher:       { bit: 16 }
 
   "1_2":
     _comment: "Platform / Air"
@@ -86,5 +84,5 @@ appearance:
     # NO firepower_kill entry. Bit 2 carries an unrelated meaning for air
     # platforms, and a decoder that read it here would assert firepower kills
     # on aircraft. Its ABSENCE is the instruction.
-    power_plant:    { bit: 21 }
-    deactivated:    { bit: 22 }
+    power_plant:    { bit: 22 }
+    deactivated:    { bit: 23 }
