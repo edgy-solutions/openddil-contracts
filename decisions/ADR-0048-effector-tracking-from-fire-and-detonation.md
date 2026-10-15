@@ -5,6 +5,9 @@
 **ACCEPTED — 2026-10-06.** Un-parks munitions Phase 6 for the DIS path only (PLAN-munitions-taxonomy-phases.md,
 "Phase 6's blocker"). The upstream feed path is unchanged.
 
+**Amended 2026-10-15 by ADR-0049:** §2 (the kind gate has a second exit, for in-flight munition tracks) and §8
+(track markers are a track layer, not an asset layer).
+
 ## Decision
 
 1. **Fire and Detonation are decoded at ingress.**
