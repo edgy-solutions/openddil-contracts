@@ -304,3 +304,48 @@ count is not zero.
 
 **Conformance.** The Contract B kit validates this plane, with a red case
 for each of its rules, beside the two element planes.
+
+---
+
+## Amendment 2026-10-15 — Contract B: the fielding plane
+
+ADR-0050 §4 needs the logistics system of record to say which serials are
+owed to a site before anything is observed there. The record is about an
+item that has not arrived, so it cannot sit on an element plane. It is its
+own plane.
+
+**The plane.** Topic `asset-fielding`, one record per serial, key
+`serial`. It goes onto the broker of the site it is fielded to, and it is
+compacted: the latest record for a serial is the claim. It is keyed by
+serial, not by asset: no observed id exists yet, so it carries no
+`asset_id` or `sustainment_id`. Every other block of the 2026-10-03 shape
+applies unchanged: `site` declared, labels under `provenance`,
+`observed_at_ns`, `extraction` and `extras`. Its own fields:
+
+* `serial`, the item's serial as the source holds it. Never empty and
+  never `none`. A source item with no serial gets no record, because
+  nothing could ever correlate it.
+* `platform_variant`, the variant the item is expected to resolve to. The
+  candidate rule (ADR-0050 §1) compares it with the observed entity's
+  resolved variant, and nothing else.
+* `unit`, the holding unit's id from the deployment's declared unit list.
+* `due_by_ns`, when the item is owed at the site. Past it the row is
+  overdue and stays listed.
+
+The ADR's names map onto the plane as follows:
+* `fielded_to` is `site`;
+* `owning_nation` is `provenance.originator_nation`;
+* `releasable_to` is `provenance.releasable_to`.
+
+The labels are the owning unit's nation as the source states it, with no
+default. The site's own nation is not substituted, because a unit can be
+fielded to a site another nation runs.
+
+**What the plane never says.** It never names an observed id, and nothing
+downstream derives one from it. A serial stops being expected only when a
+person's declaration correlates it (ADR-0050 §2). A record is never
+withdrawn because time passed.
+
+**Conformance.** The Contract B kit validates this plane beside the other
+three, with a red case for each of its rules: `serial_invalid`,
+`fielding_invalid` (variant or unit absent) and `due_by_invalid`.

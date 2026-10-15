@@ -130,6 +130,9 @@ permanent (ADR-0029).
   - It goes onto the fielded-to edge's broker as topic `asset-fielding`, compacted and keyed by serial.
   - It is projected to `asset_fielding` and bridges up like any edge topic.
 - **When a serial is expected.** A serial is expected while no `asset_correlation` row names it.
+- **On the wire** it is Contract B's fielding plane (DESIGN-2026-09-06, amendment 2026-10-15). `fielded_to` is the
+  plane's `site`, `due_by` is `due_by_ns`, and the owning nation and `releasable_to` are the labels under
+  `provenance`.
 
 ### 5. Every tier sees the unknowns
 
