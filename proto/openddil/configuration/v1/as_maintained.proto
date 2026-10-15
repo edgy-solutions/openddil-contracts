@@ -8,6 +8,12 @@ import "openddil/configuration/v1/discrepancy.proto";
 // =============================================================================
 // As-Maintained Configuration — actual current state of one asset
 // ADR-0009: Persisted in compacted Kafka topic `asset-cm-state`, keyed by asset_id.
+//
+// Alignment declared (ADR-0038 C1 intake; ADR-0009 §Alignment declared):
+// every field in this file is configuration status accounting as EIA-649
+// and NATO ACMP-2000 name it, with the as-maintained baseline as the
+// reference. OpenDDIL-local names with a declared alignment intent, not a
+// binding: no element names or code lists from either standard are used.
 // =============================================================================
 
 // Per-asset compliance state for a single Modification Requirement.

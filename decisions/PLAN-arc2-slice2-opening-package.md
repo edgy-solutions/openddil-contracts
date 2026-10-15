@@ -275,7 +275,7 @@ to be refused with reason `no_nation_overlap`; and a record carrying a
 
 ## 6. What this package deliberately does not decide
 
-- **The real ALCS adapter and the C2's inbound format.** Contract A is
+- **The real logistics-system-of-record adapter and the C2's inbound format.** Contract A is
   defined against published status vocabulary and never against a C2's
   inbound API. Nothing here assumes one.
 - **Whether the gate's decision is final.** Contract A says the per-consumer

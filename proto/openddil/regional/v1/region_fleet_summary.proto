@@ -15,6 +15,10 @@ import "openddil/telemetry/v1/telemetry.proto";
 // region_fleet_summary handler, which UPSERTs into the region_fleet_summary
 // table keyed by region_id.
 //
+// The asset-cm-state driver's values are configuration status accounting
+// (EIA-649, NATO ACMP-2000) against the as-maintained baseline; ADR-0009
+// §Alignment declared.
+//
 // Severity buckets here mirror LogisticsSeverity (asset-logistics-status
 // driver) and lifecycle/overall_status (asset-cm-state driver). An asset's
 // final bucket is the WORST of its logistics severity and its cm-state

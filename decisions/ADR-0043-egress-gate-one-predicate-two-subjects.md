@@ -250,7 +250,7 @@ observed passing is a test whose green means nothing.
 
 ## What this ADR does not decide
 
-- **The real ALCS adapter and the C2's inbound format.** Contract A is
+- **The real logistics-system-of-record adapter and the C2's inbound format.** Contract A is
   defined against published status vocabulary and never against a
   particular consumer's inbound API. Nothing here assumes one.
 - **Whether the gate's decision is final.** If a receiving C2 cannot carry

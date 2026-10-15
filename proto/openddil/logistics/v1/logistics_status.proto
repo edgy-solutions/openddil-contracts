@@ -67,6 +67,9 @@ message AssetLogisticsStatus {
 
   google.protobuf.Timestamp computed_at = 20;
   google.protobuf.Timestamp latest_telemetry_sample_time = 21;
+  // The as-maintained baseline this status was assessed against: the
+  // reference for configuration status accounting (EIA-649, NATO
+  // ACMP-2000); ADR-0009 §Alignment declared.
   string cm_baseline_id = 23;
 
   // Monotonic counter on the per-asset Restate object — increments on every

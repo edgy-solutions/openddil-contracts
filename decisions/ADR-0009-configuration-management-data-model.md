@@ -66,3 +66,28 @@ and is verified by `test_manual_discrepancy_survives_reanalysis`,
 `clear_manual_discrepancy(discrepancy_id)` handler (planned for
 Phase 3.5) is the right way to remove manual entries — not by letting
 the analyzer wipe them on the next observation.
+
+## Alignment declared (ADR-0038 C1 intake), 2026-10-14
+
+**By concept name only.** No schema text, element names or code lists from either specification are copied into the
+contracts.
+
+| field (contracts) | aligned to | concept named |
+|---|---|---|
+| `AsMaintainedConfiguration` (`installed`, `mod_status`, `discrepancies`, `overall_status`, `baseline_id`, `lifecycle`), `ConfigurationStatus`, `ModComplianceState` | EIA-649; NATO ACMP-2000 | configuration status accounting |
+| `ConfigurationBaseline`, `AuthorizedCi`, `ModificationRequirement`, `ConfigurationItem` | EIA-649; NATO ACMP-2000 | configuration status accounting |
+| `ConfigurationDiscrepancy`, `CmEvent` and its event types | EIA-649; NATO ACMP-2000 | configuration status accounting |
+| `AssetIdentity.configuration_baseline`, `AssetLogisticsStatus.cm_baseline_id`, the asset-cm-state driver of `RegionFleetSummary` | EIA-649; NATO ACMP-2000 | configuration status accounting |
+
+**The reference is the as-maintained baseline.** Every status is a statement about one asset's as-maintained
+configuration against the baseline it is assigned. An asset with no baseline is not assessed; an asset with a baseline and
+no assessment has not reported. The two are different facts and are shown differently.
+
+**The display words are status accounting words.** The surface says *conforms* or *deviates* (*deviates: critical* for a
+critical discrepancy). It never says *mission capable*: CM status and operational severity are separate axes
+(ADR-0035, class 6). The stored `CONFIG_STATUS_*` tokens are unchanged. The pipeline reads them by name, so a rename is a
+migration and is not part of this declaration.
+
+The field names are OpenDDIL-local, with a declared alignment intent. Binding them to named elements is owed before any
+field is frozen. The intent declarations already made elsewhere stay as they are: ADR-0046 (ASD S5000F, MIMOSA OSA-CBM)
+and ADR-0044 (ASD S5000F).

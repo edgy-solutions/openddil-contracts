@@ -35,7 +35,7 @@ read path working needed a simple projector first, and a flat dataset was
 the fastest route to three views on screen. The risk is not the collapse
 itself. **The risk is letting the flat assumption harden into places that
 are expensive to reverse**: the schema, the projector, the aggregation
-logic, and — most urgently — the ALCS/EAGLE egress bridges about to be
+logic, and — most urgently — the egress bridges to the logistics system of record about to be
 built, which are the work most likely to bake "there is one flat pool" into
 an external contract.
 
@@ -80,7 +80,7 @@ rules that apply to every change between now and hierarchical restoration.
    list" has to be rewritten at the hierarchy phase; code that aggregates
    "this node's children" just gets a real tree handed to it.
 
-4. **Egress bridges (ALCS/EAGLE) carry echelon context.** Any bridge that
+4. **Egress bridges to the logistics system of record carry echelon context.** Any bridge that
    exports OpenDDIL data to an external system must include the originating
    echelon (edge/region, or a node path) in what it emits or in its
    addressing. An egress contract that assumes a single flat source is the
@@ -106,7 +106,7 @@ never slipped in as a side effect of building something else the short way
   for a future per-tier deployment.
 
 Constraints 3 and 4 are forward-looking — they bind the aggregation work
-and the ALCS/EAGLE bridge work that has not yet been built.
+and the logistics-system-of-record bridge work that has not yet been built.
 
 ## Consequences
 
@@ -119,7 +119,7 @@ and the ALCS/EAGLE bridge work that has not yet been built.
 - The schema and projector are already shaped for the hierarchy. When the
   restoration phase lands, the per-asset read model does not need a
   migration that adds a structural dimension under live consumers.
-- The ALCS/EAGLE egress work — the highest-risk place to bake in the flat
+- The egress work to the logistics system of record — the highest-risk place to bake in the flat
   assumption — now starts with constraint 4 already on the table.
 
 **Cons**

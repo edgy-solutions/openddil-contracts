@@ -215,7 +215,7 @@ engine; test_39 verified the integration). No sub-phase ships with a
 - **Phase 6d (optional / scope-permitting) — cleanup and forward
   preparation.** Customer-overlay per-edge AMQP routing
   (`openddil-customer-bundle` + customer-overlay overlay); ADR-0019
-  re-examination if Phase 6 surfaced reasons; ALCS/EAGLE constraint 4
+  re-examination if Phase 6 surfaced reasons; egress constraint 4
   prep work (egress bridges with echelon context). Each item is
   individually scope-checked.
 

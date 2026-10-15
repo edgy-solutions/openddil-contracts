@@ -48,7 +48,7 @@ explicitly **non-retroactive** for existing services.
   the soonest pending mod's due_date passes" — Restate's
   `ctx.object_send(handler, send_delay=...)` is the natural primitive.
 - **Durable side effects with retry semantics.** Publishing to Kafka,
-  calling enterprise APIs (ALCS, EAGLE), sending notifications — wrapping
+  calling enterprise APIs (the logistics system of record), sending notifications — wrapping
   those calls in `ctx.run()` makes them journaled and at-least-once with
   idempotency by handler invocation.
 - **Lifecycle / registration flows.** `LifecycleState` transitions, an
