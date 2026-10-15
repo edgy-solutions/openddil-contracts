@@ -4,6 +4,18 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-14 — the stored `CONFIG_STATUS_IN_COMPLIANCE` token, renamed for a quiet week
+
+The surface now says *conforms* / *deviates* (ADR-0009 §Alignment declared). The stored tokens did not change. `CONFIG_STATUS_IN_COMPLIANCE` and its siblings are read by name in several places, so a rename is a migration, not a relabel:
+- the `ConfigurationStatus` enum in `as_maintained.proto`;
+- `asset_cm_state.overall_status` in each tier's store;
+- the `tactical_events` severity column (which also mixes CM and operational values: IH-3);
+- fusion's CM rules in `rules.py`;
+- the cm-service analyzer's rollup;
+- the regional fleet-summary buckets.
+
+**No runtime benefit.** Do it in a quiet week, as one coordinated change with a store migration, never piecemeal. Until then, the frontend's `cmStatusBadge` is the only place the words are mapped.
+
 ## OPEN 2026-09-30 — reset phase 4 cannot quiesce a consumer that reaches its broker through toxiproxy
 
 **Measured on the lab, 2026-09-30:** the first reset since the egress gate was deployed (chart 0.1.62) aborted in phase 4. The live-consumer assertion held for 180s on `group=egress-gate-c2 topics=asset-logistics-status broker=hq owners=PROXY/openddil-toxiproxy`. The census attributes a consumer to the pod that owns the source IP the broker sees, and a proxied client's source IP is the proxy's. So the derived quiesce set can never contain the gate.
