@@ -73,6 +73,10 @@ edge is cut.
    The intake writes topic `asset-declarations`, compacted and keyed by `asset_id`.
 4. **When `baseline_id` is not `none`,** the PEP posts a `BaselineAssigned` CmEvent to cm-intake with
    `recordedBy` = the declarer. This is the baseline assignment.
+   - cm-service also reads the declaration record whenever an asset is first seen with empty state: a new asset,
+     or every asset after the state wipe an upgrade or reset runs. A declared baseline that is loaded is used over
+     the variant default. One that is not loaded warns and falls back to the variant default. So the assignment
+     survives a state wipe without the event being replayed.
 5. **The projector writes the store.**
    - `asset_declaration` always gets a row.
    - `asset_correlation` (`serial` ↔ `asset_id`) gets a row when a serial is given.
@@ -100,8 +104,11 @@ edge is cut.
   baseline loaded, otherwise the variant default.
 - **Samples before the cache refresh** (≤ the TTL) still arrive unlabelled.
 
-**Reset.** The full reset clears all three tables and trims the topic, as it clears every custody record on the lab.
-The id returns to observed-undeclared on its next sample. The decision log is not cleared: decision lines are
+**Reset.** By default, the full reset keeps the declaration and correlation tables and the `asset-declarations`
+topic, and confirms that they are unchanged. Declarations are custody records, not exercise state. With
+`exerciseControl.resetJob.clearExerciseDeclarations: true` (a lab exercising the arrival beat), the reset clears all
+three tables and trims the topic, and the id returns to observed-undeclared on its next sample. Fielding records are
+exercise state and are always cleared. The decision log is not cleared: decision lines are
 permanent (ADR-0029).
 
 **Roles.**
@@ -180,3 +187,4 @@ field is frozen.
 - DESIGN-2026-09-06 §2: Contract B read side.
 
 - 2026-10-15: §2 item 6 amended to declaration, then row, then default, then unlabelled. A default must never beat a person's declaration.
+- 2026-10-15: §2 item 4: cm-service reads the declaration on first-seen registration, so a declared baseline survives a state wipe. Reset: declarations are kept unless `clearExerciseDeclarations` is set.
