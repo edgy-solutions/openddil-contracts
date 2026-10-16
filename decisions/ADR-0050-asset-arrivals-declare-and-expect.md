@@ -80,10 +80,13 @@ edge is cut.
      edge's declaration reaches HQ on heal.
 6. **The releasability row for the id is the declaration row itself.**
    - Ingress looks the id up in this order:
-     1. the file's `assets`;
-     2. else the owning store's `asset_declaration`, through a short-TTL cached query;
-     3. else unlabelled.
-   - The file wins, so a declaration for an id the file already labels is refused (already in fleet).
+     1. the owning store's `asset_declaration`, through a short-TTL cached query;
+     2. else the file's `assets` row;
+     3. else the file's `default_originator_nation` (a deployment default, e.g. per edge);
+     4. else unlabelled.
+   - The file's rows win over a declaration for the same id, so a declaration for an id the file already labels
+     is refused (already in fleet). Only `assets` rows count; the default never does.
+   - An asset labelled only by a default is still undeclared and may be declared.
    - A failed lookup stamps nothing. A store outage withholds and never mislabels.
 
 **From that record forward the asset is in the fleet.**
@@ -175,3 +178,5 @@ field is frozen.
 - ADR-0046: intake pattern and the local decision line at the owning tier.
 - ADR-0047: the observed id is opaque; serial correlation is a separate record.
 - DESIGN-2026-09-06 §2: Contract B read side.
+
+- 2026-10-15: §2 item 6 amended to declaration, then row, then default, then unlabelled. A default must never beat a person's declaration.
