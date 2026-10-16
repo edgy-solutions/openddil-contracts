@@ -261,7 +261,7 @@ Named, not resolved here. Each is real work with its own sizing.
 `edge_id` / `region_id` (ADR-0023) are named proto fields encoding a
 two-level hierarchy into the schema. The generic form is a node
 identifier plus parent chain — e.g. a materialized path
-(`nato/nld/north/site-04`) or an equivalent adjacency representation —
+(`coalition/atl/north/site-04`) or an equivalent adjacency representation —
 of which `edge_id`/`region_id` is the two-level projection.
 
 This is the **deepest hardcoding and the most expensive to move**: it
