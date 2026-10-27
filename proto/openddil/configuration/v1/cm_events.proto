@@ -41,6 +41,7 @@ message CmEvent {
     CiSerialNumberCorrected serial_corrected = 13;
     BaselineAssigned baseline_assigned = 14;
     ManualDiscrepancyRaised manual_discrepancy = 15;
+    ManualDiscrepancyResolved manual_discrepancy_resolved = 16;
   }
 }
 
@@ -89,4 +90,13 @@ message ManualDiscrepancyRaised {
   string source = 4;                                // opaque origin label; cm-service never interprets it
   string component = 5;                             // BOM slot_id this report concerns
   string fault_code = 6;                             // non-empty groups reports into one episode
+}
+
+// Closes the open manual-discrepancy episode on (asset_id, component, fault_code).
+// The envelope's recorded_by names who resolved it. A resolve with no matching open
+// episode is a no-op. The next report of the same code starts a new episode.
+message ManualDiscrepancyResolved {
+  string component = 1;                             // BOM slot_id of the open episode
+  string fault_code = 2;                            // must be non-empty: keyed episodes only
+  string resolution = 3;                            // free text: what was done
 }
