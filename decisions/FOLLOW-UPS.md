@@ -4,6 +4,18 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-29 — first slice: the fault cleared, and the record stayed (ADR-0051)
+
+**Not scheduled.** About 4 days. Keep the closed episode in cm-service (`cleared_at_ns`, `cleared_by`, `resolution`) instead of filtering it out on `ManualDiscrepancyResolved`; freeze `baseline_id` and the `ModCompliance` list at open; a `failure_episodes` table with rounds and moves at open and close; an episode history on the asset page; run on the lab as file, resolve, file. Folds into the per-tier chain increment (`ROADMAP-2026-10-29-isolation-increments.md`). Home: ADR-0051 §First demo-able slice. Debt: GD-15.
+
+## OPEN 2026-10-29 — first slice: the release was refused, and the refusal said why (ADR-0052)
+
+**Not scheduled.** About 4.5 days. `emitting` and `launcher_raised` (with `_at`) as columns on `telemetry_latest_state`; a `WorkRelease` intake kind; the interlock check in the intake with `interlock_conflict` / `interlock_state_unknown`; two lab rule files; three releases on the lab (radiating refused, round in flight refused, silent admitted). Folds into the per-tier chain increment. Home: ADR-0052 §First demo-able slice. Debt: GD-16.
+
+## OPEN 2026-10-29 — first slice: three sources, one asset, no collapse (ADR-0053)
+
+**Not scheduled.** About 3 days. A PEP-mediated read of observed, declared and derived readiness for one asset with provenance; one pane of three columns with a disagreement mark and no rolled-up readiness; one band-mapping overlay file; three lab assets (agree, CM red with observed operational, silent past window). Folds into the per-tier chain increment. Home: ADR-0053 §First demo-able slice. Debt: GD-17.
+
 ## OPEN 2026-10-14 — the stored `CONFIG_STATUS_IN_COMPLIANCE` token, renamed for a quiet week
 
 The surface now says *conforms* / *deviates* (ADR-0009 §Alignment declared). The stored tokens did not change. `CONFIG_STATUS_IN_COMPLIANCE` and its siblings are read by name in several places, so a rename is a migration, not a relabel:
@@ -2537,6 +2549,9 @@ heading, where nothing can be split. Verified by diffing: the change is
 | GD-12 | Absence conventions declared only in the consumer | open |
 | GD-13 | Generated protos are not a package; every consumer invents a path | open |
 | GD-14 | Wear axis applicability: type-level manifest FIXED; asset-level as-maintained state open | narrowed — type-level fixed, asset-level open |
+| GD-15 | FRACAS usage meters named in code, not declared per variant | open |
+| GD-16 | Interlock state vocabulary closed, bound to columns in code | open |
+| GD-17 | Readiness disagreement mark forces three bands | open |
 
 ### UD — undetected failure modes (`ADR-0036`)
 
