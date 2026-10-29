@@ -129,9 +129,16 @@ received the mod, against those that did not, over matched usage.
     `(/asset_id, /fault/item, /fault/fault_code)`.
   - It adds the closed fields (§1), the frozen context (§2) and the meter values (§3).
   - It is emitted once, on close. An open episode is already released as `MaintenanceFaultEvent`.
-- **The other side:** a `content_kind` registration in iagent's overlay, next to
-  `iagent:policy/overlays/openddil-lab/content_kinds/maintenance-fault-event.yaml`.
+- **The other side:** iagent reserves the content kind **`fracas_report`** at its door. `iagent:ADR-0063` is the
+  receiving half. The destination sends `FailureReport` as `content_kind: fracas_report`, the way
+  `MaintenanceFaultEvent` already leaves under its own content kind.
   - It enters through the existing door (`POST /ingest/events`, `iagent:src/iagent/gateway.py`).
+  - It arrives as an event carrying `on_behalf_of`, our `episode_id` and our `asset_id`. `on_behalf_of` names the
+    person who closed the episode (`/cleared_by`), declared in the overlay the way `MaintenanceFaultEvent` names its
+    filer.
+  - Its `provenance[]` entries keep their source class. The CM report and the people's declarations are
+    **declared**, the telemetry at open is **observed**, and the meter values are **derived**. iagent passes them
+    through its provenance unmerged (`iagent:ADR-0063`).
   - It feeds iagent's `safety:FailureRecord` (`iagent:agent_fleet/safety_agent/entities.py`) as a cited occurrence.
     The system of record it cites is the owning tier.
 - **Inbound:** a FRACAS corrective action returns as an intake kind (`openddil:ADR-0046` §5) carrying a
@@ -150,7 +157,8 @@ received the mod, against those that did not, over matched usage.
 - Declared usage meters per variant, as overlay data (§3), plus one new accumulator, for `duration:emitting`.
 - The `(region, variant, component, fault_code)` sums rollup (§4).
 - The partitioned recurrence read (§5).
-- Two kinds, `FailureReport` out and `CorrectiveAction` in, plus one iagent `content_kind` row (§6).
+- Two kinds, `FailureReport` out (as `content_kind: fracas_report`, reserved on iagent's side) and `CorrectiveAction`
+  in (§6).
 - Unchanged: the gate, the door, the episode key, the open-episode list, and `MaintenanceFaultEvent`.
 
 ## Alignment declared (ADR-0038 C1 intake)
@@ -227,3 +235,5 @@ the slice. Status `open`.
 - `openddil:ADR-0048` / `openddil:ADR-0049`: the effector ledger and its rounds.
 - `iagent:docs/adr/ADR-0056-fracas-phase-1-what-failed-on-this-part-across-programs.md`: `safety:FailureRecord`.
 - `iagent:docs/adr/ADR-0054-data-classes-every-write-declares-what-it-is.md` §3: write-back is its own ruling.
+- `iagent:ADR-0063`: the receiving half; reserves `fracas_report`, `safety_finding` and `cyber_indicator`, and keeps
+  source classes unmerged.

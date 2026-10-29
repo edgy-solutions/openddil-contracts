@@ -118,7 +118,8 @@ indicator: { indicator_id, detector, asset_id?, source?, owning_tier,
              opened_at, closed_at?, count }
 ```
 
-It opens and closes like an episode (`openddil:ADR-0051` §1), and its history is kept.
+It opens and closes like an episode (`openddil:ADR-0051` §1), and its history is kept. Each side's `provenance`
+names its source class (observed, declared or derived). An indicator never merges two sides into one entry.
 
 | detector | left | right | new work |
 |---|---|---|---|
@@ -153,11 +154,22 @@ False readiness looks like:
 
 Every one of them is a disagreement the view can show **without** knowing which source is lying.
 
+When a `readiness_disagreement` leaves (§3), it carries **all three sources**, not only the disagreeing pair. Each
+source is its own provenance entry, with its class, value, producing tier and time. On iagent's side the three arrive
+as **three provenance entries, never one** (`iagent:ADR-0063`). The no-single-readiness rule therefore holds past the
+seam as well as on our screen.
+
 ### 3. Indicators leave as a kind and as STIX, through the same gate
 
-- **To iagent:** a new overlay kind, `CyberIndicator`, released through the existing gate (`openddil:ADR-0046` §4), with
-  a `content_kind` registration in iagent's overlay. Key `/indicator_id`; episode `(/detector, /asset_id or /source,
-  /opened_at)`.
+- **To iagent:** a new overlay kind, `CyberIndicator`, released through the existing gate (`openddil:ADR-0046` §4).
+  Key `/indicator_id`; episode `(/detector, /asset_id or /source, /opened_at)`.
+  - iagent reserves the content kind **`cyber_indicator`** at its door. `iagent:ADR-0063` is the receiving half. The
+    destination sends `CyberIndicator` as `content_kind: cyber_indicator`.
+  - It arrives as an event carrying `on_behalf_of`, our `episode_id` and our `asset_id` (or the source, for a
+    source-keyed detector). `on_behalf_of` is declared per kind in the overlay, and which subject it names is
+    confirmed against `iagent:ADR-0063` before the kind is frozen.
+  - The left and right sides travel as separate `provenance[]` entries, each keeping its source class. iagent passes
+    them through unmerged (`iagent:ADR-0063`).
 - **To a SOC:** the same indicator rendered as a STIX indicator plus an observed-data pair, to a declared destination.
   - Same gate, same labels, same refusals. An indicator about a coalition asset is releasable only where the asset is.
   - The detector vocabulary maps to ATT&CK for ICS technique names by concept, in an overlay table, so a SOC reads
@@ -179,8 +191,8 @@ trigger it switch off the picture, and that is the attack this ADR exists to sur
 - An `indicator` record with open/closed history (§1).
 - Nine detector declarations, five of which need new ingest or projector counting (§1 table).
 - The readiness view (§2) and its band mapping per variant (overlay).
-- The `CyberIndicator` kind, a STIX rendering for a declared SOC destination, and an ATT&CK-for-ICS concept table
-  (§3).
+- The `CyberIndicator` kind (sent as `content_kind: cyber_indicator`, reserved on iagent's side), a STIX rendering
+  for a declared SOC destination, and an ATT&CK-for-ICS concept table (§3).
 - A source label on ingest counters, and a newer-sample guard that counts.
 - Unchanged: the PEP, the gates, the labels, the declarations and the egress ledger.
 
@@ -264,3 +276,5 @@ three bands is forced into them. Status `open`.
 - `openddil:ADR-0050`: declarations as a label source.
 - `openddil:ADR-0051`: the open/closed episode shape.
 - `openddil:ADR-0052`: hazard findings, the sibling finding shape.
+- `iagent:ADR-0063`: the receiving half; reserves `cyber_indicator`, keeps source classes unmerged, and receives the
+  false-readiness view's three sources as three provenance entries.

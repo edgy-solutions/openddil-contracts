@@ -152,8 +152,15 @@ own `_at` timestamps.
 - **Outbound:** a new overlay kind, `SafetyFinding`, released through the existing gate (`openddil:ADR-0046` §4).
   - Key `/finding_id`; episode `(/asset_id, /hazard, /opened_at)`.
   - It carries the predicate name, the rows that met it, and the open and close times.
-- **The other side:** an iagent `content_kind` registration seeds its safety workflow. The finding becomes a cited
-  occurrence against a `Hazard` (`iagent:agent_fleet/safety_agent/entities.py`).
+- **The other side:** iagent reserves the content kind **`safety_finding`** at its door. `iagent:ADR-0063` is the
+  receiving half. The destination sends `SafetyFinding` as `content_kind: safety_finding`. It seeds iagent's safety
+  workflow, and the finding becomes a cited occurrence against a `Hazard` (`iagent:agent_fleet/safety_agent/entities.py`).
+  - It arrives as an event carrying `on_behalf_of`, our `episode_id` and our `asset_id`. A finding is the system's
+    reading of a declared predicate, not a person's act. `on_behalf_of` is declared per kind in the overlay, and
+    which subject it names is confirmed against `iagent:ADR-0063` before the kind is frozen.
+  - The rows that met the predicate travel as `provenance[]` entries, each with its source class. Emitting and
+    launcher state are **observed**, work and holding records are **declared**, and the finding itself is
+    **derived**. iagent passes them through unmerged (`iagent:ADR-0063`).
   - Severity, probability, mitigation and acceptance are iagent's (`iagent:docs/adr/ADR-0051-…` §2, §5).
   - The safety workflow's task kinds (`iagent:policy/overlays/sample/task_kinds/risk_acceptance_*.yaml`) decide;
     OpenDDIL never does.
@@ -173,7 +180,7 @@ equipment stay the controls of record.
 - The `interlock_conflict` and `interlock_state_unknown` refusal reasons (§2).
 - The interlock rule files per variant, with a declared state vocabulary (§3).
 - Six declared hazard predicates, and a finding record with open/closed history (§1).
-- The `SafetyFinding` outbound kind and one iagent `content_kind` row (§5).
+- The `SafetyFinding` outbound kind, sent as `content_kind: safety_finding` (reserved on iagent's side) (§5).
 - A declared storage limit, for `over_declared_holding` only.
 - Unchanged: the intake gate's order, the existing kinds, the posture machine, and every lifecycle column.
 
@@ -257,3 +264,4 @@ state is not one of the four cannot be interlocked without a code change. Status
 - `openddil:ADR-0051`: the open/closed episode shape, reused for findings.
 - `iagent:docs/adr/ADR-0051-sustainment-safety-the-mesh-drafts-a-risk-and-refuses-to-accept-it.md`: the hazard,
   risk matrix and acceptance.
+- `iagent:ADR-0063`: the receiving half; reserves `safety_finding` and keeps source classes unmerged.
