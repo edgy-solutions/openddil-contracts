@@ -4,6 +4,21 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-29 — the tier issuer's PEP code is committed but not served on lab2
+
+**Blocked on a bundle rebuild.** `ADR-0045` §"The next increment", progress: with the tier issuer on at edge-01,
+edgy-lab2 reads 2 / 4 at edge-01 as designed (no alias yet), link up and severed, with 0 diffs on role and
+allowed_nations. The PEP changes for items 5–6 (`iss` checked before the signing key; `issuer` and `realm_version` in
+the decision record and on `/auth/me`) are committed in openddil-demo and ship in the runtime bundle, which lab2 pins
+by digest. Until the bundle is rebuilt and lab2's pin moves, a root-minted token is refused there on its key, not on
+`iss`, and neither field is visible. Close when lab2 serves the new PEP code and a root-minted token for edge-01's
+client is refused on `iss` by the serving process.
+
+Related, recorded in the ADR and not separately open: `realm_version` is a digest of the import's inputs, including
+the deployment's user overlay, so a per-file digest of the artefact belongs in the bundle build; `home_tiers` for
+the test's homes lives in the openddil-demo realm artefact; the import has a fourth refusal, for a temporary
+credential.
+
 ## OPEN 2026-10-29 — the sever cuts the user too: decided and built; one question left on the red's location
 
 **Decided 2026-10-29: a named ingress exception.** `ADR-0045`, "The red runs come first": the first red run read

@@ -346,7 +346,7 @@ profiles hold a credential at the root only: they are edge-01's visitors.
 | 3 | **prove the cut can fail the test**: from edge-01's PEP pod **and from edge-01's Keycloak pod**, a fresh connect to the root Keycloak Service | refused or timed out from both. If either connects, the cut is not real and the run stops |
 | 4 | four-profile sign-in at edge-01's origin, severed | **2 / 4**. The two home profiles sign in, and their `role` and `allowed_nations` equal step 1's: **0 diffs**. The two visitors are refused at the broker step, with no `openddil_session` |
 | 5 | `observer.unlisted` at edge-01, severed | signs in; first read **denied** by Topaz. The tier admits; the corpus decides |
-| 6 | a root-minted token presented to edge-01's PEP | **refused on `iss`** |
+| 6 | a token the root mints for **edge-01's own client** (aud = edge-01's client id), presented to edge-01's PEP | **refused on `iss`**. A token minted for the root's own client is refused on audience first, so it cannot test the issuer |
 | 7 | four-profile sign-in at the root origin, edge-01 still severed | 4 / 4 (unaffected) |
 | 8 | sign in a visitor at edge-01, then cut edge-01 again | the visitor's next read still succeeds: the session is the tier's (§6) |
 | 9 | heal. Sign in at the root as `liaison.coalition`, then open edge-01 | edge-01 admits with **no credential form posted** (one session, down the tree) |
@@ -380,7 +380,9 @@ profiles hold a credential at the root only: they are edge-01's visitors.
   is open (`FOLLOW-UPS.md`).
 * The import step must refuse each of the following, with the reason printed, and
   must not start the tier's Keycloak: a user with a required action, a user with
-  no pinned id, and a `home_tiers` entry naming no known tier.
+  no pinned id, a `home_tiers` entry naming no known tier, and a credential
+  marked temporary (the person would set a new one at whichever tier they first
+  signed in, and fork the realm).
 * A link red, on lab2 only, because it needs an altered realm at one tier: a
   brokered sign-in in which the parent's `sub` differs from the local id must be
   refused with `identity_link_mismatch`. If it is admitted, §6's join is not
@@ -431,6 +433,35 @@ defaulting to off. Each line is checked by the test above.
 
 Not in the next increment: issuers at more than one tier (the chain is the second
 increment), durable Keycloak storage, any change to Topaz or the corpus.
+
+**Progress, read on edgy-lab2, 2026-10-29.** Items 1, 2, 5, 6, 7 and 9 are built
+and run, with the value on at edge-01 only; items 3, 4 and 8 are not.
+
+* **Steps 0, 1, 3, 4, 5, 7 and the heal, without the alias: 2 / 4 at edge-01,
+  link up, severed and healed.** The two home profiles and the control sign in
+  at the tier's own Keycloak; the two visitors are refused at the tier's form,
+  because no alias exists yet. `role` and `allowed_nations` read **0 diffs**
+  across the three. The cut was proven from both pods, `observer.unlisted` was
+  admitted and denied by Topaz, and the root read 4 / 4 throughout. The pass
+  line of steps 1 and 10 (4 / 4) waits for items 3 and 4.
+* **Step 6** reads refused at edge-01, but on lab2 the serving PEP refuses on the
+  signing key, not on `iss`: the PEP code that checks `iss` first, and that
+  writes `issuer` and `realm_version` into the decision record and onto the
+  status, ships in the runtime bundle, and lab2 pins the bundle by digest. The
+  same token, checked in the same pod by the committed PEP code, is refused on
+  `iss`. Until the bundle is rebuilt, neither field is on lab2 (`FOLLOW-UPS.md`).
+* **Imports:** all four refusals fire with their reason printed, and the tier's
+  Keycloak does not start. `home_tiers` for the test's homes is carried by the
+  realm artefact in openddil-demo (`policy/realm-openddil.json`), beside the
+  realm it annotates, not by this repository.
+* **`realm_version` is a digest of the import's inputs** (the artefact as the
+  chart renders it, with the deployment's user overlay), not of the bundle file
+  alone. It moves when the overlay changes, which is the intent; a per-file
+  digest belongs in the bundle build.
+* **The drift check** reads 1 distinct across linked tiers, flags a forged
+  digest as drift, and lists a severed tier apart instead of counting it.
+* **Item 9:** the tier Keycloak's working set was 602Mi idle and 621Mi at most
+  under 15 looped sign-ins, link up or severed, beside the root's 605Mi.
 
 ---
 
