@@ -6,15 +6,15 @@ and this file is the thing that is wrong.
 
 ## OPEN 2026-10-29 — first slice: the fault cleared, and the record stayed (ADR-0051)
 
-**Not scheduled.** About 4 days. Keep the closed episode in cm-service (`cleared_at_ns`, `cleared_by`, `resolution`) instead of filtering it out on `ManualDiscrepancyResolved`; freeze `baseline_id` and the `ModCompliance` list at open; a `failure_episodes` table with rounds and moves at open and close; an episode history on the asset page; run on the lab as file, resolve, file. Folds into the per-tier chain increment (`ROADMAP-2026-10-29-isolation-increments.md`). Home: ADR-0051 §First demo-able slice. Debt: GD-15.
+**Not scheduled.** About 4 days. Keep the closed episode in cm-service (`cleared_at_ns`, `cleared_by`, `resolution`) instead of filtering it out on `ManualDiscrepancyResolved`; freeze `baseline_id` and the `ModCompliance` list at open; a `failure_episodes` table with rounds and moves at open and close; an episode history on the asset page; run on the lab as file, resolve, file. Folds into increment 3, chain per tier (`ROADMAP-2026-10-29-isolation-increments.md` row C). Home: ADR-0051 §First demo-able slice. Debt: GD-15.
 
 ## OPEN 2026-10-29 — first slice: the release was refused, and the refusal said why (ADR-0052)
 
-**Not scheduled.** About 4.5 days. `emitting` and `launcher_raised` (with `_at`) as columns on `telemetry_latest_state`; a `WorkRelease` intake kind; the interlock check in the intake with `interlock_conflict` / `interlock_state_unknown`; two lab rule files; three releases on the lab (radiating refused, round in flight refused, silent admitted). Folds into the per-tier chain increment. Home: ADR-0052 §First demo-able slice. Debt: GD-16.
+**Not scheduled.** About 4.5 days. `emitting` and `launcher_raised` (with `_at`) as columns on `telemetry_latest_state`; a `WorkRelease` intake kind; the interlock check in the intake with `interlock_conflict` / `interlock_state_unknown`; two lab rule files; three releases on the lab (radiating refused, round in flight refused, silent admitted). Folds into increment 2, identity per tier (`ROADMAP-2026-10-29-isolation-increments.md` row B). Home: ADR-0052 §First demo-able slice. Debt: GD-16.
 
 ## OPEN 2026-10-29 — first slice: three sources, one asset, no collapse (ADR-0053)
 
-**Not scheduled.** About 3 days. A PEP-mediated read of observed, declared and derived readiness for one asset with provenance; one pane of three columns with a disagreement mark and no rolled-up readiness; one band-mapping overlay file; three lab assets (agree, CM red with observed operational, silent past window). Folds into the per-tier chain increment. Home: ADR-0053 §First demo-able slice. Debt: GD-17.
+**Not scheduled.** About 3 days. A PEP-mediated read of observed, declared and derived readiness for one asset with provenance; one pane of three columns with a disagreement mark and no rolled-up readiness; one band-mapping overlay file; three lab assets (agree, CM red with observed operational, silent past window). Folds into increment 2, identity per tier (`ROADMAP-2026-10-29-isolation-increments.md` row A). Home: ADR-0053 §First demo-able slice. Debt: GD-17.
 
 ## OPEN 2026-10-14 — the stored `CONFIG_STATUS_IN_COMPLIANCE` token, renamed for a quiet week
 
