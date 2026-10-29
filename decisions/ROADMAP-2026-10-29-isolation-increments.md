@@ -29,10 +29,10 @@ the increment.
 | # | increment | what isolates | home | depends on |
 |---|---|---|---|---|
 | 1 (done) | **PDP per tier** | a severed tier still decides and enforces | `ADR-0029` §Per-tier PDP | — |
-| 2 | **Identity per tier** | a severed tier can log people in | `ADR-0045` (PROPOSED; v2 under review) | rung 1 |
+| 2 | **Identity per tier** | a severed tier can log people in | `ADR-0045` (PROPOSED-v2: own realm per tier, trust between tiers) | rung 1 |
 | 3 | **Chain per tier** | a severed tier assembles, gates and forwards its own records (assembler, gate, forwarder, intake per tier) | `ADR-0046` decision 2, Noted for later; `ADR-0031` | 2: the tier's gate and intake resolve approvers and `on_behalf_of` locally |
 | 4 | **Workflow per tier** | a severed tier keeps durable timers and state | `ADR-0034`; per-tier Restate | 3: the chain's durable steps move onto it |
-| 5 | **One session** | a person who moves between tiers is honoured without signing in again, and no token crosses tiers | `ADR-0045` Still open | 2. Under ADR-0045 v2 (trust between tiers rather than replicas), this may land with 2. |
+| 5 | **One session** | a person who moves between tiers is honoured without signing in again, and no token crosses tiers | `ADR-0045` Still open | 2. ADR-0045 v2 §6 delivers it partly with 2: down the tree, link up. Up the tree and severed stay open. |
 
 Rung 1 is done. Increments 2 to 5 are the four in the dispatch.
 
@@ -49,5 +49,5 @@ None of A–D is on an increment's critical path. Each can be dropped from its i
 
 ## Not decided here
 
-- Whether increment 2 is realm replicas or trust between tiers (item 6 of the dispatch; `ADR-0045` v2).
+- Since decided as PROPOSED-v2: increment 2 is an own realm per tier plus trust between tiers, with credentials kept at the home tier (`ADR-0045` v2). Rows A and B are unchanged by it.
 - Any date. The three first slices (A to C) are marked not scheduled in `FOLLOW-UPS.md`; D has no slice yet.
