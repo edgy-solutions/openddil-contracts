@@ -117,6 +117,14 @@ the source of truth (their external system, not OpenDDIL). OpenDDIL
 itself never overrides the assignment — it just shows that the
 assignment looks wrong.
 
+**Added 2026-10-29: the ingest tier holds its first choice.** sensor-ingest
+decides an entity's owner tier from its first Entity State and holds that
+choice for the life of the process; a later position never reassigns it, so a
+battery crossing a polygon mid-march does not flip tiers. Only a declaration
+(a rule or registry change, then an ingest restart) moves ownership. An entity
+the rules would now place elsewhere is shown at its assigned tier as
+"assigned <tier> · observed outside its area", beside staleness, never hidden.
+
 `divergent` becomes a new `cm.edge_divergent` (or similar) constraining
 factor on `asset_logistics_status` so existing severity rollups +
 EngagementWatchlist surface it. Maintainer view gets a divergence

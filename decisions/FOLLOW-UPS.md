@@ -4,6 +4,10 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-29 — the screen does not say when an entity is observed outside its assigned area
+
+Tier assignment is sticky by design (ADR-0028 "Real-vs-intent divergence", added line 2026-10-29): sensor-ingest holds its first choice for the life of the process, and ownership moves only by a declaration. What is missing is the screen. An entity the rules would now place elsewhere should show "assigned <tier> · observed outside its area", the way staleness is shown. Before any spec, a lookup answers three things: whether ADR-0028's `divergent` / `observed_edge_id` is built; whether any path compares the current position with the held assignment (today the rules run only on first sight, `openddil:openddil-sensor-ingest/assign.py`); and which pane shows staleness, so the label sits beside it. Assignment behaviour is not changed by this row. Trigger: a lab fixture drifted out of its area and, after an ingest restart, was assigned to the fallback tier; the simulator side is fixed by a leash in the lab overlay.
+
 ## OPEN 2026-10-29 — first slice: the fault cleared, and the record stayed (ADR-0051)
 
 **Not scheduled.** About 4 days. Keep the closed episode in cm-service (`cleared_at_ns`, `cleared_by`, `resolution`) instead of filtering it out on `ManualDiscrepancyResolved`; freeze `baseline_id` and the `ModCompliance` list at open; a `failure_episodes` table with rounds and moves at open and close; an episode history on the asset page; run on the lab as file, resolve, file. Folds into increment 3, chain per tier (`ROADMAP-2026-10-29-isolation-increments.md` row C). Home: ADR-0051 §First demo-able slice. Debt: GD-15.
