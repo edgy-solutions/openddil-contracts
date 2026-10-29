@@ -2,7 +2,7 @@
 
 ## Status
 
-**PROPOSED — 2026-10-29.** Design only. Nothing here is built or deployed.
+**ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed.
 - It adds detectors over records the stack already keeps, plus one outbound kind.
 - It adds no new enforcement point. Enforcement stays where `openddil:ADR-0029` (the PDP and PEP),
   `openddil:ADR-0043` (the egress gate) and `openddil:ADR-0046` (intake) put it.
@@ -166,8 +166,8 @@ seam as well as on our screen.
   - iagent reserves the content kind **`cyber_indicator`** at its door. `iagent:ADR-0063` is the receiving half. The
     destination sends `CyberIndicator` as `content_kind: cyber_indicator`.
   - It arrives as an event carrying `on_behalf_of`, our `episode_id` and our `asset_id` (or the source, for a
-    source-keyed detector). `on_behalf_of` is declared per kind in the overlay, and which subject it names is
-    confirmed against `iagent:ADR-0063` before the kind is frozen.
+    source-keyed detector). An indicator is the system's reading, so `on_behalf_of` is the empty string, which by iagent's own rule means the service itself
+    (`iagent:ADR-0063`). The record is the system's reading, and naming a person would be false.
   - The left and right sides travel as separate `provenance[]` entries, each keeping its source class. iagent passes
     them through unmerged (`iagent:ADR-0063`).
 - **To a SOC:** the same indicator rendered as a STIX indicator plus an observed-data pair, to a declared destination.

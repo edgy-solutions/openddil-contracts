@@ -2,7 +2,8 @@
 
 ## Status
 
-**PROPOSED — 2026-10-29.** Design only. Nothing here is built or deployed.
+**ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed. The first slice is approved as
+written.
 - Extends `openddil:ADR-0046`: one new outbound kind, one new inbound kind, and no new gate.
 - Uses `openddil:ADR-0009` (the CM model), `openddil:ADR-0048` / `openddil:ADR-0049` (the effector ledger) and
   `openddil:ADR-0044` (posture signals).

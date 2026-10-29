@@ -2,9 +2,10 @@
 
 ## Status
 
-**PROPOSED (v2) — 2026-10-29.** This replaces PROPOSED (2026-10-08) in §2, the
+**ACCEPTED (v2) — approved 2026-10-29.** This replaces PROPOSED (2026-10-08) in §2, the
 login test, the next increment, the predictions and §"Still open". It adds a
-paragraph to §4, a new §6 and a lab2 section. §1, §3 and §5 stand. Design only: nothing here is
+paragraph to §4, a new §6 and a lab2 section. §1, §3 and §5 stand. Decided at
+approval: a person's home tier follows the system of record's assignment (§2). Design only: nothing here is
 built, and nothing is deployed. Draft 2026-09-29.
 
 v1 put a full realm replica at each tier, with every user and every credential.
@@ -169,14 +170,17 @@ against the corpus the tier already holds. (Unchanged from v1.)
 | admin credentials | **no** | generated per tier into a Secret at the tier |
 | entitlements, roles used for decisions | **not in Keycloak at all** | the corpus, already per tier (rung 1) |
 
-**Home tiers.** Each user in the artefact carries `home_tiers`, a list of tier ids.
-A tier's import step keeps a user's credential only if that tier is in the list.
-The root keeps every credential, so the root is today's Keycloak, unchanged. A user
-with no `home_tiers` holds a credential at the root only. An unknown tier id in
-`home_tiers` refuses the import, with the reason printed. The demo realm may set
-`home_tiers: ["*"]` on every user. That is v1 exactly: everyone signs in everywhere
-while severed. It is a setting, not a second design. The lab runs the scoped
-setting, so that the visitor path is exercised.
+**Home tiers (decided at approval, 2026-10-29).** Each user in the artefact
+carries `home_tiers`. It follows the system of record's assignment, the ADR-0028
+lineage: a person's home is the tier they are assigned to, declared once, so the
+entry names that one tier. OpenDDIL never overrides the assignment (ADR-0028). A
+person whose assignment moves is one commit to the artefact. A tier's import step
+keeps a user's credential only if that tier is the user's home. The root keeps
+every credential, so the root is today's Keycloak, unchanged. A user with no
+assignment holds a credential at the root only. An unknown tier id in
+`home_tiers` refuses the import, with the reason printed. v1's
+everyone-everywhere is not offered as a setting: a home that did not follow the
+assignment would be a second writer.
 
 **The pinned ids are still what make this cheap.** Every tier imports the same
 users with the same ids, so a person has the **same `sub` at every tier**. The
@@ -306,7 +310,7 @@ says the bundled Keycloak is disqualifying anywhere but a lab covers its replica
   **a prediction**). Cutting the link after a visitor signs in therefore does not
   sign them out. Their session ends at the tier's SSO maximum. This is the same
   interplay between SSO maximum and PEP session already recorded for one tier.
-* **One session, partly (roadmap increment 5).** With the link up, take a person
+* **One session, partly (roadmap increment 4).** With the link up, take a person
   signed in at an ancestor who then opens a child tier. They pass through the
   child's broker to the ancestor, which already holds their SSO session, and come
   back with no password prompt. That is single sign-on across tiers, which v1 left
@@ -330,7 +334,8 @@ not in the corpus.
 
 **Homes for the run.** In the first increment only edge-01 and the root run an
 issuer, so edge-01's alias points at the root. `operator.atlantia`,
-`operator.borduria` and `observer.unlisted` are homed at edge-01. The other two
+`operator.borduria` and `observer.unlisted` are assigned to edge-01, declared as
+their assignment in the lab's realm artefact. The other two
 profiles hold a credential at the root only: they are edge-01's visitors.
 
 | step | action | pass |
@@ -432,9 +437,10 @@ increment), durable Keycloak storage, any change to Topaz or the corpus.
   tree while the link is up. Moving up the tree is a fresh sign-in at the upper
   tier. Moving to a severed tier where the person is not homed is a refusal.
   Both are accepted for the demo.
-* **Who declares home tiers.** The artefact is the single writer, so a person
-  whose home moves is a commit. Whether `home_tiers` should follow the system of
-  record's assignment (ADR-0028 lineage) is not decided here.
+* **Who declares home tiers: decided at approval.** The system of record's
+  assignment (§2). Which system of record holds a person's assignment, and how
+  it reaches the artefact, is owed by the deployment; the lab declares it in its
+  realm artefact by hand.
 * **Auto-link trusts the parent's username.** Linking with no review means the
   tier trusts its ancestor to say who a person is. That is acceptable only because
   the ancestor is a declared OpenDDIL tier importing the same artefact, and the

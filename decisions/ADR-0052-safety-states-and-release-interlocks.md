@@ -2,7 +2,8 @@
 
 ## Status
 
-**PROPOSED — 2026-10-29.** Design only. Nothing here is built or deployed.
+**ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed. Approved with the request to
+iagent in §5 (`WorkRelease` before the work).
 - Extends `openddil:ADR-0046`: one new intake kind, one new outbound kind, and one new refusal reason at the existing
   intake gate.
 - Reads `openddil:ADR-0044` (posture), `openddil:ADR-0048` / `openddil:ADR-0049` (the effector ledger and munition
@@ -156,8 +157,8 @@ own `_at` timestamps.
   receiving half. The destination sends `SafetyFinding` as `content_kind: safety_finding`. It seeds iagent's safety
   workflow, and the finding becomes a cited occurrence against a `Hazard` (`iagent:agent_fleet/safety_agent/entities.py`).
   - It arrives as an event carrying `on_behalf_of`, our `episode_id` and our `asset_id`. A finding is the system's
-    reading of a declared predicate, not a person's act. `on_behalf_of` is declared per kind in the overlay, and
-    which subject it names is confirmed against `iagent:ADR-0063` before the kind is frozen.
+    reading of a declared predicate, not a person's act, so `on_behalf_of` is the empty string, which by iagent's own rule means the service itself (`iagent:ADR-0063`).
+    The record is the system's reading, and naming a person would be false.
   - The rows that met the predicate travel as `provenance[]` entries, each with its source class. Emitting and
     launcher state are **observed**, work and holding records are **declared**, and the finding itself is
     **derived**. iagent passes them through unmerged (`iagent:ADR-0063`).
@@ -166,6 +167,11 @@ own `_at` timestamps.
     OpenDDIL never does.
 - **Inbound:** `WorkRelease` (§2). An accepted risk does not lift an interlock. Lifting one is a change to the
   overlay rule file, a declaration made by a person and reviewed like any overlay change.
+- **The request to iagent that makes the interlock real.** `WorkRelease` needs iagent to send a release **before**
+  the work starts. Their workflow does not do that today: what reaches us is `MaintenanceAction`, which reports work
+  already done (finding 1). Until iagent's workflow sends a release before work, nothing can trip the interlock, and
+  an interlock nobody can trip proves nothing. This is put to iagent as a request. The interlock is not demonstrated
+  until a release arrives from their side and is refused or admitted on a named state.
 
 ### 6. What this ADR does not claim
 
