@@ -4,13 +4,23 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
-## OPEN 2026-10-29 — the sever cuts the user too, so the identity test under a cut cannot pass
+## OPEN 2026-10-29 — the sever cuts the user too: decided and built; one question left on the red's location
 
-**Blocks the ADR-0045 green run; needs a decision.** `ADR-0045`, "The red runs come first": on edgy-lab2 the
-red run read 0 / 4 at HTTP 502 from the ingress, before any identity step, because `sever-tier.sh` does not admit
-the ingress controller. Recommended: a named exception that admits the ingress controller to the tier's PEP only,
-beside the simulator exception and for the same reason (the browser stands in for on-site users). Close when the red
-run on today's chart fails at code redemption, not at the ingress.
+**Decided 2026-10-29: a named ingress exception.** `ADR-0045`, "The red runs come first": the first red run read
+0 / 4 at HTTP 502 from the ingress, because `sever-tier.sh` did not admit the ingress controller. `sever-tier.sh` now
+admits the ingress controller to the tier's door only. That is the backend the tier's Ingress routes to, so it
+reaches the PEP through the tier frontend. The exception is declared in the script's usage text beside the
+simulator one, and its cut proof still requires the tier PEP (and a tier Keycloak, when one exists) to be refused by
+the root identity provider (`openddil-helm` `scripts/sever-tier.sh`).
+
+**Second red run on edgy-lab2:** 0 / 4, at the identity provider. The ingress is no longer where it fails: the origin
+answers 302, not 502. It did not fail where predicted, at code redemption. It failed at the PEP's first sign-in step
+with 503 "identity provider unavailable". The PEP fetches discovery from the root on its first sign-in and caches it
+per process. The cut restarts every site pod, so the cache is empty while severed. A PEP running before a real cut
+would keep its cache and fail later, at code redemption.
+
+**Still open:** accept step 1 as the red location, or add a warm-up to `sever-tier.sh on` so the restarted PEP
+fetches discovery before the policy lands. Close when that is decided.
 
 ## OPEN 2026-10-29 — iagent is asked to send a WorkRelease before the work, or the interlock cannot be tripped
 

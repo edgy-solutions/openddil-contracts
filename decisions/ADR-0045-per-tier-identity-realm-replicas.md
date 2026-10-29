@@ -367,6 +367,17 @@ profiles hold a credential at the root only: they are edge-01's visitors.
   tier, and how they reach it is open (`FOLLOW-UPS.md`). With that settled,
   today's chart is predicted to fail at code redemption: from edge-01's PEP,
   the root Keycloak Service was refused under the cut.
+
+  **Read again on edgy-lab2, 2026-10-29, with the ingress exception: 0 / 4, at
+  the issuer.** The origin answered 302, so the door works. Every sign-in
+  stopped at the PEP's first step with 503 "identity provider unavailable":
+  the PEP fetches discovery from the root on its first sign-in and caches it
+  per process, and the cut restarts the PEP, so it had nothing cached. A PEP
+  running before a real cut keeps its cache and fails later, at code
+  redemption. Either way the failure is at the issuer, which a tier issuer
+  removes, so the run now tells a tier issuer from none. Whether to accept the
+  first step as the red location, or to warm the PEP before the policy lands,
+  is open (`FOLLOW-UPS.md`).
 * The import step must refuse each of the following, with the reason printed, and
   must not start the tier's Keycloak: a user with a required action, a user with
   no pinned id, and a `home_tiers` entry naming no known tier.
