@@ -357,6 +357,16 @@ profiles hold a credential at the root only: they are edge-01's visitors.
 * Steps 2–4 against today's chart, with no tier issuer, must read **0 / 4** at
   step 4. If they read anything else, the test cannot tell a tier issuer from
   none, and it is not a test.
+
+  **Read on edgy-lab2, 2026-10-29: 0 / 4, but at the wrong place.** Every
+  sign-in failed at the tier's first page with HTTP 502. `sever-tier.sh` admits
+  only same-site pods and the simulators, so it cuts the ingress controller
+  along with the parent, and the browser never reaches an identity step. A
+  tier issuer would read the same 502, so the green run cannot pass under
+  today's sever. The red run is valid only once the user can reach the severed
+  tier, and how they reach it is open (`FOLLOW-UPS.md`). With that settled,
+  today's chart is predicted to fail at code redemption: from edge-01's PEP,
+  the root Keycloak Service was refused under the cut.
 * The import step must refuse each of the following, with the reason printed, and
   must not start the tier's Keycloak: a user with a required action, a user with
   no pinned id, and a `home_tiers` entry naming no known tier.

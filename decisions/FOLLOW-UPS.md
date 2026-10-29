@@ -4,6 +4,14 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-29 — the sever cuts the user too, so the identity test under a cut cannot pass
+
+**Blocks the ADR-0045 green run; needs a decision.** `ADR-0045`, "The red runs come first": on edgy-lab2 the
+red run read 0 / 4 at HTTP 502 from the ingress, before any identity step, because `sever-tier.sh` does not admit
+the ingress controller. Recommended: a named exception that admits the ingress controller to the tier's PEP only,
+beside the simulator exception and for the same reason (the browser stands in for on-site users). Close when the red
+run on today's chart fails at code redemption, not at the ingress.
+
 ## OPEN 2026-10-29 — iagent is asked to send a WorkRelease before the work, or the interlock cannot be tripped
 
 **Asked of iagent, not scheduled here.** `ADR-0052` §5: the interlock refuses a `WorkRelease`, and iagent's workflow
