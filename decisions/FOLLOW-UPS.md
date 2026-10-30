@@ -4,6 +4,15 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-30 — defect: a roll resets applied mods and replaced parts to the baseline defaults
+
+On a cold start (an upgrade-time Restate wipe), cm-service re-seeded only manual discrepancies from the tier store, so
+an in-compliance asset read not mission capable after every lab roll until its part and mod events were re-sent. This
+costs the mod compliance that ADR-0051's verification story reads. Fixed in openddil-cm-service 6535fe8 (the cold start
+also re-seeds installed parts and mod history from the same row when its baseline matches), unit-tested, not yet live.
+Close when a lab2 roll on the new image keeps an in-compliance asset in compliance with no re-send. Home:
+openddil-helm `scripts/RECORDING-READINESS.md` §G item 3.
+
 ## OPEN 2026-10-29 — resilience: a healed tier's bridge resumes on its crash backoff, not on the heal
 
 **A finding, not a leak.** On edgy-lab2, edge-01 was cut from its parent for about 3 minutes and then healed. Its
