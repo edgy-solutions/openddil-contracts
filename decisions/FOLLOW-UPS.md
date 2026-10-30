@@ -4,6 +4,14 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-30 — lab2 pins cm-service by digest after the roll that measures the re-seed fix
+
+lab2 runs `cm-service:latest` with pull policy Always and no `cmService.image.digest`, so any cm-service push changes
+what the next lab2 pod start runs. The other lab already pins by digest. The roll that measures the re-seed fix (the
+entry below) must take `:latest`; after it reads, lab2's values chain sets `cmService.image.digest` to the digest that
+roll measured. Close when a lab2 render shows `cm-service@sha256:` on every cm-service deployment. Home: openddil-helm
+`scripts/RECORDING-READINESS.md` §G item 3.
+
 ## OPEN 2026-10-30 — defect: a roll resets applied mods and replaced parts to the baseline defaults
 
 On a cold start (an upgrade-time Restate wipe), cm-service re-seeded only manual discrepancies from the tier store, so
