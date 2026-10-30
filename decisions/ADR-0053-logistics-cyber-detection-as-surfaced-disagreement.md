@@ -251,6 +251,12 @@ said each, from which tier, and when. We don't pick one."
 (ready / limited / not-ready), rather than a vocabulary each variant declares. A variant whose readiness does not fit
 three bands is forced into them. Status `open`.
 
+Finding from the first slice (2026-10-30): the debt already shows in the slice's own band file. The observed source
+reads `operational_status`, a two-valued vocabulary, which the band file maps only to ready and not-ready, for both
+lab variants. Observed `limited` therefore cannot happen. An asset the CM record or fusion puts in `limited` always
+shows a disagreement against observed, whether it is operational or not, and an observed source can never agree
+with a `limited` one. This is the forcing GD-17 names, not a defect in the mapping, and the slice does not fix it.
+
 ## Consequences
 
 ### Positive
