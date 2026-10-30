@@ -4,6 +4,18 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-10-29 — resilience: a healed tier's bridge resumes on its crash backoff, not on the heal
+
+**A finding, not a leak.** On edgy-lab2, edge-01 was cut from its parent for about 3 minutes and then healed. Its
+bridge to the parent broker crash-loops under a cut, as designed: it cannot reach the parent. After the heal, it
+stayed down for about 30 s more, until the kubelet's next scheduled restart, and then resumed on its own. Nothing
+restarts it on the heal, and the heal's proof does not read it. The wait is the crash backoff in effect when the link
+returns. The backoff doubles per restart up to 5 minutes, so after a long cut, forwarding from the tier can lag the
+link by up to 5 minutes, with no error once it resumes. It belongs on the resilience row, beside the reading in which
+Restate came up before the site's broker. That reading's home is not in this repository; link it here when it is
+placed. Both are about when a component retries, inside or across a site. Neither loses data. Close when the heal either restarts the bridge or proves it
+forwarding, or when the bridge retries in-process instead of exiting.
+
 ## OPEN 2026-10-29 — the tier issuer's PEP code is committed but not served on lab2
 
 **Blocked on a bundle rebuild.** `ADR-0045` §"The next increment", progress: with the tier issuer on at edge-01,
