@@ -4,6 +4,7 @@
 
 **ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed. The first slice is approved as
 written.
+**Amended 2026-10-30:** the closed set is keyed `(episode_id, detected_at_ns)`, not by the episode id alone (§1).
 - Extends `openddil:ADR-0046`: one new outbound kind, one new inbound kind, and no new gate.
 - Uses `openddil:ADR-0009` (the CM model), `openddil:ADR-0048` / `openddil:ADR-0049` (the effector ledger) and
   `openddil:ADR-0044` (posture signals).
@@ -72,8 +73,10 @@ Resolving an episode stamps it and moves it to a closed set. It does not filter 
 
 - New fields: `cleared_at_ns`, `cleared_by` (the resolver's sub, the same field the PEP stamps today),
   `resolution` (the field-16 text, read at last).
-- The closed set lives at the owning tier. It is append-only and keyed by the existing episode id, so a refile after
-  closure is a new episode, as it is today.
+- The closed set lives at the owning tier. It is append-only and keyed by `(episode_id, detected_at_ns)`. A refile
+  reuses the episode id by design (the id derives from asset, component and fault code), so a set keyed by the id
+  alone would overwrite the earlier closure. The detection time keeps each closure, and a refile after closure is a
+  new episode, as it is today.
 - `manual_discrepancies` keeps its meaning: open episodes only. Existing readers see no change.
 - Closure ages out with the asset under `openddil:ADR-0044`'s prune rule, as every other per-asset row does. The
   release record (`egress_delivered_events`) is unaffected.
