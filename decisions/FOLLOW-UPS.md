@@ -4,7 +4,7 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
-## OPEN 2026-10-30 — lab2 pins cm-service by digest after the roll that measures the re-seed fix
+## CLOSED 2026-10-30 (opened 2026-10-30) — lab2 pins cm-service by digest after the roll that measures the re-seed fix
 
 lab2 runs `cm-service:latest` with pull policy Always and no `cmService.image.digest`, so any cm-service push changes
 what the next lab2 pod start runs. The other lab already pins by digest. The roll that measures the re-seed fix (the
@@ -12,7 +12,10 @@ entry below) must take `:latest`; after it reads, lab2's values chain sets `cmSe
 roll measured. Close when a lab2 render shows `cm-service@sha256:` on every cm-service deployment. Home: openddil-helm
 `scripts/RECORDING-READINESS.md` §G item 3.
 
-## OPEN 2026-10-30 — defect: a roll resets applied mods and replaced parts to the baseline defaults
+**Closed by lab2 rev 14.** The pin rode in the measuring roll, since without it the tier-cm pods would not have rolled.
+The render carries the digest on all 9 cm-service image references, and all 4 cm-service pods run it.
+
+## CLOSED 2026-10-30 (opened 2026-10-30) — defect: a roll resets applied mods and replaced parts to the baseline defaults
 
 On a cold start (an upgrade-time Restate wipe), cm-service re-seeded only manual discrepancies from the tier store, so
 an in-compliance asset read not mission capable after every lab roll until its part and mod events were re-sent. This
@@ -20,6 +23,9 @@ costs the mod compliance that ADR-0051's verification story reads. Fixed in open
 also re-seeds installed parts and mod history from the same row when its baseline matches), unit-tested, not yet live.
 Close when a lab2 roll on the new image keeps an in-compliance asset in compliance with no re-send. Home:
 openddil-helm `scripts/RECORDING-READINESS.md` §G item 3.
+
+**Closed by lab2 rev 14**, the first roll on the new image. The in-compliance fixture asset stayed in compliance in its
+tier store and at HQ, its stored part and mod times were byte-identical across the wipe, and no event was re-sent.
 
 ## OPEN 2026-10-29 — resilience: a healed tier's bridge resumes on its crash backoff, not on the heal
 
