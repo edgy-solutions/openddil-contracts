@@ -127,6 +127,25 @@ mapping layer. That mapping is deployment configuration and lives in the
 deployment's own bundle overlay — the OSS core defines the field and the
 discipline, not any particular naming convention.
 
+#### Element rows carry the asset's labels (added 2026-11-01)
+
+Element rows (`asset_element_state`, `asset_element_telemetry`) take the
+asset's labels from the tier's asset label record, `telemetry_latest_state`,
+stamped by the projector at write. The element feed carries no labels of
+its own, and a row with none is served to nobody under deny-unlabeled.
+
+This is a carry, not a derivation: the record's labels are the asset's own
+ingress stamp, copied onto its element rows. The projector decides nothing,
+so there is still exactly one answer per asset. If the record's labels
+change, the asset's element rows are restamped in the same transaction as
+the next write.
+
+A write for an asset whose record is missing or unlabelled is refused with
+a declared reason (`no_label_record`, `label_record_unlabelled`). It is
+never written unlabelled. §7's gate query names only
+`telemetry_latest_state`; because element rows are now labelled at write, an
+unlabelled element row is a refusal, not a row.
+
 ### 4. Decisions at boundaries
 
 PEPs sit where data crosses a trust boundary:
