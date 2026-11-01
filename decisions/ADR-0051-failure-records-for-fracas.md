@@ -5,6 +5,8 @@
 **ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed. The first slice is approved as
 written.
 **Amended 2026-10-30:** the closed set is keyed `(episode_id, detected_at_ns)`, not by the episode id alone (§1).
+**Amended 2026-11-01:** analyzer findings now keep their first `detected_at_ns` across re-evaluation, and the CM
+provenance entry's `observed_at` is the CM row's `as_of` (its last change). See the notes under Findings 1 and 2.
 - Extends `openddil:ADR-0046`: one new outbound kind, one new inbound kind, and no new gate.
 - Uses `openddil:ADR-0009` (the CM model), `openddil:ADR-0048` / `openddil:ADR-0049` (the effector ledger) and
   `openddil:ADR-0044` (posture signals).
@@ -19,9 +21,16 @@ written.
    - `resolved_by` is logged and then dropped. The `resolution` text is never read, and no cleared time is stored.
    - The only trace is the CmEvent itself on `cm-events` (compact+delete, 30 days) and the egress ledger row.
    - So "first-observed, cleared" is half-true: first-observed is stored (`detected_at_ns`), cleared is not.
+   - *Note 2026-11-01:* for analyzer-computed findings, first-observed was also not kept: every re-evaluation
+     rebuilt them with `detected_at_ns = now`. cm-service now carries the first time forward for a finding that
+     stays open, matched on the discrepancy id plus the advisory inputs, because the id alone is shared by every
+     unverified-slot finding on an asset. Manual episodes always kept theirs.
 2. **No configuration is stored with the episode.**
    - The assembled record's `provenance[]` names the row key `asset_cm_state:{asset}` and `last_observed_at`
      (`openddil:openddil-demo/egress/assembler.py:269-311`). It carries no baseline id.
+   - *Note 2026-11-01:* the asset's observation clock is no longer on `asset_cm_state`. It is
+     `telemetry_latest_state.last_sample_at`, in the asset's reporting row. The CM entry's `observed_at` is the
+     CM row's `as_of`, which moves only when the CM state changes.
    - The nearest value is `asset_logistics_status.cm_baseline_id`, and that is latest-only.
 3. **No rollup is keyed by variant.**
    - `region_fleet_summary`, `region_top_factors` and `region_wear_trends` are keyed by `region_id` only
