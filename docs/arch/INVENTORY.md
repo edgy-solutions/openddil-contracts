@@ -14,15 +14,15 @@ Which declared artefact supplies which view's content, and which views have no s
 
 | Artefact | Where | Supplies | How it is read |
 |---|---|---|---|
-| Tier template | `openddil-helm/openddil-demo/templates/tier-node.yaml` | Op-Sr, Rs-Sr, Rs-Cn, Rs-If | Render, by the generator |
-| Workload annotations: produces-topics, consumer-groups | Chart render | Rs-If | Render, by the generator |
-| `produces.yaml` | 8 repositories | Rs-If, indirectly | Not read by the generator. `openddil-helm/scripts/check-produces-declarations.py` holds it to the chart's annotations. |
-| Consumer declarations | `openddil-helm/scripts/check_consumer_declarations.py` and its expected list | Rs-If, indirectly | Not read by the generator. The script holds the annotations to an expected list. |
-| Bridge and projector config | Chart ConfigMaps | Rs-If, Rs-Cn | Render, by the generator: topics, groups, tables |
+| Tier template | `openddil-helm/openddil-demo/templates/tier-node.yaml` | Op-Sr, Rs-Sr, Rs-Cn | Render, by the generator |
+| Workload annotations: produces-topics, consumer-groups | Chart render | Rs-Cn | Render, by the generator |
+| `produces.yaml` | 8 repositories | Rs-Cn, indirectly | Not read by the generator. `openddil-helm/scripts/check-produces-declarations.py` holds it to the chart's annotations. |
+| Consumer declarations | `openddil-helm/scripts/check_consumer_declarations.py` and its expected list | Rs-Cn, indirectly | Not read by the generator. The script holds the annotations to an expected list. |
+| Bridge and projector config | Chart ConfigMaps | Rs-Cn | Render, by the generator: topics, groups, tables |
 | Overlay kind schemas | `egress.kinds` in a deployment's values; the example in `tools/testdata/` | Rs-If, Op-If, Sc-Pr | Render, by the generator: `x-openddil` pointers |
-| Egress routes | `egress.routes` in a deployment's values | Rs-If, Sc-Cn | Render, by the generator |
-| Egress destinations | Destination entries in a deployment's values | Rs-If, Sc-Cn | Render, by the generator: display name, nations, accepts, asserted by and on. No other field is output. |
-| Labelled tables | `releasability.labeledTables` in chart values | Rs-If, Sc-Cn | Values, by the generator |
+| Egress routes | `egress.routes` in a deployment's values | Rs-Cn, Rs-If, Sc-Cn | Render, by the generator |
+| Egress destinations | Destination entries in a deployment's values | Rs-Cn, Rs-If, Sc-Cn | Render, by the generator: display name, nations, accepts, asserted by and on. No other field is output. |
+| Labelled tables | `releasability.labeledTables` in chart values | Rs-Cn, Sc-Cn | Values, by the generator |
 | Proto contracts | `proto/`, 16 files and 68 messages | Op-If, Rs-If | By hand for now |
 | Ontology files | `ontology/` | Op-If, Rs-If | By hand for now |
 | Contract B | Defined in `decisions/DESIGN-2026-09-06-interface-contracts.md`; held by the kit in `openddil-customer-bundle-example/conformance/contract-b/`. There is no separate schema file. | Rs-If, Rs-Cn | By hand for now |
@@ -31,11 +31,11 @@ Which declared artefact supplies which view's content, and which views have no s
 | Alignment declared tables | ADR-0009, 0043, 0044, 0046, 0050, 0051, 0052, 0053 and the CoT design | Sd-Tx | By hand |
 | Citations note | `decisions/CITATIONS-2026-09-08-standard-ontologies.md` | Sd-Tx | By hand |
 | Roadmap note | `decisions/ROADMAP-2026-10-29-isolation-increments.md` | St-Rm-P, St-Tx | By hand |
-| UAF 1.2 Appendix A | OMG formal/22-07-07 | `profiles.yaml` | Looked up 2026-11-02 |
+| UAF 1.2 Appendix A | OMG formal/22-07-07 | [`APPENDIX-A.md`](APPENDIX-A.md), then `profiles.yaml` | Looked up 2026-11-02 |
 
 ## The UAF grid
 
-Output names are those Appendix A gives. Where the mapping is not one-to-one, `profiles.yaml` says which this repository selects.
+Output names are those [Appendix A](APPENDIX-A.md) gives. Where the mapping is not one-to-one, `profiles.yaml` says which this repository selects.
 
 ### Written
 
@@ -51,9 +51,9 @@ Output names are those Appendix A gives. Where the mapping is not one-to-one, `p
 | [Op-St](views/Op-St.md) | ADR-0044, 0050 | OV-6b | L5 |
 | [Op-If](views/Op-If.md) | ADR-0009, 0026, 0029, 0044, 0046 | DIV-2 | L7 |
 | [Rs-Sr](views/Rs-Sr.md) | ADR-0021, 0033 | SV-1, SV-2 | P2 |
-| [Rs-Cn](views/Rs-Cn.md) | ADR-0021, 0030, interface contracts | SV-3 | P3 |
+| [Rs-Cn](views/Rs-Cn.md) | Generated from a bundle; ADR-0021, 0030, interface contracts | SV-3, SV-6 | P3 |
 | [Rs-Pr](views/Rs-Pr.md) | ADR-0029, 0030, 0038, 0043, 0046 | SV-4 | P4 |
-| [Rs-If](views/Rs-If.md) | Generated from a bundle; proto contracts | DIV-3, SV-6 | P7, L7 |
+| [Rs-If](views/Rs-If.md) | Proto contracts, ontology files | DIV-3 | P7 |
 | [Rs-Tr](views/Rs-Tr.md) | Op-Pr joined to Rs-Pr | SV-5a, SV-5b | L4-P4 |
 | [Sc-Sr](views/Sc-Sr.md) | ADR-0029, 0043, 0045 | None in Appendix A | None in Appendix A |
 | [Sc-Cn](views/Sc-Cn.md) | ADR-0029, 0043, 0045, 0046 | None in Appendix A | None in Appendix A |
@@ -87,7 +87,7 @@ Output names are those Appendix A gives. Where the mapping is not one-to-one, `p
 | Ar-* Actual resources | Deployment facts, which stay private. Slots only. | |
 | Sc-Ct Security-Constraints | ADR-0053 lists detectors, and no risk assessment exists | SecV-1 |
 
-Appendix A's own tables label a few rows inconsistently: its Operational Structure row reads Op-St, and its Resources Structure row reads Rs-St. `profiles.yaml` uses the identifiers from the view specifications.
+Appendix A's own tables label a few rows inconsistently. [`APPENDIX-A.md`](APPENDIX-A.md) lists each one and how it is read here.
 
 ## Declaration exceptions, by bundle
 

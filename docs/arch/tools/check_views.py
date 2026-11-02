@@ -9,9 +9,12 @@ any. When nothing fails it prints an `ok:` count line.
 Usage:
     python docs/arch/tools/check_views.py [--root docs/arch]
 
-Rules: exports, stale-deviation, view-files, slots, links, sources-table,
+Rules: exports, appendix-a, view-files, slots, links, sources-table,
 marks, model, capabilities, trace, outputs, generated. The vocabularies for
 the Decision and Evidence columns are read from README.md, so they live once.
+The mapping from UAF views to DoDAF and NAF outputs is read from APPENDIX-A.md,
+the only copy: `exports` fails on an export it does not name, and `appendix-a`
+fails on a table that is missing, malformed, or out of step with profiles.yaml.
 
 Exit codes: 0 ok, 1 a check failed, 2 bad input (a required file is missing
 or does not parse). Stdlib and PyYAML only.
@@ -28,8 +31,10 @@ import yaml
 from render_profile import mask_sysml, package_depths
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
-RULES = ["exports", "stale-deviation", "view-files", "slots", "links", "sources-table",
+RULES = ["exports", "appendix-a", "view-files", "slots", "links", "sources-table",
          "marks", "model", "capabilities", "trace", "outputs", "generated"]
+APPENDIX_HEADER = "| View | Name | DoDAF 2.02 | NAF 4.0 | DNDAF |"
+APPENDIX_COLUMNS = {"dodaf202": 2, "naf4": 3}
 SOURCES_HEADER = "| Claim | Source | Decision | Evidence |"
 GEN_MARKER = "<!-- generated: data-exchange -->"
 MODEL_RE = re.compile(r"<!--\s*model:\s*([A-Za-z_]\w*)\s*-->")
@@ -167,39 +172,77 @@ def adr_status(text: str) -> str | None:
 
 # --- rules -------------------------------------------------------------------
 
+def appendix_parse(root: Path) -> tuple[str, list[list[str]]] | None:
+    """(header line, body rows) of the first table of APPENDIX-A.md, or None if the file is missing."""
+    try:
+        text = (root / "APPENDIX-A.md").read_text(encoding="utf-8")
+    except OSError:
+        return None
+    return table_after(outside_fences(text), 0)
+
+
+def appendix_table(root: Path) -> list[list[str]]:
+    """The rows of the first table of APPENDIX-A.md; empty when the file is missing."""
+    got = appendix_parse(root)
+    return got[1] if got else []
+
+
+def appendix_cell(cell: str) -> set[str]:
+    return set() if cell.strip() == "-" else {x.strip() for x in cell.split(",") if x.strip()}
+
+
+def appendix_names(root: Path) -> dict[str, dict[str, set[str]]]:
+    """view id -> profile -> the output ids the table names, the union over the view's rows."""
+    out: dict[str, dict[str, set[str]]] = {}
+    for r in appendix_table(root):
+        if len(r) != 5:
+            continue
+        per = out.setdefault(r[0], {p: set() for p in APPENDIX_COLUMNS})
+        for prof, col in APPENDIX_COLUMNS.items():
+            per[prof] |= appendix_cell(r[col])
+    return out
+
+
 def rule_exports(t: Tree) -> list[str]:
-    devs = t.profiles.get("deviations") or []
+    names = appendix_names(t.root)
     fails = []
     for vid, e in t.views.items():
         for prof, ids in (e.get("exports") or {}).items():
-            allowed = set((e.get("appendix_a") or {}).get(prof) or [])
+            allowed = names.get(vid, {}).get(prof, set())
             for x in ids or []:
-                if x in allowed:
-                    continue
-                if any(d.get("view") == vid and d.get("profile") == prof and d.get("export") == x for d in devs):
-                    continue
-                fails.append(f"exports: {vid} {prof} exports {x}, which is not in its appendix_a and no deviation names it")
+                if x not in allowed:
+                    fails.append(f"exports: {vid} {prof} exports {x}, which APPENDIX-A.md does not name for that view")
     return fails
 
 
-def rule_stale(t: Tree) -> list[str]:
-    fails = []
-    for d in t.profiles.get("deviations") or []:
-        v, p, x, h = d.get("view"), d.get("profile"), d.get("export"), d.get("appendix_a_home")
-        tag = f"stale-deviation: {v} {p} {x}"
-        view = t.views.get(v)
-        if view is None:
-            fails.append(f"{tag}: view {v} does not exist")
+def rule_appendix(t: Tree) -> list[str]:
+    got = appendix_parse(t.root)
+    if got is None:
+        return ["appendix-a: APPENDIX-A.md does not exist"]
+    header, rows = got
+    if header != APPENDIX_HEADER:
+        return [f"appendix-a: APPENDIX-A.md table header is '{header}', expected '{APPENDIX_HEADER}'"]
+    fails, seen = [], set()
+    for r in rows:
+        if len(r) != 5:
+            fails.append(f"appendix-a: row '{(r[0] if r else '')[:40]}' has {len(r)} cells, expected 5")
             continue
-        if x in ((view.get("appendix_a") or {}).get(p) or []):
-            fails.append(f"{tag}: the export is in the view's appendix_a, so the deviation is stale")
-        if x not in ((view.get("exports") or {}).get(p) or []):
-            fails.append(f"{tag}: the view has no such export entry")
-        home = t.views.get(h)
-        if home is None:
-            fails.append(f"{tag}: appendix_a_home {h} is not a view")
-        elif x not in ((home.get("appendix_a") or {}).get(p) or []):
-            fails.append(f"{tag}: appendix_a of {h} does not name {x} for {p}")
+        if (r[0], r[1]) in seen:
+            fails.append(f"appendix-a: {r[0]} '{r[1]}' appears twice")
+        seen.add((r[0], r[1]))
+    names = appendix_names(t.root)
+    for vid, e in t.views.items():
+        if vid not in names:
+            fails.append(f"appendix-a: view {vid} has no row in APPENDIX-A.md")
+            continue
+        for prof, reason in (e.get("no_target") or {}).items():
+            if reason and names[vid].get(prof):
+                fails.append(f"appendix-a: {vid} has a no_target reason for {prof}, "
+                             f"but APPENDIX-A.md names {', '.join(sorted(names[vid][prof]))}")
+        if "appendix_a" in e:
+            fails.append(f"appendix-a: view {vid} still has appendix_a in profiles.yaml; the mapping lives in APPENDIX-A.md")
+    if "deviations" in t.profiles:
+        fails.append("appendix-a: profiles.yaml still has deviations; the mapping lives in APPENDIX-A.md")
     return fails
 
 
@@ -244,7 +287,7 @@ def rule_slots(t: Tree) -> list[str]:
 def rule_links(t: Tree) -> list[str]:
     fails = []
     files = [(f"views/{Path(e['file']).name}", t.root / e["file"]) for e in t.views.values()]
-    files += [(n, t.root / n) for n in ("README.md", "INVENTORY.md")]
+    files += [(n, t.root / n) for n in ("README.md", "INVENTORY.md", "APPENDIX-A.md")]
     for name, path in files:
         if not path.is_file():
             if not name.startswith("views/"):  # a missing view file is view-files' finding
@@ -442,7 +485,7 @@ def rule_generated(t: Tree) -> list[str]:
     return fails
 
 
-CHECKS = [rule_exports, rule_stale, rule_view_files, rule_slots, rule_links, rule_sources_table,
+CHECKS = [rule_exports, rule_appendix, rule_view_files, rule_slots, rule_links, rule_sources_table,
           rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated]
 
 

@@ -464,10 +464,6 @@ def render_document(m: Model, profile: str, stamps: list[str], allow_no_kinds: s
     cols = dx["columns"][profile]
     lines = [f"# {ident} {title} ({prof['profiles'][profile]['label']})", ""]
     lines += [s for s in stamps] + [STAMP_NOT_MEASURED, ""]
-    for d in prof.get("deviations") or []:
-        if d.get("profile") == profile and d.get("export") == ident:
-            lines += [f"Naming set in profiles.yaml; UAF 1.2 Appendix A names {d['appendix_a_home']} for "
-                      f"{d['export']}. Decision open.", ""]
     lines += ["## Tiers", ""]
     lines += table(["Tier", "Broker", "Exchange rows"], [
         [t, m.brokers.get(t, "none rendered"),

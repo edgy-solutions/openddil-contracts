@@ -285,14 +285,6 @@ def drop_h1(doc: str) -> str:
     return "\n".join(lines).rstrip("\n")
 
 
-def deviation_line(prof: dict, profile: str, export_id: str) -> str | None:
-    for d in prof.get("deviations") or []:
-        if d.get("profile") == profile and d.get("export") == export_id:
-            return (f"Naming set in profiles.yaml; UAF 1.2 Appendix A names {d['appendix_a_home']} for "
-                    f"{d['export']}. Decision open.")
-    return None
-
-
 # --- rendering ---------------------------------------------------------------
 
 class Renderer:
@@ -320,11 +312,7 @@ class Renderer:
     def dx_content(self) -> str:
         """The generated document without its H1, or the notice."""
         if self.doc is None:
-            lines = []
-            dev = deviation_line(self.prof, self.profile, self.dx_id)
-            if dev:
-                lines += [dev, ""]
-            return "\n".join(lines + [NOTICE])
+            return NOTICE
         return drop_h1(self.doc)
 
     def view_text(self, vid: str, dx_marker: str) -> tuple[str, str]:
@@ -371,7 +359,11 @@ class Renderer:
         """One source view's body for one export."""
         if vid == self.home and GEN_MARKER in (ROOT / self.views[vid]["file"]).read_text(encoding="utf-8"):
             if export_id == self.dx_id:
-                return self.dx_content()
+                mine = (self.views[vid].get("exports") or {}).get(self.profile) or []
+                if len(mine) > 1:
+                    return self.dx_content()
+                _, body = self.view_text(vid, demote(self.dx_content()))
+                return body.rstrip("\n")
             _, body = self.view_text(vid, f"Exported separately as {self.dx_id}.")
             return body.rstrip("\n")
         _, body = self.view_text(vid, "")
@@ -386,8 +378,6 @@ class Renderer:
         else:
             for v in sources:
                 name = self.views[v]["name"]
-                if v == self.home and export_id == self.dx_id:
-                    name = self.dx["uaf"]["title"]
                 lines += [f"## {name} ({v})", "", demote(self.source_body(export_id, v)), ""]
         return "\n".join(lines).rstrip("\n") + "\n"
 

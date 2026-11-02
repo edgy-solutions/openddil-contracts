@@ -83,8 +83,8 @@ The integration tests need `helm`, and look for the chart and the example bundle
 
 ## Profile mapping
 
-[`profiles.yaml`](profiles.yaml) records the mapping from UAF 1.2 Appendix A, formal/22-07-07, Tables 2:1, 2:3 and 2:5. The mapping is not one-to-one. A view a profile cannot name is listed in that profile's `NOT-EXPORTED.md` and is not dropped silently.
+[`APPENDIX-A.md`](APPENDIX-A.md) is the mapping from UAF 1.2 Appendix A, formal/22-07-07, Tables 2:1, 2:3 and 2:5, and the only copy of it. `exports` in [`profiles.yaml`](profiles.yaml) selects from it, and `tools/check_views.py` fails on an export the table does not name. The mapping is not one-to-one. A view a profile cannot name is listed in that profile's `NOT-EXPORTED.md` and is not dropped silently.
 
 The security views have no DoDAF 2.02 or NAF 4.0 target. Appendix A maps them only to DNDAF SecV views.
 
-The `deviations` block in `profiles.yaml` records one open decision. The data-exchange view is homed in Resources-Information and exported as SV-6 and L7, where Appendix A names Resources-Connectivity for SV-6 and Operational-Information for L7. The generated output says so, and the block says how to follow the appendix instead.
+The data-exchange view sits in Resources-Connectivity, where Appendix A names it: SV-6 under DoDAF 2.02, P3 under NAF v4. Resources-Information exports as DIV-3 and P7. Under DoDAF 2.02 the generated table is its own file, SV-6, and SV-3 carries the rest of the view. NAF v4 names one output for the whole view, so P3 holds both.

@@ -1,6 +1,6 @@
 # Resources-Information (Rs-If)
 
-The information as it exists on the wire: proto contracts, the kinds a deployment declares, and which workload writes and reads which topic.
+The information as it exists on the wire: proto contracts, ontology files, and the kinds, routes and destinations a deployment declares. Which workload writes and reads each topic is in [Resources-Connectivity](Rs-Cn.md).
 
 ## Contracts
 
@@ -13,12 +13,6 @@ The information as it exists on the wire: proto contracts, the kinds a deploymen
 | Routes | Deployment overlay | Source topic, destination, sink topic and kind. {{slot:routes}} |
 | Destinations | Deployment overlay | Display name, nations, accepts, asserted by and on. {{slot:destinations}} |
 
-## Data exchange
-
-Generated from a bundle by [`tools/data_exchange.py`](../tools/data_exchange.py), which reads a chart render. A tier, kind or route with no row fails the generator's check. Every row is declared and none was measured; where a declaration is missing, the Exceptions section of the output names it.
-
-<!-- generated: data-exchange -->
-
 ## Sources
 
 | Claim | Source | Decision | Evidence |
@@ -26,4 +20,3 @@ Generated from a bundle by [`tools/data_exchange.py`](../tools/data_exchange.py)
 | Labels are carried on provenance | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | Kinds, routes and destinations live in the overlay | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
 | Contract B's catalog shape | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |
-| Writers and consumers, per topic, from workload annotations; no decision record defines the annotations | [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Declared |

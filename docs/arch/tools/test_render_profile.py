@@ -28,6 +28,7 @@ SIBLINGS = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))
 CHART = SIBLINGS / "openddil-helm" / "openddil-demo"
 BUNDLE = SIBLINGS / "openddil-customer-bundle-example" / "k8s" / "tier-node-values.yaml"
 OVERLAY = HERE / "testdata" / "example-overlay.yaml"
+NOTICE = "Not generated: pass --chart and --values to fill this from a bundle."
 LINK = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 
 
@@ -114,23 +115,40 @@ class RealTree(Base):
     def test_single_source_keeps_headings(self):
         self.assertIn("\n## Sources", read(self.out["dodaf202"], "OV-1.md"))
 
-    def test_l7_has_op_if_and_the_notice(self):
-        t = read(self.out["naf4"], "L7.md")
-        self.assertIn("## Operational-Information (Op-If)", t)
-        self.assertIn("## Resources-Information: data exchange (Rs-If)", t)
-        self.assertIn("Not generated: pass --chart and --values to fill this from a bundle.", t)
+    def test_sv6_holds_the_notice_and_sv3_points_to_it(self):
+        d = self.out["dodaf202"]
+        sv6 = read(d, "SV-6.md")
+        self.assertIn(NOTICE, sv6)
+        self.assertIn("From UAF 1.2 Resources-Connectivity (Rs-Cn).", sv6)
+        self.assertIn("Exported separately as SV-6.", read(d, "SV-3.md"))
+        div3 = read(d, "DIV-3.md")
+        self.assertNotIn(NOTICE, div3)
+        self.assertNotIn("Exported separately", div3)
 
-    def test_sv6_holds_the_notice_and_div3_points_to_it(self):
-        sv6 = read(self.out["dodaf202"], "SV-6.md")
-        self.assertIn("Not generated: pass --chart and --values to fill this from a bundle.", sv6)
-        self.assertIn("Exported separately as SV-6.", read(self.out["dodaf202"], "DIV-3.md"))
-        self.assertNotIn("Not generated", read(self.out["dodaf202"], "DIV-3.md"))
-        self.assertIn("Exported separately as L7.", read(self.out["naf4"], "P7.md"))
+    def test_p3_holds_the_view_and_the_notice(self):
+        d = self.out["naf4"]
+        p3 = read(d, "P3.md")
+        self.assertIn("## Boundary interfaces", p3)
+        self.assertIn(NOTICE, p3)
+        self.assertNotIn("Exported separately", p3)
+        l7 = read(d, "L7.md")
+        self.assertIn("## Sources", l7)
+        self.assertNotIn(NOTICE, l7)
+        self.assertNotIn("Exported separately", l7)
+        p7 = read(d, "P7.md")
+        self.assertNotIn(NOTICE, p7)
+        self.assertNotIn("Exported separately", p7)
+
+    def test_l7_is_op_if_only(self):
+        t = read(self.out["naf4"], "L7.md")
+        self.assertIn("From UAF 1.2 Operational-Information (Op-If).", t)
+        self.assertNotIn("(Rs-", t)
 
     def test_uaf_home_view_holds_notice_under_demoted_flow(self):
-        t = read(self.out["uaf"], "Rs-If.md")
-        self.assertIn("Not generated", t)
-        self.assertTrue(t.startswith("# Resources-Information (Rs-If)\n"))
+        t = read(self.out["uaf"], "Rs-Cn.md")
+        self.assertIn(NOTICE, t)
+        self.assertTrue(t.startswith("# Resources-Connectivity (Rs-Cn)\n"))
+        self.assertNotIn(NOTICE, read(self.out["uaf"], "Rs-If.md"))
 
     def test_not_exported_lists_security_views(self):
         for p in ("dodaf202", "naf4"):
@@ -296,12 +314,12 @@ class Integration(unittest.TestCase):
         d = self.render("dodaf202")
         self.assertIn("| FaultEvent |", read(d, "SV-6.md"))
         self.assertNotIn("Not generated", read(d, "SV-6.md"))
-        self.assertIn("Exported separately as SV-6.", read(d, "DIV-3.md"))
+        self.assertIn("Exported separately as SV-6.", read(d, "SV-3.md"))
 
-    def test_naf4_l7_has_the_kind_row(self):
+    def test_naf4_p3_has_the_kind_row(self):
         d = self.render("naf4")
-        self.assertIn("| FaultEvent |", read(d, "L7.md"))
-        self.assertIn("## Operational-Information (Op-If)", read(d, "L7.md"))
+        self.assertIn("| FaultEvent |", read(d, "P3.md"))
+        self.assertNotIn("| FaultEvent |", read(d, "L7.md"))
 
     def test_failing_check_is_exit_1_and_writes_nothing(self):
         d = self.tmp / "none"

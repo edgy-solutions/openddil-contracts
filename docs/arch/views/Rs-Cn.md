@@ -1,6 +1,6 @@
 # Resources-Connectivity (Rs-Cn)
 
-Which resource talks to which, and across what boundary. The row-by-row flows are generated from a bundle and live in [Resources-Information](Rs-If.md). Link figures: {{slot:link-characteristics}}. Severance results: {{slot:severance-test-results}}.
+Which resource talks to which, and across what boundary. The row-by-row flows are generated from a bundle, under Data exchange below. Link figures: {{slot:link-characteristics}}. Severance results: {{slot:severance-test-results}}.
 
 | | Broker | Aggregator | Projector | Store | Presentation | Bridge | Gate |
 |---|---|---|---|---|---|---|---|
@@ -24,6 +24,12 @@ Which resource talks to which, and across what boundary. The row-by-row flows ar
 | Release | Out | {{slot:destinations}} | HTTP POST by the forwarder | A kind's schema |
 | Intake | In | {{slot:destinations}} | Polled over HTTP; callback later | A kind's schema |
 
+## Data exchange
+
+Generated from a bundle by [`tools/data_exchange.py`](../tools/data_exchange.py), which reads a chart render. A tier, kind or route with no row fails the generator's check. Every row is declared and none was measured; where a declaration is missing, the Exceptions section of the output names it.
+
+<!-- generated: data-exchange -->
+
 ## Sources
 
 | Claim | Source | Decision | Evidence |
@@ -35,3 +41,4 @@ Which resource talks to which, and across what boundary. The row-by-row flows ar
 | Release and intake at the hub | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | Cursor-on-target bridge | [CoT bridge design](../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Design note | Not stated |
 | Member-to-member flows in the matrix | [ADR-0033](../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Declared |
+| Writers and consumers, per topic, from workload annotations; no decision record defines the annotations | [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Declared |

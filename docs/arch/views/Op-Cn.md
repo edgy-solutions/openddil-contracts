@@ -1,6 +1,6 @@
 # Operational-Connectivity (Op-Cn)
 
-Who needs what from whom. This view states the needs. The topics and workloads that carry them are in [Resources-Information](Rs-If.md).
+Who needs what from whom. This view states the needs. The topics and workloads that carry them are in [Resources-Connectivity](Rs-Cn.md).
 
 | Need | From | To | Carries | Condition when severed |
 |---|---|---|---|---|

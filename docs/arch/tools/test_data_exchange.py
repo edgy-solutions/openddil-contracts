@@ -176,17 +176,16 @@ class Content(Base):
 
     def test_profiles_rename_and_check_by_position(self):
         prof = yaml.safe_load((HERE.parent / "profiles.yaml").read_text(encoding="utf-8"))
-        for name, head in (("uaf", "# Rs-If "), ("dodaf202", "# SV-6 "), ("naf4", "# L7 ")):
+        for name, head in (("uaf", "# Rs-Cn "), ("dodaf202", "# SV-6 "), ("naf4", "# P3 ")):
             rc, out, err = run("--rendered", BASIC, "--profile", name, "--check")
             self.assertEqual(rc, 0, f"{name}: {err}")
             self.assertTrue(out.startswith(head), name)
             header = self.exchanges(out)[0]
             for col in prof["data_exchange"]["columns"][name].values():
                 self.assertIn(f" {col} ", header)
-            self.assertEqual("Naming set in profiles.yaml" in out, name != "uaf", name)
+            self.assertNotIn("Decision open", out, name)
         _, out, _ = run("--rendered", BASIC, "--profile", "dodaf202")
         self.assertIn("Receiving resources", out)
-        self.assertIn("UAF 1.2 Appendix A names Rs-Cn for SV-6. Decision open.", out)
 
     def test_sentinels_never_appear(self):
         _, out, err = run("--rendered", BASIC, "--check")

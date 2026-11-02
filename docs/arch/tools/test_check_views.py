@@ -71,18 +71,54 @@ class Perturbed(unittest.TestCase):
              "exports: {dodaf202: [OV-1, ZZ-9], naf4: [L1]}")
         self.expect("exports", "Op-Tx", "ZZ-9")
 
-    def test_2_stale_deviation_export_now_in_appendix(self):
-        edit(self.root, "profiles.yaml", "appendix_a: {dodaf202: [DIV-3], naf4: [P7]}",
-             "appendix_a: {dodaf202: [DIV-3, SV-6], naf4: [P7]}")
-        self.expect("stale-deviation", "Rs-If dodaf202 SV-6", "stale")
+    def test_1_exports_not_in_appendix(self):
+        edit(self.root, "APPENDIX-A.md", "| Resources Connectivity | SV-3, SV-6 |", "| Resources Connectivity | SV-3 |")
+        self.expect("exports", "Rs-Cn", "SV-6")
 
-    def test_2_stale_deviation_home_not_a_view(self):
-        edit(self.root, "profiles.yaml", "appendix_a_home: Rs-Cn", "appendix_a_home: Rs-Nowhere")
-        self.expect("stale-deviation", "Rs-Nowhere")
+    def test_1_exports_old_mapping_is_wrong(self):
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [DIV-3], naf4: [P7]}",
+             "exports: {dodaf202: [DIV-3], naf4: [P7, L7]}")
+        self.expect("exports", "Rs-If", "L7")
 
-    def test_2_stale_deviation_home_does_not_name_export(self):
-        edit(self.root, "profiles.yaml", "appendix_a_home: Op-If", "appendix_a_home: Op-Pr")
-        self.expect("stale-deviation", "Op-Pr does not name L7")
+    def test_2_appendix_a_row_deleted(self):
+        p = self.root / "APPENDIX-A.md"
+        lines = [l for l in p.read_text(encoding="utf-8").split("\n") if not l.startswith("| Rs-If |")]
+        p.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+        self.expect("appendix-a", "Rs-If", "no row")
+
+    def test_2_appendix_a_row_duplicated(self):
+        row = "| Rs-If | Information: Resources Information | DIV-3 | P7 | - |"
+        edit(self.root, "APPENDIX-A.md", row, row + "\n" + row)
+        self.expect("appendix-a", "Rs-If", "twice")
+
+    def test_2_appendix_a_header_changed(self):
+        edit(self.root, "APPENDIX-A.md", "| View | Name | DoDAF 2.02 | NAF 4.0 | DNDAF |",
+             "| View | Name | DoDAF | NAF 4.0 | DNDAF |")
+        self.expect("appendix-a", "header")
+
+    def test_2_appendix_a_missing(self):
+        (self.root / "APPENDIX-A.md").unlink()
+        self.expect("appendix-a", "does not exist")
+
+    def test_2_appendix_a_bad_cell_count(self):
+        edit(self.root, "APPENDIX-A.md", "| Rs-If | Information: Resources Information | DIV-3 | P7 | - |",
+             "| Rs-If | Information: Resources Information | DIV-3 | P7 |")
+        self.expect("appendix-a", "Rs-If", "4 cells")
+
+    def test_2_appendix_a_no_target_reason_is_false(self):
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [DIV-3], naf4: [P7]}",
+             'exports: {dodaf202: [DIV-3]}\n    no_target: {naf4: "Nothing."}')
+        self.expect("appendix-a", "Rs-If", "naf4")
+
+    def test_2_appendix_a_deviations_key_remains(self):
+        p = self.root / "profiles.yaml"
+        p.write_text(p.read_text(encoding="utf-8") + "\ndeviations: []\n", encoding="utf-8", newline="\n")
+        self.expect("appendix-a", "deviations")
+
+    def test_2_appendix_a_view_key_remains(self):
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [DIV-3], naf4: [P7]}",
+             "exports: {dodaf202: [DIV-3], naf4: [P7]}\n    appendix_a: {dodaf202: [DIV-3], naf4: [P7]}")
+        self.expect("appendix-a", "Rs-If", "appendix_a")
 
     def test_3_view_files_bad_first_line(self):
         edit(self.root, "views/Op-Cn.md", "# Operational-Connectivity (Op-Cn)", "# Operational-Connectivity")
@@ -112,6 +148,11 @@ class Perturbed(unittest.TestCase):
         p = self.root / "README.md"
         p.write_text(p.read_text(encoding="utf-8") + "\nSee [gone](views/Nope.md).\n", encoding="utf-8", newline="\n")
         self.expect("links", "README.md", "views/Nope.md")
+
+    def test_5_links_broken_in_appendix(self):
+        p = self.root / "APPENDIX-A.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\nSee [gone](Nope.md).\n", encoding="utf-8", newline="\n")
+        self.expect("links", "APPENDIX-A.md", "Nope.md")
 
     def test_5_links_broken_in_view(self):
         edit(self.root, "views/Op-Pr.md", "(Rs-Tr.md)", "(Rs-Gone.md)")
@@ -186,8 +227,8 @@ class Perturbed(unittest.TestCase):
         self.expect("outputs", "OV-1")
 
     def test_11_outputs_data_exchange_id_not_exported(self):
-        edit(self.root, "profiles.yaml", "exports: {dodaf202: [DIV-3, SV-6], naf4: [P7, L7]}",
-             "exports: {dodaf202: [DIV-3], naf4: [P7, L7]}")
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [SV-3, SV-6], naf4: [P3]}",
+             "exports: {dodaf202: [SV-3], naf4: [P3]}")
         self.expect("outputs", "SV-6")
 
     def test_12_generated_twice(self):
@@ -197,7 +238,7 @@ class Perturbed(unittest.TestCase):
         self.expect("generated", "Op-If")
 
     def test_12_generated_missing(self):
-        edit(self.root, "views/Rs-If.md", "<!-- generated: data-exchange -->", "")
+        edit(self.root, "views/Rs-Cn.md", "<!-- generated: data-exchange -->", "")
         self.expect("generated", "0 times")
 
 
