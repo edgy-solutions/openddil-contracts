@@ -1,0 +1,181 @@
+# Output profiles for the architecture views. The content lives once, in
+# views/ under its UAF 1.2 view specification; a profile only renames and
+# selects. tools/render_profile.py and tools/data_exchange.py both read this.
+#
+# Source for every `appendix_a` entry: UAF 1.2 Appendix A, Traceability,
+# OMG formal/22-07-07, Table 2:1 (DoDAF 2.02), Table 2:3 (NAF 4.0) and
+# Table 2:5 (DNDAF security views). The appendix states the mapping is not
+# one-to-one. Looked up 2026-11-02, not recalled.
+#
+# `exports` is the selection this repository makes. Each entry must be named
+# by that view's `appendix_a` unless `deviations` below names it;
+# tools/check_views.py fails otherwise.
+
+profiles:
+  uaf: {label: "UAF 1.2"}
+  dodaf202: {label: "DoDAF 2.02"}
+  naf4: {label: "NAF v4"}
+
+# OPEN DECISION. This repository homes the generated data-exchange view in
+# Resources-Information and exports it as SV-6 and L7. Appendix A places SV-6
+# and P3 under Resources Connectivity, Resources Information under DIV-3 and
+# P7, and L7 under Operational Information. Until decided the view stays here
+# and says so where it is rendered. To follow the appendix instead,
+# remove these two deviations, set data_exchange.home to Rs-Cn and its naf4
+# entry to {id: P3, title: Resource Connectivity}, and add SV-6 and P3 to the
+# Rs-Cn exports.
+deviations:
+  - {view: Rs-If, profile: dodaf202, export: SV-6, appendix_a_home: Rs-Cn}
+  - {view: Rs-If, profile: naf4, export: L7, appendix_a_home: Op-If}
+
+data_exchange:
+  home: Rs-If
+  uaf: {id: Rs-If, title: "Resources-Information: data exchange"}
+  dodaf202: {id: SV-6, title: "Systems Resource Flow Matrix"}
+  naf4: {id: L7, title: "Information Model"}
+  columns:
+    uaf: {writer: Writer, consumers: Consumers, topic: Topic}
+    dodaf202: {writer: Sending resource, consumers: Receiving resources, topic: Resource flow}
+    naf4: {writer: Producer, consumers: Consumers, topic: Information flow}
+
+export_titles:
+  dodaf202:
+    AV-1: Overview and Summary Information
+    CV-2: Capability Taxonomy
+    CV-3: Capability Phasing
+    OV-1: High Level Operational Concept Graphic
+    OV-2: Operational Resource Flow Description
+    OV-3: Operational Resource Flow Matrix
+    OV-5a: Operational Activity Decomposition Tree
+    OV-5b: Operational Activity Model
+    OV-6b: State Transition Description
+    DIV-2: Logical Data Model
+    DIV-3: Physical Data Model
+    SV-1: Systems Interface Description
+    SV-2: Systems Resource Flow Description
+    SV-3: Systems-Systems Matrix
+    SV-4: Systems Functionality Description
+    SV-5a: Operational Activity to Systems Function Traceability Matrix
+    SV-5b: Operational Activity to Systems Traceability Matrix
+    SV-6: Systems Resource Flow Matrix
+    StdV-1: Standards Profile
+  naf4:
+    A8: Standards
+    C1: Capability Taxonomy
+    Cr: Capability Roadmap
+    L1: Node Types
+    L2: Logical Scenario
+    L3: Node Interactions
+    L4: Logical Activities
+    L5: Logical States
+    L7: Information Model
+    L4-P4: Activity to Function Mapping
+    P2: Resource Structure
+    P3: Resource Connectivity
+    P4: Resource Functions
+    P7: Data Model
+
+# One entry per view file under views/. `no_target` says why a profile
+# selects a view out; a view that a profile cannot name is listed in that
+# profile's NOT-EXPORTED.md, never silently dropped.
+views:
+  Sm-Ov:
+    name: Summary-Overview
+    file: views/Sm-Ov.md
+    appendix_a: {dodaf202: [AV-1], naf4: []}
+    exports: {dodaf202: [AV-1]}
+    no_target: {naf4: "Table 2:3 gives Summary & Overview no NAF 4.0 view."}
+  St-Tx:
+    name: Strategic-Taxonomy
+    file: views/St-Tx.md
+    appendix_a: {dodaf202: [CV-2], naf4: [C1]}
+    exports: {dodaf202: [CV-2], naf4: [C1]}
+  St-Rm-P:
+    name: Strategic-Roadmap-Phasing
+    file: views/St-Rm-P.md
+    appendix_a: {dodaf202: [CV-3], naf4: [Cr]}
+    exports: {dodaf202: [CV-3], naf4: [Cr]}
+  Op-Tx:
+    name: Operational-Taxonomy
+    file: views/Op-Tx.md
+    appendix_a: {dodaf202: [OV-1, OV-2], naf4: [L1]}
+    exports: {dodaf202: [OV-1], naf4: [L1]}
+  Op-Sr:
+    name: Operational-Structure
+    file: views/Op-Sr.md
+    appendix_a: {dodaf202: [OV-2], naf4: [L2, L2-L3]}
+    exports: {dodaf202: [OV-2], naf4: [L2]}
+  Op-Cn:
+    name: Operational-Connectivity
+    file: views/Op-Cn.md
+    appendix_a: {dodaf202: [OV-2, OV-3], naf4: [L3, L2-L3]}
+    exports: {dodaf202: [OV-2, OV-3], naf4: [L3]}
+  Op-Pr:
+    name: Operational-Processes
+    file: views/Op-Pr.md
+    appendix_a: {dodaf202: [OV-5a, OV-5b], naf4: [L4]}
+    exports: {dodaf202: [OV-5a, OV-5b], naf4: [L4]}
+  Op-St:
+    name: Operational-States
+    file: views/Op-St.md
+    appendix_a: {dodaf202: [OV-6b], naf4: [L5]}
+    exports: {dodaf202: [OV-6b], naf4: [L5]}
+  Op-If:
+    name: Operational-Information
+    file: views/Op-If.md
+    appendix_a: {dodaf202: [DIV-2], naf4: [L7]}
+    exports: {dodaf202: [DIV-2], naf4: [L7]}
+  Rs-Sr:
+    name: Resources-Structure
+    file: views/Rs-Sr.md
+    appendix_a: {dodaf202: [SV-1, SV-2], naf4: [P2]}
+    exports: {dodaf202: [SV-1, SV-2], naf4: [P2]}
+  Rs-Cn:
+    name: Resources-Connectivity
+    file: views/Rs-Cn.md
+    appendix_a: {dodaf202: [SV-3, SV-6], naf4: [P3]}
+    exports: {dodaf202: [SV-3], naf4: [P3]}
+  Rs-Pr:
+    name: Resources-Processes
+    file: views/Rs-Pr.md
+    appendix_a: {dodaf202: [SV-4], naf4: [P4]}
+    exports: {dodaf202: [SV-4], naf4: [P4]}
+  Rs-If:
+    name: Resources-Information
+    file: views/Rs-If.md
+    appendix_a: {dodaf202: [DIV-3], naf4: [P7]}
+    exports: {dodaf202: [DIV-3, SV-6], naf4: [P7, L7]}
+  Rs-Tr:
+    name: Resources-Traceability
+    file: views/Rs-Tr.md
+    appendix_a: {dodaf202: [SV-5a, SV-5b], naf4: [L4-P4]}
+    exports: {dodaf202: [SV-5a, SV-5b], naf4: [L4-P4]}
+  Sc-Sr:
+    name: Security-Structure
+    file: views/Sc-Sr.md
+    appendix_a: {dodaf202: [], naf4: []}
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:1 gives Security Structure no DoDAF 2.02 view."
+      naf4: "Table 2:3 gives Security Structure no NAF 4.0 view."
+  Sc-Cn:
+    name: Security-Connectivity
+    file: views/Sc-Cn.md
+    appendix_a: {dodaf202: [], naf4: []}
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2:1 gives no DoDAF 2.02 view."
+      naf4: "Table 2:5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2:3 gives no NAF 4.0 view."
+  Sc-Pr:
+    name: Security-Processes
+    file: views/Sc-Pr.md
+    appendix_a: {dodaf202: [], naf4: []}
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:1 gives no DoDAF 2.02 view."
+      naf4: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:3 gives no NAF 4.0 view."
+  Sd-Tx:
+    name: Standards-Taxonomy
+    file: views/Sd-Tx.md
+    appendix_a: {dodaf202: [StdV-1], naf4: [A8]}
+    exports: {dodaf202: [StdV-1], naf4: [A8]}

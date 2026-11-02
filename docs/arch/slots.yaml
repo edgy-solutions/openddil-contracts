@@ -1,0 +1,91 @@
+# Instantiation slots. A view writes {{slot:name}} wherever a deployment has to
+# supply a fact. Nothing here holds a value: values belong to the deployment's
+# bundle or to a private file passed to render_profile.py --slots.
+# tools/check_views.py fails on a slot used and not registered here, and on a
+# slot registered here and used nowhere.
+#
+# `source` is the bundle artefact that fills the slot. `none yet` means no
+# declared artefact carries it, so a person has to write it.
+
+slots:
+  deployment-name:
+    fills: Name of this instantiation of the architecture.
+    source: none yet
+  mission-thread:
+    fills: The operational thread the deployment supports, in the deployment's own words.
+    source: none yet
+  coalition-nations:
+    fills: Nations whose labels and entitlements the deployment evaluates.
+    source: bundle ontology releasability file; chart releasability values
+  tier-tree:
+    fills: The deployment's whole tier tree, including lateral peer links if any.
+    source: chart values edges[] and regions[]
+  root-node:
+    fills: Name of the root tier.
+    source: chart values
+  regional-nodes:
+    fills: Intermediate tiers and their parents.
+    source: chart values regions[]
+  edge-sites:
+    fills: Leaf tiers and the sites they stand for.
+    source: chart values edges[]; bundle site and geofence files
+  operator-roles:
+    fills: Roles that sign in at each tier and what each may do.
+    source: none yet (the public bundle's user list is fiction and names no organisation)
+  c2-system:
+    fills: The command-and-control picture that receives status.
+    source: egress destination entry
+  sustainment-system-of-record:
+    fills: The materiel management system on the far side of Contract B.
+    source: none yet (contract fixtures only)
+  maintenance-system:
+    fills: The maintenance system that receives records and returns actions.
+    source: egress destination entry
+  ingest-formats:
+    fills: Wire formats in use and the ingress class of each.
+    source: bundle ingress definitions
+  feeds:
+    fills: The specific feeds at each tier and who owns them.
+    source: none yet
+  platform-variants:
+    fills: Platform variants in the fleet and the aliases they arrive under.
+    source: bundle ontology files
+  kinds:
+    fills: Record kinds this deployment releases and takes in.
+    source: egress kinds in the deployment overlay
+  destinations:
+    fills: Destination registry entries.
+    source: egress destinations in the deployment overlay
+  routes:
+    fills: Gate routes from source topic to destination.
+    source: egress routes in the deployment overlay
+  classification-scheme:
+    fills: The classification scheme, if the deployment evaluates one. The gate does not evaluate classification today.
+    source: none yet
+  standards-editions:
+    fills: The edition of each standard the deployment binds to.
+    source: none yet
+  attribute-bindings:
+    fills: Field-level bindings from OpenDDIL names to a standard's attributes.
+    source: none yet
+  link-characteristics:
+    fills: Bandwidth, latency and expected outage pattern of each uplink.
+    source: none yet
+  severance-test-results:
+    fills: Results of severing each uplink in this deployment.
+    source: none yet (deployment test records)
+  measured-results:
+    fills: Measured latency, throughput and recovery figures for this deployment.
+    source: none yet (deployment test records)
+  idp-issuer:
+    fills: Identity issuer at each tier.
+    source: chart oidc values
+  approval-authorities:
+    fills: Who approves a release, a work action and an architecture change.
+    source: none yet
+  capabilities-in-scope:
+    fills: Which capabilities this deployment takes on.
+    source: none yet
+  increment-dates:
+    fills: Dates for the roadmap increments. The roadmap note deliberately has none.
+    source: none yet
