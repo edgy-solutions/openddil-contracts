@@ -1,6 +1,8 @@
-# Standards-Taxonomy (Sd-Tx)
+# Sample Fleet System: Standards-Taxonomy (Sd-Tx)
 
-The standards the decision records align with, and how strongly. Alignment is by concept name only. Field names stay OpenDDIL-local, and a binding is owed before any field is frozen. Editions: {{slot:standards-editions}}. Bindings: {{slot:attribute-bindings}}.
+built on OpenDDIL 0.1.161
+
+The standards the decision records align with, and how strongly. Alignment is by concept name only. Field names stay local to this architecture, and a binding is owed before any field is frozen. Editions: {{slot:standards-editions}}. Bindings: {{slot:attribute-bindings}}.
 
 No row here is a conformance claim.
 

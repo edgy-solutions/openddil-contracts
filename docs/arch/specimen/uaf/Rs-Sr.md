@@ -1,4 +1,6 @@
-# Resources-Structure (Rs-Sr)
+# Sample Fleet System: Resources-Structure (Rs-Sr)
+
+built on OpenDDIL 0.1.161
 
 A tier is one kit, and a deployment decides which members each tier carries. The deployment's tree: {{slot:tier-tree}}.
 

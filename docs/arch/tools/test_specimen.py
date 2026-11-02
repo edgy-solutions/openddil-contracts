@@ -27,6 +27,7 @@ PROFILES = rs.PROFILES
 CONFIG_KEYS = ("url", "token_url", "client_id", "client_secret_file", "token_file")
 DX_OUTPUTS = (("uaf", "Rs-Cn.md"), ("dodaf202", "SV-6.md"), ("naf4", "P3.md"))
 STAMP_PREFIX = "Chart: "
+ATTRIBUTION_PREFIX = "built on OpenDDIL"
 NOT_MEASURED = "Declared, not measured"
 
 WHY = rs.missing_input()
@@ -39,7 +40,9 @@ def read_lf(path: Path) -> str:
 
 
 def without_chart_stamp(text: str) -> list[str]:
-    return [ln for ln in text.split("\n") if not ln.startswith(STAMP_PREFIX)]
+    """Lines without the two that carry the chart version: the stamp and the attribution."""
+    return [ln for ln in text.split("\n")
+            if not ln.startswith((STAMP_PREFIX, ATTRIBUTION_PREFIX))]
 
 
 def tree(root: Path) -> dict[str, Path]:
@@ -155,6 +158,25 @@ class Specimen(unittest.TestCase):
     def test_specimen_states_what_it_is(self):
         for prof, name in DX_OUTPUTS:
             self.assertIn(NOT_MEASURED, read_lf(SPECIMEN / prof / name), f"{prof}/{name}")
+
+    def test_every_file_leads_with_the_twins_system_name(self):
+        name = self.twin["system"]["name"]
+        self.assertTrue(isinstance(name, str) and name.strip(), "the twin names no system")
+        for rel, path in tree(SPECIMEN).items():
+            first = read_lf(path).split("\n")[0]
+            self.assertTrue(first.startswith(f"# {name}: "), f"{rel}: {first!r}")
+
+    def test_every_file_has_the_attribution_once(self):
+        for rel, path in tree(SPECIMEN).items():
+            lines = [ln for ln in read_lf(path).split("\n") if ln.startswith(ATTRIBUTION_PREFIX)]
+            self.assertEqual(len(lines), 1, f"{rel}: {lines}")
+
+    def test_the_framework_name_is_only_in_the_attribution_and_the_package(self):
+        for rel, path in tree(SPECIMEN).items():
+            for ln in read_lf(path).split("\n"):
+                if "OpenDDIL" in ln:
+                    self.assertTrue(ln.startswith(ATTRIBUTION_PREFIX) or "package OpenDDIL" in ln,
+                                    f"{rel}: {ln!r}")
 
     def test_line_endings_are_lf(self):
         for name, path in tree(SPECIMEN).items():

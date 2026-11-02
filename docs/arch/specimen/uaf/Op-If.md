@@ -1,10 +1,12 @@
-# Operational-Information (Op-If)
+# Sample Fleet System: Operational-Information (Op-If)
 
-The logical information model. Field names are OpenDDIL-local: the standards in [Standards-Taxonomy](../../views/Sd-Tx.md) are aligned by concept name, and a binding is owed before any field is frozen. Bindings: {{slot:attribute-bindings}}. Variants: {{slot:platform-variants}}.
+built on OpenDDIL 0.1.161
+
+The logical information model. Field names are local to this architecture: the standards in [Standards-Taxonomy](../../views/Sd-Tx.md) are aligned by concept name, and a binding is owed before any field is frozen. Bindings: {{slot:attribute-bindings}}. Variants: {{slot:platform-variants}}.
 
 ```sysml
 package Information {
-    doc /* Logical entities only. Field names are OpenDDIL-local; the wire shape is in the proto contracts. */
+    doc /* Logical entities only. Field names are local to this architecture; the wire shape is in the proto contracts. */
 
     item def Asset {
         doc /* ADR-0047: the id is opaque inside the system; every boundary has a mapper. */

@@ -1,4 +1,6 @@
-# Operational-Structure (Op-Sr)
+# Sample Fleet System: Operational-Structure (Op-Sr)
+
+built on OpenDDIL 0.1.161
 
 The performers as a deployment arranges them. The whole tree: {{slot:tier-tree}}.
 

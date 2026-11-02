@@ -1,4 +1,6 @@
-# Resources-Connectivity (Rs-Cn)
+# Sample Fleet System: Resources-Connectivity (Rs-Cn)
+
+built on OpenDDIL 0.1.161
 
 Which resource talks to which, and across what boundary. The row-by-row flows are generated from a bundle, under Data exchange below. Link figures: {{slot:link-characteristics}}. Severance results: {{slot:severance-test-results}}.
 

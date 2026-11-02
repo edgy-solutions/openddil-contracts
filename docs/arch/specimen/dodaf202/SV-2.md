@@ -1,4 +1,6 @@
-# SV-2 Systems Resource Flow Description (DoDAF 2.02)
+# Sample Fleet System: SV-2 Systems Resource Flow Description (DoDAF 2.02)
+
+built on OpenDDIL 0.1.161
 
 From UAF 1.2 Resources-Structure (Rs-Sr).
 

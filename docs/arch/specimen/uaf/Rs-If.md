@@ -1,4 +1,6 @@
-# Resources-Information (Rs-If)
+# Sample Fleet System: Resources-Information (Rs-If)
+
+built on OpenDDIL 0.1.161
 
 The information as it exists on the wire: proto contracts, ontology files, and the kinds, routes and destinations a deployment declares. Which workload writes and reads each topic is in [Resources-Connectivity](../../views/Rs-Cn.md).
 

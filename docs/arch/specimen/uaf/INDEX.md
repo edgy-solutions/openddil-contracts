@@ -1,4 +1,6 @@
-# Index (UAF 1.2)
+# Sample Fleet System: Index (UAF 1.2)
+
+built on OpenDDIL 0.1.161
 
 | View | Name |
 |---|---|

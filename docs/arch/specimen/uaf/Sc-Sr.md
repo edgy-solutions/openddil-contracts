@@ -1,4 +1,6 @@
-# Security-Structure (Sc-Sr)
+# Sample Fleet System: Security-Structure (Sc-Sr)
+
+built on OpenDDIL 0.1.161
 
 One decision point per tier, and enforcement wherever data leaves a tier's custody. Labels come from {{slot:coalition-nations}}. Classification: {{slot:classification-scheme}}. Issuers: {{slot:idp-issuer}}.
 

@@ -1,4 +1,6 @@
-# Strategic-Taxonomy (St-Tx)
+# Sample Fleet System: Strategic-Taxonomy (St-Tx)
+
+built on OpenDDIL 0.1.161
 
 The capabilities this architecture names. The grouping is this view's; each row cites where the capability comes from. ISO 13374 is used as a reading of what exists and is not a conformance claim. In scope for this deployment: {{slot:capabilities-in-scope}}.
 

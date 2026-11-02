@@ -1,4 +1,6 @@
-# Security-Connectivity (Sc-Cn)
+# Sample Fleet System: Security-Connectivity (Sc-Cn)
+
+built on OpenDDIL 0.1.161
 
 What is asserted across each boundary, and who stands behind it.
 

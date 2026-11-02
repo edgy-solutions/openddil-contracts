@@ -1,4 +1,6 @@
-# OV-6b State Transition Description (DoDAF 2.02)
+# Sample Fleet System: OV-6b State Transition Description (DoDAF 2.02)
+
+built on OpenDDIL 0.1.161
 
 From UAF 1.2 Operational-States (Op-St).
 

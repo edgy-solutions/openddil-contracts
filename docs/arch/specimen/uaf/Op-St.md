@@ -1,4 +1,6 @@
-# Operational-States (Op-St)
+# Sample Fleet System: Operational-States (Op-St)
+
+built on OpenDDIL 0.1.161
 
 The states the operational record can claim, and what moves between them. The three machines are independent: none of them writes another's value.
 

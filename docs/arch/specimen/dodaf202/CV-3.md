@@ -1,4 +1,6 @@
-# CV-3 Capability Phasing (DoDAF 2.02)
+# Sample Fleet System: CV-3 Capability Phasing (DoDAF 2.02)
+
+built on OpenDDIL 0.1.161
 
 From UAF 1.2 Strategic-Roadmap-Phasing (St-Rm-P).
 

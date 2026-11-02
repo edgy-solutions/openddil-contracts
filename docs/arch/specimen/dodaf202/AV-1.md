@@ -1,10 +1,12 @@
-# AV-1 Overview and Summary Information (DoDAF 2.02)
+# Sample Fleet System: AV-1 Overview and Summary Information (DoDAF 2.02)
+
+built on OpenDDIL 0.1.161
 
 From UAF 1.2 Summary-Overview (Sm-Ov).
 
-The architecture of {{slot:deployment-name}}, which supports {{slot:mission-thread}}.
+The architecture of Sample Fleet System, which supports {{slot:mission-thread}}.
 
-OpenDDIL reads a fleet's tactical signals and its sustainment records, correlates them, and keeps doing so when a tier is cut off from the tier above it. It correlates and does not transact: both provenances are kept, and the system of record stays the system of record.
+Sample Fleet System reads a fleet's tactical signals and its sustainment records, correlates them, and keeps doing so when a tier is cut off from the tier above it. It correlates and does not transact: both provenances are kept, and the system of record stays the system of record.
 
 Three decisions shape every other view:
 
