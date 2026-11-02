@@ -330,6 +330,49 @@ def lab_sentence(labs: dict, used: list[str]) -> str:
     return parts[0] + "." if parts else ""
 
 
+def resolve_quotes(record: dict, readiness: list[str], entries: dict | None = None) -> tuple[dict, list[str]]:
+    """(capability, index of its measured citation) to the cited readiness quote, and the failures.
+
+    `readiness` is the document's lines. `entries` is from resolve_entries; given, its failures
+    are the caller's already.
+    """
+    fails: list[str] = []
+    if entries is None:
+        entries, fails = resolve_entries(record, readiness)
+    quotes: dict[tuple[str, int], str] = {}
+    for name, cap in record["capabilities"].items():
+        for k, m in enumerate((cap or {}).get("measured") or []):
+            entry, line = (m or {}).get("entry"), (m or {}).get("line")
+            if entry not in entries or not line:
+                continue  # an unknown entry or an unresolved anchor is already a failure
+            hits = measured_line(readiness, entries[entry][0], line)
+            if len(hits) != 1:
+                fails.append(f"{name}: entry {entry} line {line!r} is on {len(hits)} readiness lines "
+                             "from the anchor to the next heading, expected one")
+            else:
+                quotes[(name, k)] = quote_of(readiness, hits[0])
+    return quotes, fails
+
+
+def evidence_item(record: dict, entries: dict, measured: dict, quote: str) -> str:
+    """One piece of evidence, as the Evidence column prints it."""
+    _, date, section = entries[measured["entry"]]
+    return f"{date}, lab {record['entries'][measured['entry']]['lab']}, {section}: {quote}"
+
+
+def evidence_cells(record: dict, readiness_text: str) -> dict[str, list[str]]:
+    """Capability to the evidence strings render_table prints for it, joined by '; '. Raises CheckError."""
+    readiness = readiness_text.replace("\r\n", "\n").split("\n")
+    entries, fails = resolve_entries(record, readiness)
+    quotes, quote_fails = resolve_quotes(record, readiness, entries)
+    fails += quote_fails
+    if fails:
+        raise CheckError("".join(f"phases: {f}\n" for f in fails))
+    return {name: [evidence_item(record, entries, m, quotes[(name, k)]) for k, m in enumerate(cap["measured"])]
+            for name, cap in ((n, c or {}) for n, c in record["capabilities"].items())
+            if cap.get("measured")}
+
+
 def render_table(record: dict, capabilities: dict[str, str], decisions_dir, templates_dir,
                  readiness_text: str) -> str:
     """The phases document text. Raises CheckError listing every failure."""
@@ -340,7 +383,6 @@ def render_table(record: dict, capabilities: dict[str, str], decisions_dir, temp
     fails += entry_fails
     caps = {k: (v or {}) for k, v in record["capabilities"].items()}
 
-    quotes: dict[tuple[str, int], str] = {}
     for name, cap in caps.items():
         for b in cap.get("built") or []:
             tpl, contains = (b or {}).get("template"), (b or {}).get("contains")
@@ -349,16 +391,8 @@ def render_table(record: dict, capabilities: dict[str, str], decisions_dir, temp
                 fails.append(f"{name}: template {tpl} is not in the chart's templates")
             elif not contains or contains not in text:
                 fails.append(f"{name}: template {tpl} does not contain {contains!r}")
-        for k, m in enumerate(cap.get("measured") or []):
-            entry, line = (m or {}).get("entry"), (m or {}).get("line")
-            if entry not in entries or not line:
-                continue  # an unknown entry or an unresolved anchor is already a failure
-            hits = measured_line(readiness, entries[entry][0], line)
-            if len(hits) != 1:
-                fails.append(f"{name}: entry {entry} line {line!r} is on {len(hits)} readiness lines "
-                             "from the anchor to the next heading, expected one")
-            else:
-                quotes[(name, k)] = quote_of(readiness, hits[0])
+    quotes, quote_fails = resolve_quotes(record, readiness, entries)
+    fails += quote_fails
     if fails:
         raise CheckError("".join(f"phases: {f}\n" for f in fails))
 
@@ -377,13 +411,9 @@ def render_table(record: dict, capabilities: dict[str, str], decisions_dir, temp
             lane += f", {number}: {cap['increment'].replace('**', '')}"
         evidence = NOT_MEASURED
         if phase == "measured":
-            items = []
-            for k, m in enumerate(cap["measured"]):
-                _, date, section = entries[m["entry"]]
-                lab = record["entries"][m["entry"]]["lab"]
-                used.add(lab)
-                items.append(f"{date}, lab {lab}, {section}: {quotes[(name, k)]}")
-            evidence = "; ".join(items)
+            used.update(record["entries"][m["entry"]]["lab"] for m in cap["measured"])
+            evidence = "; ".join(evidence_item(record, entries, m, quotes[(name, k)])
+                                 for k, m in enumerate(cap["measured"]))
         built = list(dict.fromkeys(f"templates/{b['template']}" for b in cap.get("built") or []))
         decisions = []
         for adr in record_adrs(cap):
@@ -405,3 +435,38 @@ def render_table(record: dict, capabilities: dict[str, str], decisions_dir, temp
             'the readiness doc has no entry for the capability, and says nothing about measurements recorded '
             'elsewhere.']
     return "\n".join(out)
+
+
+# --- the barred list ----------------------------------------------------------
+
+def load_barred(paths) -> list[re.Pattern]:
+    """Compile the barred list: a pattern per line, `#` comments, an optional `|reason` tail."""
+    patterns: list[re.Pattern] = []
+    for path in paths:
+        name = Path(path).name
+        try:
+            text = Path(path).read_text(encoding="utf-8")
+        except OSError:
+            raise CheckError(f"barred list {name} cannot be read") from None
+        for n, line in enumerate(text.splitlines(), 1):
+            if not line.strip() or line.startswith("#"):
+                continue
+            if "|" in line:
+                line = line.rsplit("|", 1)[0]
+            try:
+                patterns.append(re.compile(line, re.IGNORECASE))
+            except re.error:
+                raise CheckError(f"barred list {name} line {n} does not compile") from None
+    if not patterns:
+        raise CheckError("the barred list is empty")
+    return patterns
+
+
+def scan_barred(texts: dict[str, list[str]], barred) -> list[str]:
+    """One failure per name that carries a barred value. It never says which, or what matched."""
+    fails = []
+    for name, strings in texts.items():
+        n = sum(len(p.findall(s)) for s in strings for p in barred)
+        if n:
+            fails.append(f"quotes: {name}: carries {n} barred value(s)")
+    return fails

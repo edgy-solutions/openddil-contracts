@@ -433,6 +433,86 @@ class Counts(Fixture):
         self.assertEqual(names, ["Alpha", "Beta", "Gamma"])
 
 
+class Quotes(Fixture):
+    def test_evidence_cells_are_what_the_table_prints(self):
+        self.assertEqual({k: "; ".join(v) for k, v in cp.evidence_cells(self.rec, READINESS_TEXT).items()},
+                         {"Alpha": self.cells(self.render(), "Alpha")[3]})
+
+    def test_two_citations_are_two_strings(self):
+        self.rec["capabilities"]["Alpha"]["measured"].append({"entry": "e2", "line": "second section line"})
+        cells = cp.evidence_cells(self.rec, READINESS_TEXT)["Alpha"]
+        self.assertEqual(len(cells), 2)
+        self.assertEqual("; ".join(cells), self.cells(self.render(), "Alpha")[3])
+
+    def test_a_bad_citation_raises_without_the_text(self):
+        self.rec["capabilities"]["Alpha"]["measured"][0]["line"] = "| 9 | nothing"
+        with self.assertRaises(cp.CheckError) as cm:
+            cp.evidence_cells(self.rec, READINESS_TEXT)
+        self.assertNotIn(MARKER, cm.exception.args[0])
+
+
+class Barred(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def write(self, text, name="list.txt"):
+        p = self.tmp / name
+        p.write_text(text, encoding="utf-8", newline="\n")
+        return p
+
+    def test_comments_and_blank_lines_are_skipped(self):
+        got = cp.load_barred([self.write("# note\n\n  \nzebra\n")])
+        self.assertEqual([p.pattern for p in got], ["zebra"])
+
+    def test_the_rsplit_form_drops_the_tail(self):
+        got = cp.load_barred([self.write("a|b|reason\nplain\n")])
+        self.assertEqual([p.pattern for p in got], ["a|b", "plain"])
+
+    def test_two_files_add_up(self):
+        got = cp.load_barred([self.write("one\n", "a.txt"), self.write("two\n", "b.txt")])
+        self.assertEqual(len(got), 2)
+
+    def test_a_bad_pattern_names_only_the_file_and_line(self):
+        p = self.write("fine\n(unclosed-ZZPAT\n", "mylist.txt")
+        with self.assertRaises(cp.CheckError) as cm:
+            cp.load_barred([p])
+        msg = cm.exception.args[0]
+        self.assertEqual(msg, "barred list mylist.txt line 2 does not compile")
+        self.assertNotIn("ZZPAT", msg)
+        self.assertIsNone(cm.exception.__cause__)
+
+    def test_an_empty_list_raises(self):
+        for text in ("", "# only a comment\n\n"):
+            with self.assertRaises(cp.CheckError):
+                cp.load_barred([self.write(text)])
+
+    def test_an_unreadable_list_raises(self):
+        with self.assertRaises(cp.CheckError):
+            cp.load_barred([self.tmp / "nowhere.txt"])
+
+    def test_hit_and_miss(self):
+        pats = cp.load_barred([self.write("zebra\n")])
+        self.assertEqual(cp.scan_barred({"A": ["a zebra here"], "B": ["nothing"]}, pats),
+                         ["quotes: A: carries 1 barred value(s)"])
+        self.assertEqual(cp.scan_barred({"B": ["nothing"]}, pats), [])
+
+    def test_case_insensitive(self):
+        pats = cp.load_barred([self.write("zebra\n")])
+        self.assertEqual(len(cp.scan_barred({"A": ["ZeBrA"]}, pats)), 1)
+
+    def test_count_is_over_strings_and_patterns(self):
+        pats = cp.load_barred([self.write("zebra\nlion\n")])
+        got = cp.scan_barred({"A": ["zebra zebra", "lion and zebra"]}, pats)
+        self.assertEqual(got, ["quotes: A: carries 4 barred value(s)"])
+
+    def test_the_output_has_neither_pattern_nor_match(self):
+        pats = cp.load_barred([self.write("zeb[a-z]+|why\n")])
+        out = "\n".join(cp.scan_barred({"A": ["see zebra now"]}, pats))
+        self.assertNotIn("zeb", out)
+        self.assertNotIn("why", out)
+
+
 WHY = None if READINESS.is_file() and (CHART / "templates").is_dir() else \
     f"the chart or its readiness doc is not beside this repository ({CHART})"
 if WHY:
@@ -449,6 +529,16 @@ class RealSources(unittest.TestCase):
         self.caps = cp.model_capabilities(sysml)
         self.readiness = READINESS.read_text(encoding="utf-8")
         self.table = cp.render_table(self.record, self.caps, REPO / "decisions", CHART / "templates", self.readiness)
+
+    def test_evidence_cells_are_what_the_table_prints(self):
+        printed = {}
+        for ln in self.table.split("\n"):
+            cells = [c.strip() for c in re.split(r"(?<!\\)\|", ln.strip().strip("|"))]
+            if ln.startswith("| ") and len(cells) == 7 and cells[0] != "Capability" and cells[3] != "not measured":
+                printed[cells[0]] = cells[3]
+        got = cp.evidence_cells(self.record, self.readiness)
+        self.assertEqual({k: "; ".join(v) for k, v in got.items()}, printed)
+        self.assertTrue(printed)
 
     def test_counts(self):
         self.assertTrue(self.table.startswith(

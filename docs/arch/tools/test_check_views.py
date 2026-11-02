@@ -20,8 +20,10 @@ REPO = ARCH.parent.parent
 TOOL = HERE / "check_views.py"
 
 
-def run(root):
-    p = subprocess.run([sys.executable, str(TOOL), "--root", str(root)],
+def run(root, *extra):
+    """check_views on root. The default is partial: quotes and floor need a chart, and have their own tests."""
+    args = extra or ("--allow-partial", "test")
+    p = subprocess.run([sys.executable, str(TOOL), "--root", str(root), *args],
                        capture_output=True, text=True, encoding="utf-8")
     return p.returncode, p.stdout, p.stderr
 
@@ -45,7 +47,27 @@ class RealTree(unittest.TestCase):
     def test_real_tree_passes(self):
         rc, out, err = run(ARCH)
         self.assertEqual(rc, 0, err)
-        self.assertTrue(out.startswith("ok:"), out)
+        self.assertTrue(out.startswith("ok: 13 rules"), out)
+        self.assertIn("not run: quotes, floor (test)", out)
+
+    def test_bare_invocation_is_bad_input_and_names_the_flags(self):
+        rc, out, err = run(ARCH, "--root", str(ARCH))
+        self.assertEqual(rc, 2, err)
+        for flag in ("--chart", "--values", "--release", "--readiness", "--barred"):
+            self.assertIn(flag, err)
+        self.assertIn("--allow-partial", err)
+        self.assertEqual(out, "")
+
+    def test_allow_partial_with_all_five_is_a_stale_exception(self):
+        rc, _, err = run(ARCH, "--chart", "c", "--values", "v", "--release", "r", "--readiness", "x",
+                         "--barred", "b", "--allow-partial", "test")
+        self.assertEqual(rc, 2, err)
+        self.assertIn("stale", err)
+
+    def test_allow_partial_needs_a_reason(self):
+        for reason in ("", "  "):
+            rc, _, err = run(ARCH, "--allow-partial", reason)
+            self.assertEqual(rc, 2, err)
 
     def test_missing_root_is_bad_input(self):
         rc, _, err = run(ARCH / "nowhere")

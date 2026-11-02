@@ -7,10 +7,18 @@ the SysML model) and the decision records the views cite. Writes one
 any. When nothing fails it prints an `ok:` count line.
 
 Usage:
-    python docs/arch/tools/check_views.py [--root docs/arch]
+    python docs/arch/tools/check_views.py [--root docs/arch] \
+        --chart DIR --values FILE [--values FILE ...] --release NAME \
+        --readiness FILE --barred FILE [--barred FILE ...]
+    python docs/arch/tools/check_views.py [--root docs/arch] --allow-partial REASON
 
 Rules: exports, appendix-a, view-files, slots, links, sources-table,
-marks, model, capabilities, trace, outputs, generated, phases. The vocabularies for
+marks, model, capabilities, trace, outputs, generated, phases, quotes, floor.
+`quotes` and `floor` need the chart, its values, the release name, the
+readiness doc and the barred list, so a call that omits any of the five
+exits 2. A check that quietly does less is the bug it exists to catch.
+--allow-partial REASON runs the first thirteen and says so in its ok line.
+The vocabularies for
 the Decision and Evidence columns are read from README.md, so they live once.
 The mapping from UAF views to DoDAF and NAF outputs is read from APPENDIX-A.md,
 the only copy: `exports` fails on an export it does not name, and `appendix-a`
@@ -28,12 +36,14 @@ from pathlib import Path
 
 import yaml
 
+import capability_floor
 import capability_phases
+import data_exchange
 from render_profile import mask_sysml, package_depths
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
 RULES = ["exports", "appendix-a", "view-files", "slots", "links", "sources-table",
-         "marks", "model", "capabilities", "trace", "outputs", "generated", "phases"]
+         "marks", "model", "capabilities", "trace", "outputs", "generated", "phases", "quotes", "floor"]
 APPENDIX_HEADER = "| View | Name | DoDAF 2.02 | NAF 4.0 | DNDAF |"
 APPENDIX_COLUMNS = {"dodaf202": 2, "naf4": 3}
 SOURCES_HEADER = "| Claim | Source | Decision | Evidence |"
@@ -508,19 +518,78 @@ def rule_phases(t: Tree) -> list[str]:
     return fails + [f"phases: {f}" for f in capability_phases.check_record(record, capabilities, decisions)]
 
 
+def rule_quotes(t: Tree, a: argparse.Namespace) -> list[str]:
+    """The evidence the table prints, and the record's own text, carry no barred value."""
+    try:
+        record = capability_phases.load_record(t.root / "capability-record.yaml")
+        capabilities = capability_phases.model_capabilities(t.sysml)
+        decisions = t.root.parent.parent / "decisions"
+        readiness = t.text(Path(a.readiness))
+        try:
+            capability_phases.render_table(record, capabilities, decisions, Path(a.chart) / "templates", readiness)
+            cells = capability_phases.evidence_cells(record, readiness)
+        except capability_phases.CheckError as e:
+            return [f for f in str(e).splitlines() if f]
+        barred = capability_phases.load_barred(a.barred)
+    except capability_phases.InputError as e:
+        raise InputError(str(e))
+    except capability_phases.CheckError as e:
+        raise InputError(str(e))
+    cells["the record"] = [t.text(t.root / "capability-record.yaml")]
+    return capability_phases.scan_barred(cells, barred)
+
+
+def rule_floor(t: Tree, a: argparse.Namespace) -> list[str]:
+    """The render's workloads, kinds, flags and routes are claimed, and what claims them is built."""
+    try:
+        record = capability_phases.load_record(t.root / "capability-record.yaml")
+        capabilities = capability_phases.model_capabilities(t.sysml)
+        statuses = capability_phases.statuses_of(record, t.root.parent.parent / "decisions")
+        items, _ = capability_floor.render_inputs(a.chart, a.values, a.release)
+    except data_exchange.InputError as e:
+        raise InputError(str(e))
+    try:
+        return capability_floor.check_floor(record, capabilities, statuses, items)
+    except capability_phases.CheckError as e:
+        return [str(e)]
+
+
 CHECKS = [rule_exports, rule_appendix, rule_view_files, rule_slots, rule_links, rule_sources_table,
           rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated, rule_phases]
+
+
+PARTIAL_FLAGS = [("--chart", "chart"), ("--values", "values"), ("--release", "release"),
+                 ("--readiness", "readiness"), ("--barred", "barred")]
 
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Check the architecture views against the rules.")
     ap.add_argument("--root", default=str(Path(__file__).resolve().parent.parent))
+    ap.add_argument("--chart", help="the chart directory the floor renders and the table reads templates from")
+    ap.add_argument("--values", action="append", default=[], help="a values file, in order (repeatable)")
+    ap.add_argument("--release", help="the Helm release name")
+    ap.add_argument("--readiness", help="the readiness document the evidence quotes come from")
+    ap.add_argument("--barred", action="append", default=[], help="a barred list file (repeatable)")
+    ap.add_argument("--allow-partial", metavar="REASON", help="run without quotes and floor, and say why")
     a = ap.parse_args(argv)
+    missing = [flag for flag, dest in PARTIAL_FLAGS if not getattr(a, dest)]
+    if a.allow_partial is not None and not a.allow_partial.strip():
+        print("error: --allow-partial needs a reason", file=sys.stderr)
+        return EXIT_INPUT
+    if a.allow_partial is not None and not missing:
+        print("error: --allow-partial given but all five inputs are too (stale exception)", file=sys.stderr)
+        return EXIT_INPUT
+    if missing and a.allow_partial is None:
+        print(f"error: {', '.join(missing)} not given; give them, or --allow-partial REASON", file=sys.stderr)
+        return EXIT_INPUT
     try:
         tree = Tree(Path(a.root))
         fails: list[str] = []
         for check in CHECKS:
             fails += check(tree)
+        if not missing:
+            fails += rule_quotes(tree, a)
+            fails += rule_floor(tree, a)
     except (InputError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return EXIT_INPUT
@@ -528,7 +597,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"FAIL: {f}", file=sys.stderr)
     if fails:
         return EXIT_CHECK
-    print(f"ok: {len(RULES)} rules, {len(tree.views)} views")
+    if missing:
+        print(f"ok: {len(CHECKS)} rules, {len(tree.views)} views; not run: quotes, floor ({a.allow_partial})")
+    else:
+        print(f"ok: {len(RULES)} rules, {len(tree.views)} views")
     return EXIT_OK
 
 
