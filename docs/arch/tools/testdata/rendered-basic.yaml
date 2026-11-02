@@ -1,0 +1,166 @@
+# Handwritten fixture. Fiction: tiers edge-atl, edge-bdr, hq. Not a real render.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: openddil-redpanda-edge-atl}
+spec: {template: {spec: {containers: [{name: rp}]}}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: openddil-redpanda-edge-bdr}
+spec: {template: {spec: {containers: [{name: rp}]}}}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: openddil-redpanda-hq}
+spec: {template: {spec: {containers: [{name: rp}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-sensor-edge-atl
+  annotations: {openddil.io/produces-topics: "edge-atl/raw"}
+spec: {template: {spec: {containers: [{name: s}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-sensor-edge-bdr
+  annotations: {openddil.io/produces-topics: "edge-bdr/raw"}
+spec: {template: {spec: {containers: [{name: s}]}}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-bridge-config-edge-atl}
+data:
+  connect.yaml: |
+    input:
+      kafka:
+        addresses: [openddil-redpanda-edge-atl:9092]
+        topics: [raw]
+        consumer_group: bridge-atl
+    output:
+      kafka:
+        addresses: [openddil-redpanda-hq:19092]
+        topic: '${! meta("kafka_topic") }'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-bridge-config-edge-bdr}
+data:
+  connect.yaml: |
+    input:
+      kafka:
+        addresses: [openddil-redpanda-edge-bdr:9092]
+        topics: [raw]
+        consumer_group: bridge-bdr
+    output:
+      kafka:
+        addresses: [openddil-redpanda-hq:19092]
+        topic: '${! meta("kafka_topic") }'
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-bridge-edge-atl
+  annotations: {openddil.io/consumer-groups: "edge-atl/bridge-atl"}
+spec: {template: {spec: {containers: [{name: b}], volumes: [{name: c, configMap: {name: openddil-bridge-config-edge-atl}}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-bridge-edge-bdr
+  annotations: {openddil.io/consumer-groups: "edge-bdr/bridge-bdr"}
+spec: {template: {spec: {containers: [{name: b}], volumes: [{name: c, configMap: {name: openddil-bridge-config-edge-bdr}}]}}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-projector-config}
+data:
+  projector_config.yaml: |
+    mappings:
+      - {topic: raw, table: raw_table, consumer_group: proj-raw}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-projector-hq
+  annotations: {openddil.io/consumer-groups: "hq/proj-raw"}
+spec: {template: {spec: {containers: [{name: p}], volumes: [{name: c, configMap: {name: openddil-projector-config}}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-egress-gate-c2
+  annotations:
+    openddil.io/consumer-groups: "hq/egress-gate-c2"
+    openddil.io/produces-topics: "hq/egress-sink"
+spec:
+  template:
+    spec:
+      containers: [{name: g}]
+      volumes:
+        - {name: r, configMap: {name: openddil-egress-routes}}
+        - {name: k, configMap: {name: openddil-egress-kinds}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-egress-assembler
+  annotations:
+    openddil.io/consumer-groups: "hq/egress-assembler"
+    openddil.io/produces-topics: "hq/fault-feed"
+spec: {template: {spec: {containers: [{name: a}]}}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-egress-forwarder
+  annotations: {openddil.io/consumer-groups: "hq/egress-forwarder"}
+spec:
+  template:
+    spec:
+      containers: [{name: f}]
+      volumes: [{name: f, configMap: {name: openddil-egress-forwarder-config}}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openddil-lonely-edge-bdr
+  annotations: {openddil.io/consumer-groups: "edge-bdr/lonely-group-name-raw"}
+spec: {template: {spec: {containers: [{name: l}]}}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-egress-forwarder-config}
+data:
+  config.json: '[{"sink_topic": "egress-sink", "url": "https://SENTINEL-FWD-URL.invalid/x", "auth": "SENTINEL-FWD-TOKEN", "tokenSecret": "SENTINEL-FWD-SECRET"}]'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-egress-routes}
+data:
+  routes.json: '[{"name": "r1", "source_topic": "fault-feed", "destination": "system:depot-ledger", "sink_topic": "egress-sink", "kind": "FaultEvent", "url": "https://SENTINEL-ROUTE-URL.invalid"}]'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-egress-kinds}
+data:
+  FaultEvent.schema.json: '{"title": "FaultEvent", "x-openddil": {"key": "/id", "label": "/label", "owning_tier": "/tier"}}'
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: openddil-destinations-deployment}
+data:
+  data.yaml: |
+    version: fixture
+    entries:
+      "system:depot-ledger":
+        display_name: Depot ledger
+        nations: [ATL, BDR]
+        accepts: [FaultEvent]
+        asserted_by: fixture-registry
+        asserted_on: "2026-01-01"
+        url: https://SENTINEL-DEST-URL.invalid
+        auth: SENTINEL-DEST-AUTH
+        trust_on_behalf_of: SENTINEL-TRUST
+        envelope: SENTINEL-ENVELOPE
