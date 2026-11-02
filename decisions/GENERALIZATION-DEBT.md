@@ -81,6 +81,7 @@ one place to look.
 | **GD-16** | **The interlock state vocabulary is a closed set of four names bound to columns in code.** ADR-0052 §3 lets the overlay declare which states refuse a release per variant and task, but the states themselves are `emitting`, `launcher_raised`, `round_in_flight` and `round_unresolved`, each mapped to a column in the evaluator. A variant whose conflicting state is anything else cannot be interlocked without a code change. | ADR-0052 | open |
 
 | **GD-17** | **The readiness disagreement mark forces every variant into three bands.** ADR-0053 §2 compares observed, declared and derived readiness through a band mapping per variant; the first slice fixes the bands at ready / limited / not-ready. A variant whose readiness has another shape is forced into them, and the mark reports a disagreement that the variant's own vocabulary might not. | ADR-0053 | open |
+| **GD-18** | **Two instances sharing a broker collide on Faust app names and consumer groups.** The chart fixes the edge app id at `openddil-<edge id>`, and the group equals the app id; `asset-registry-<edge id>` has no prefix and collides the same way. The prefix becomes a declared instance id, default `openddil`, used for uniqueness. It is an identifier scheme and not a brand, so `PRINCIPLES.md` §A deployment names itself does not ask for it to change with `system.name`. Changing it on a live cluster is a reset, because a new group starts with no committed offsets and Faust state moves with the app name. | `PRINCIPLES.md` | open |
 
 ## Not tracked here
 

@@ -2640,6 +2640,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | GD-15 | FRACAS usage meters named in code, not declared per variant | open |
 | GD-16 | Interlock state vocabulary closed, bound to columns in code | open |
 | GD-17 | Readiness disagreement mark forces three bands | open |
+| GD-18 | Faust app names and consumer groups carry a fixed `openddil` prefix | open |
 
 ### UD — undetected failure modes (`ADR-0036`)
 

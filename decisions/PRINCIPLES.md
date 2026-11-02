@@ -303,6 +303,25 @@ generality keeps producing the better architecture.**
 
 ---
 
+## A deployment names itself; it does not rename the contract
+
+**Presentation is instantiation data, and the contract vocabulary is not. If a
+conformance validator run by the end customer could no longer tell this is an
+OpenDDIL deployment, a rename went too deep.**
+
+`system.name` and `system.attribution` are bundle values. They drive every
+generated document's title and prose, and the framework's name appears only in
+the attribution line, which a deployment may keep or drop. These keep the
+framework's namespace in every deployment: kind names and schemas, the label
+vocabulary, the `openddil.io/` annotation keys, CloudEvent types, proto packages,
+topic roles, and the egress and intake door shapes.
+
+*Earned:* a display name is read by people and costs one value to change. A
+contract name is read by peers and validators outside the deployment, so a
+rename there breaks them while every document still looks right.
+
+---
+
 ## A deliverable's self-description is a claim
 
 **Verify the rendered artifact against its own header. Exit-zero proves
