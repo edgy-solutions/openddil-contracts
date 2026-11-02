@@ -50,15 +50,15 @@ REASONS = {
     "writer-not-annotated": (
         "A bridge writes these to its parent broker. Its annotation lists only the topics "
         "it originates, so the write is inferred from the bridge's config. ADR-0054 "
-        "proposes listing them."),
+        "decision 5 lists them, and is not built."),
     "workload-no-declaration": (
         "These workloads render with neither annotation. They touch no broker topic, or "
-        "their use of one is not yet declared. ADR-0054 asks each to be sorted into one "
-        "of those two."),
+        "their use of one is not yet declared. ADR-0054 keeps them as named "
+        "exceptions."),
     "group-without-topic": (
         "The annotation names the consumer group and not its topics, so the generator "
-        "cannot bind this group to a topic from the render. ADR-0054 proposes a topic "
-        "binding."),
+        "cannot bind this group to a topic from the render. ADR-0054 decision 6 adds "
+        "the topics, and is not built."),
 }
 LEDGER_CLASSES = tuple(REASONS)
 LEDGER_HEADER = (

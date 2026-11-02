@@ -2,8 +2,8 @@
 
 ## Status
 
-**PROPOSED — 2026-11-02.** Decisions 1 to 4 record what the chart already renders. Decisions 5 and 6 are new and are not built.
-- Nothing in the chart changes on acceptance of 1 to 4.
+**ACCEPTED (decisions 1 to 4) — 2026-11-02.** Decisions 1 to 4 record what the chart already renders. Decisions 5 and 6 are the next increment and are not built.
+- Nothing in the chart changes for 1 to 4.
 - 5 and 6 are chart changes, to be made in the chart's own repository.
 - The render check in the Check section exists and has been run. No workflow runs it yet.
 
@@ -33,10 +33,10 @@ Counts are from the chart at 0.1.161, rendered with the public twin (`k8s/tier-n
 4. **`openddil.io/consumer-groups` names the groups the workload owns.**
    - One group on one broker has one owner. Two workloads may produce one topic; two workloads may not own one group.
    - `openddil:openddil-helm/scripts/check_consumer_declarations.py` compares declared pairs with a deployment's expected list.
-5. **Proposed: `openddil.io/forwards-topics` names what a bridge writes without originating it.**
+5. **Next increment: `openddil.io/forwards-topics` names what a bridge writes without originating it.**
    - It uses the same grammar and the same placement.
    - It is a separate key because the meaning differs. Adding forwarded topics to `produces-topics` would make that annotation disagree with the bridge's `produces.yaml`, and would stop saying who originated a record. Decision 3 needs to keep saying that.
-6. **Proposed: `openddil.io/consumer-topics` names the topics a workload reads.**
+6. **Next increment: `openddil.io/consumer-topics` names the topics a workload reads.**
    - It uses the same grammar and the same placement.
    - It names topics per workload, not per group. A reset needs the group and the architecture view needs the topic, so neither needs the two joined.
 

@@ -2,7 +2,7 @@
 # the public twin render: `python docs/arch/tools/check_annotations.py --print-rows ...`.
 # A new row or a stale row fails the check.
 writer-not-annotated:
-  reason: A bridge writes these to its parent broker. Its annotation lists only the topics it originates, so the write is inferred from the bridge's config. ADR-0054 proposes listing them.
+  reason: A bridge writes these to its parent broker. Its annotation lists only the topics it originates, so the write is inferred from the bridge's config. ADR-0054 decision 5 lists them, and is not built.
   rows:
   - hq/asset-capability-snapshot (edge-hq-bridge-edge-north)
   - hq/asset-capability-snapshot (edge-hq-bridge-edge-south)
@@ -31,7 +31,7 @@ writer-not-annotated:
   - hq/telemetry-latest-state (edge-hq-bridge-edge-north)
   - hq/telemetry-latest-state (edge-hq-bridge-edge-south)
 workload-no-declaration:
-  reason: These workloads render with neither annotation. They touch no broker topic, or their use of one is not yet declared. ADR-0054 asks each to be sorted into one of those two.
+  reason: These workloads render with neither annotation. They touch no broker topic, or their use of one is not yet declared. ADR-0054 keeps them as named exceptions.
   rows:
   - egress-pane-api
   - egress-stub-sink
@@ -58,7 +58,7 @@ workload-no-declaration:
   - tier-topaz-edge-south
   - topaz-hq
 group-without-topic:
-  reason: The annotation names the consumer group and not its topics, so the generator cannot bind this group to a topic from the render. ADR-0054 proposes a topic binding.
+  reason: The annotation names the consumer group and not its topics, so the generator cannot bind this group to a topic from the render. ADR-0054 decision 6 adds the topics, and is not built.
   rows:
   - edge-north/connect-dis-mapper (redpanda-connect-edge-north)
   - edge-north/openddil-edge-north (faust-edge-edge-north)
