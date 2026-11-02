@@ -129,3 +129,81 @@ capabilities:
   DisagreementDetection:
     adrs: [ADR-0053]
     rows: [GD-17]
+
+# What the chart renders, and what each item serves. tools/capability_floor.py
+# lists the render and compares: an item nothing claims fails, a claim the render
+# no longer shows fails, and a capability that claims a rendered item cannot sit
+# below built unmeasured. The floor sees a forgotten item, not a misfiled one, so
+# a reader still has to read this: filing work under infrastructure escapes it.
+rendered:
+  workload:
+    asset-registry-service: [HierarchicalAggregation]
+    cm-service: [StateDetection, ConfigurationStatusAccounting]
+    cm-service-bootstrap: {infrastructure: "registers the service with the workflow engine"}
+    edge-hq-bridge: [HierarchicalAggregation]
+    egress-assembler: [GatedRelease]
+    egress-forwarder: [GatedRelease]
+    egress-gate-c2: [GatedRelease]
+    egress-intake: [GatedIntake]
+    egress-pane-api: [GatedRelease]
+    egress-stub-sink: {infrastructure: "stands in for a destination in the twin"}
+    electric-sync: [InformationPresentation]
+    faust-edge: [DataManipulation, PrognosticAssessment]
+    faust-regional: [HierarchicalAggregation]
+    frontend: [InformationPresentation]
+    images-pullable-1: {infrastructure: "pre-install hook that proves every image can be pulled"}
+    logistics-fusion-bootstrap: {infrastructure: "registers the service with the workflow engine"}
+    logistics-fusion-service: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    logistics-sim: {infrastructure: "a simulated source of sustainment telemetry, not a capability"}
+    pep: [LabelledReadEnforcement]
+    postgres: {infrastructure: "store"}
+    postgres-schema-init: {infrastructure: "applies the schema"}
+    projector: [DataManipulation]
+    redpanda: {infrastructure: "broker"}
+    redpanda-auto-create-off: {infrastructure: "broker setting hook"}
+    redpanda-connect: {infrastructure: "moves records between brokers and tiers"}
+    restate-hub: {infrastructure: "workflow engine at the hub"}
+    restate-server: {infrastructure: "workflow engine at the edge"}
+    sensor-ingest: [DataAcquisition]
+    tier-cm: [StateDetection, ConfigurationStatusAccounting]
+    tier-declaration-intake: [ArrivalDeclaration]
+    tier-electric: [InformationPresentation]
+    tier-frontend: [InformationPresentation]
+    tier-fusion: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    tier-pep: [LabelledReadEnforcement]
+    tier-pg: {infrastructure: "store at the tier"}
+    tier-projector: [DataManipulation]
+    tier-restate: [TierLocalWorkflow]
+    tier-restate-bootstrap: {infrastructure: "registers services with the tier's workflow engine"}
+    tier-schema-init: {infrastructure: "applies the schema at the tier"}
+    tier-topaz: [TierLocalDecision]
+    topaz: [LabelledReadEnforcement]
+    topic-init: {infrastructure: "creates the broker topics"}
+  kind:
+    FaultEvent: [GatedRelease]
+    RepairOrder: [GatedRelease, GatedIntake]
+  flag:
+    cmService.stallProbe: {infrastructure: "liveness probe"}
+    egress.assembler: [GatedRelease]
+    egress.forwarder: [GatedRelease]
+    egress.intake: [GatedIntake]
+    egress.stubSink: {infrastructure: "stands in for a destination in the twin"}
+    electric.persistence: {infrastructure: "storage setting"}
+    imagesPullable: {infrastructure: "pre-install hook that proves every image can be pulled"}
+    ingress: [InformationPresentation]
+    linkStatus: {infrastructure: "reports reachability between tiers; no capability in the taxonomy names it"}
+    logisticsFusion.stallProbe: {infrastructure: "liveness probe"}
+    logisticsSim: {infrastructure: "a simulated source of sustainment telemetry, not a capability"}
+    relayGate: {infrastructure: "holds a relay until its destination answers"}
+    relayStallProbe: {infrastructure: "liveness probe"}
+    releasability: [LabelledReadEnforcement]
+    releasability.liveReload: [LabelledReadEnforcement]
+    sensorIngest.spool: [DataAcquisition]
+    sensorIngest.stallProbe: {infrastructure: "liveness probe"}
+    tierNode: [TierLocalDecision, TierLocalWorkflow]
+    tierNode.topaz: [TierLocalDecision]
+  route:
+    c2: [GatedRelease]
+    depot-faults: [GatedRelease]
+    repair-orders: [GatedRelease]
+    "ingress /": [InformationPresentation]
