@@ -46,7 +46,7 @@ Every view has a Sources table with a Decision and an Evidence column. Both copy
 
 ## Models and diagrams
 
-[`model/openddil.sysml`](model/openddil.sysml) holds the structure in SysML v2 textual notation. A view pulls a package in with a `<!-- model: Package -->` marker, and the renderer inlines it. GitHub does not render SysML, so anything meant to be looked at as a picture is Mermaid in the view. On 2026-11-02 the file parsed with every name resolved under OMG's SysML v2 pilot implementation 0.63.1. That check was run by hand and is not part of `check_views.py`.
+[`model/openddil.sysml`](model/openddil.sysml) holds the structure in SysML v2 textual notation. A view pulls a package in with a `<!-- model: Package -->` marker, and the renderer inlines it. GitHub does not render SysML, so anything meant to be looked at as a picture is Mermaid in the view. On 2026-11-02 the file parsed with every name resolved under OMG's SysML v2 pilot implementation 0.63.1. [`sysml-model.yml`](../../.github/workflows/sysml-model.yml) repeats that parse on any change under `model/`, with the parser pinned, and also requires the parser to refuse a copy with a syntax fault and a copy with an unresolved reference.
 
 ## Running the tools
 

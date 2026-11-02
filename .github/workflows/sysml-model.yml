@@ -1,0 +1,72 @@
+name: sysml-model
+
+# Parses docs/arch/model with the SysML v2 reference parser, and proves the
+# parser refuses a syntax fault and an unresolved reference.
+#
+# The parser is fetched, not vendored, and both parts are pinned. The library
+# comes from a commit id. The kernel comes from one conda-forge file checked
+# against its SHA-256, and the run stops on a mismatch.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/arch/model/**'
+      - 'docs/arch/tools/validate_sysml.py'
+      - 'docs/arch/tools/test_validate_sysml.py'
+      - '.github/workflows/sysml-model.yml'
+  pull_request:
+    paths:
+      - 'docs/arch/model/**'
+      - 'docs/arch/tools/validate_sysml.py'
+      - 'docs/arch/tools/test_validate_sysml.py'
+      - '.github/workflows/sysml-model.yml'
+  workflow_dispatch:
+
+env:
+  # Systems-Modeling/SysML-v2-Release, tag 2026-09.1
+  LIBRARY_COMMIT: 9546486f49f704d1df092e3f252f4fcfbce534dd
+  KERNEL_FILE: jupyter-sysml-kernel-0.63.1-pyhd8ed1ab_0.conda
+  KERNEL_SHA256: 8da665d2b2131dcfbde62d32926864d0d03a62393ffdf4598efa64e0bc4b2251
+  KERNEL_JAR: share/jupyter/kernels/sysml/jupyter-sysml-kernel-0.63.1-all.jar
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Fetch the parser library at its pinned commit
+        uses: actions/checkout@v4
+        with:
+          repository: Systems-Modeling/SysML-v2-Release
+          ref: ${{ env.LIBRARY_COMMIT }}
+          path: parser/release
+          sparse-checkout: sysml.library
+
+      - name: Fetch the parser kernel and check its hash
+        run: |
+          mkdir -p parser/kernel
+          curl -fsSL --retry 3 -o "parser/$KERNEL_FILE" \
+            "https://conda.anaconda.org/conda-forge/noarch/$KERNEL_FILE"
+          echo "$KERNEL_SHA256  parser/$KERNEL_FILE" | sha256sum -c -
+          unzip -q -o "parser/$KERNEL_FILE" -d parser/kernel
+          tar --zstd -xf parser/kernel/pkg-*.tar.zst -C parser/kernel "$KERNEL_JAR"
+
+      - name: Test the validator
+        run: python -m unittest docs/arch/tools/test_validate_sysml.py
+
+      - name: Validate the model
+        run: |
+          python docs/arch/tools/validate_sysml.py \
+            --jar "parser/kernel/$KERNEL_JAR" \
+            --library parser/release/sysml.library
