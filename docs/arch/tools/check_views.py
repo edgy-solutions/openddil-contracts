@@ -428,13 +428,13 @@ def rule_trace(t: Tree) -> list[str]:
         if m:
             in_trace.add(m.group(0))
     opp = t.view_text["Op-Pr"]
-    for aid in sorted(in_trace):
-        if not re.search(r"(?<![\w.])" + re.escape(aid) + r"(?![\w]|\.\d)", opp):
-            fails.append(f"trace: Rs-Tr names activity {aid}, which Op-Pr does not hold")
+    for activity in sorted(in_trace):
+        if not re.search(r"(?<![\w.])" + re.escape(activity) + r"(?![\w]|\.\d)", opp):
+            fails.append(f"trace: Rs-Tr names activity {activity}, which Op-Pr does not hold")
     acts = set(re.findall(r'"(A\d+(?:\.\d+)?) ', opp))
-    for aid in sorted(acts):
-        if not any(o.startswith(aid + ".") for o in acts) and aid not in in_trace:
-            fails.append(f"trace: Op-Pr leaf activity {aid} is in no Rs-Tr row")
+    for activity in sorted(acts):
+        if not any(o.startswith(activity + ".") for o in acts) and activity not in in_trace:
+            fails.append(f"trace: Op-Pr leaf activity {activity} is in no Rs-Tr row")
     funcs = {m.group(0) for r in first_table(t.view_text["Rs-Pr"]) if r
              for m in [re.match(r"F\d+\b", r[0])] if m}
     for r in trace_rows:
