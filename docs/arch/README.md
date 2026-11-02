@@ -71,7 +71,7 @@ python docs/arch/tools/render_profile.py --profile naf4
 python docs/arch/tools/check_views.py
 ```
 
-[`specimen/`](specimen/) holds all three profiles rendered from the public twin, `k8s/egress-values.yaml` in the example bundle. A test compares it with a fresh render. It ignores the `Chart:` line, so a chart version bump alone passes and a content change fails. To refresh it:
+[`specimen/`](specimen/) holds all three profiles rendered from the public twin, `k8s/egress-values.yaml` in the example bundle. [`tools/test_specimen.py`](tools/test_specimen.py), beside the generator, compares it with a fresh render, and no workflow runs it yet. It ignores the `Chart:` line, so a chart version bump alone passes and a content change fails. To refresh it:
 
 ```sh
 python docs/arch/tools/refresh_specimen.py
