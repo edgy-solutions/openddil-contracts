@@ -77,7 +77,7 @@ python docs/arch/tools/check_views.py \
   --values ../openddil-customer-bundle-example/k8s/tier-node-values.yaml \
   --values ../openddil-customer-bundle-example/k8s/egress-values.yaml \
   --readiness ../openddil-helm/scripts/RECORDING-READINESS.md \
-  --barred BARRED-LIST-FILE
+  --barred docs/arch/tools/barred-sample.txt
 ```
 
 `check_views.py` needs all five inputs (the chart, its values, the release, the readiness doc and the barred list) or `--allow-partial REASON`. Without either it exits 2, because a check that quietly runs fewer rules is the bug it exists to catch. A partial run says what it skipped in its `ok:` line. [`check-views.yml`](../../.github/workflows/check-views.yml) runs it in full.
@@ -130,7 +130,7 @@ The other views' marks still copy words.
 
 The render is also a floor. `capability_floor.py` renders the chart in memory and lists its workloads, kinds, enabled flags and routes. The record's `rendered:` section has to claim every one, by section and name. A claim is either a non-empty list of capability names, or `{infrastructure: "<reason>"}` for an item that serves no capability. A capability that claims a rendered item cannot sit below `built unmeasured`, so a missing `built` citation no longer understates a phase quietly. `check_views.py` fails on an item the record does not claim, a claim the render does not show, an unknown section or capability, a malformed claim, and a capability below the floor. It cannot tell a capability that was filed under infrastructure by mistake, and a feature that is off in this render has no floor.
 
-Evidence quotes are scanned against a private list of barred values, read from a file `check_views.py` is given.
+Evidence quotes are scanned against a list of barred values, read from a file `check_views.py` is given. CI gives it [`tools/barred-sample.txt`](tools/barred-sample.txt), a public sample, and uses no secret. A private scan runs before a push, outside this repository. **CI green is not evidence that the private scan ran.** It shows the structural checks passed and that the scan works.
 
 ## Profile mapping
 

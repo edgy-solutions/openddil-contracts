@@ -193,5 +193,18 @@ class Failures(unittest.TestCase):
             self.check({"workload": {}}, items())
 
 
+class SampleListTests(unittest.TestCase):
+    SAMPLE = Path(__file__).resolve().parent / "barred-sample.txt"
+
+    def test_sample_list_loads(self):
+        self.assertTrue(cp.load_barred([str(self.SAMPLE)]))
+
+    def test_sample_list_fails_a_quote_and_prints_no_value(self):
+        got = cp.scan_barred({"Cap": ["seen on sample-barred-value today"]}, cp.load_barred([str(self.SAMPLE)]))
+        self.assertEqual(len(got), 1)
+        self.assertIn("quotes: Cap", got[0])
+        self.assertNotIn("sample-barred-value", got[0])
+
+
 if __name__ == "__main__":
     unittest.main()

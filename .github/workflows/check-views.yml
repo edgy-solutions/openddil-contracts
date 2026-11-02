@@ -1,20 +1,20 @@
 name: check-views
 
-# Runs the architecture view checks (docs/arch/tools/check_views.py) in full:
-# all thirteen view rules, plus `quotes` (evidence quotes against the barred
-# list) and `floor` (the chart's render against the capability record). Then
-# a canary run that breaks a copy of the record and proves both can fail.
+# Runs the architecture view checks (docs/arch/tools/check_views.py): all
+# thirteen view rules, plus `quotes` (evidence quotes against the public sample
+# list) and `floor` (the chart's render against the capability record). Then a
+# canary run that breaks a copy of the record and proves both can fail.
 #
 # The floor reads a render of the chart, so the chart changing is a reason to
 # run. openddil-helm sends chart-version-bumped when it does. The daily
 # schedule is a floor under that dispatch: a dropped or missed dispatch
 # still gets caught within a day.
 #
-# The barred list is a secret, written to a file in RUNNER_TEMP. It is never
-# echoed and never on a command line.
+# This workflow uses no secret. Green here shows the structural checks and the
+# scan's mechanics, and is not evidence that any private scan ran.
 on:
   push:
-    branches: [main]
+    branches: [main, 'docs/arch-*']
     paths:
       - 'docs/arch/**'
       - 'decisions/**'
@@ -91,11 +91,6 @@ jobs:
             exit 1
           fi
 
-      - name: Write the barred list
-        env:
-          BARRED: ${{ secrets.OPENDDIL_BARRED_VALUES }}
-        run: printf '%s\n' "$BARRED" > "$RUNNER_TEMP/barred.txt"
-
       - name: Check the views
         run: |
           python docs/arch/tools/check_views.py \
@@ -104,7 +99,7 @@ jobs:
             --values "$BUNDLE/k8s/egress-values.yaml" \
             --release openddil \
             --readiness "$READINESS" \
-            --barred "$RUNNER_TEMP/barred.txt"
+            --barred docs/arch/tools/barred-sample.txt
 
       - name: Canary (quotes and floor must fail when the copy is broken)
         run: |
@@ -114,4 +109,4 @@ jobs:
             --values "$BUNDLE/k8s/egress-values.yaml" \
             --release openddil \
             --readiness "$READINESS" \
-            --barred "$RUNNER_TEMP/barred.txt"
+            --barred docs/arch/tools/barred-sample.txt
