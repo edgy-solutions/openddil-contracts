@@ -26,6 +26,8 @@ MAIN_CLASS = "org.omg.sysml.interactive.SysMLInteractive"
 TIMEOUT_S = 200
 OUTPUT_CAP = 2_000_000
 NOISE = re.compile(r"^(Reading |log4j|SysML v2 Pilot|\s+at )")
+SHOWN_LINES = 12
+SHOWN_WIDTH = 200
 
 SYNTAX_OLD = "part def EgressGate;"
 SYNTAX_NEW = "part def EgressGate"
@@ -71,6 +73,8 @@ def judge(case: str, output: str) -> str | None:
             return "the parser did not report Package OpenDDIL"
         return None
     if not errors:
+        if "Package OpenDDIL" not in output:
+            return "the parser reported neither an error nor the package, so it did not read the model"
         return "the fault was accepted, so this parser run proves nothing"
     if case == "link" and not any("NoSuchThing" in ln for ln in errors):
         return f"refused, but not for the bad reference: {errors[0][:200]}"
@@ -109,6 +113,8 @@ def validate(model: str, runner: Callable[[str], str]) -> int:
         if problem:
             misses += 1
             print(f"FAIL {name}: {problem}")
+            for line in output.splitlines()[-SHOWN_LINES:]:
+                print(f"  {line[:SHOWN_WIDTH]}")
         else:
             print(f"ok {name}")
     return 1 if misses else 0

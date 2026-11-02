@@ -68,5 +68,5 @@ jobs:
       - name: Validate the model
         run: |
           python docs/arch/tools/validate_sysml.py \
-            --jar "parser/kernel/$KERNEL_JAR" \
-            --library parser/release/sysml.library
+            --jar "$PWD/parser/kernel/$KERNEL_JAR" \
+            --library "$PWD/parser/release/sysml.library"

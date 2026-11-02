@@ -90,6 +90,30 @@ class Verdict(unittest.TestCase):
         self.assertIn("not for the bad reference", out)
 
 
+class WhatTheParserSaid(unittest.TestCase):
+    def test_a_failed_case_shows_the_output(self):
+        said = "Error: could not start\n"
+        _, out, _ = run(runner=answers(good=said))
+        self.assertIn(said.strip(), out)
+
+    def test_a_passing_case_shows_nothing_more(self):
+        _, out, _ = run()
+        self.assertNotIn("Package OpenDDIL", out)
+
+    def test_shown_output_is_bounded(self):
+        said = "".join(f"{'x' * 300}{i}\n" for i in range(50))
+        _, out, _ = run(runner=answers(good=said))
+        shown = [ln for ln in out.splitlines() if ln.startswith("  ")]
+        self.assertEqual(len(shown), v.SHOWN_LINES)
+        self.assertLessEqual(max(map(len, shown)), v.SHOWN_WIDTH + 2)
+
+    def test_parser_that_never_read_the_model_is_not_called_accepting(self):
+        said = "Error: could not start\n"
+        _, out, _ = run(runner=lambda _stdin: said)
+        self.assertIn("did not read the model", out)
+        self.assertNotIn("the fault was accepted", out)
+
+
 class CouldNotRun(unittest.TestCase):
     def test_model_without_the_fault_site_is_exit_2(self):
         rc, _, err = run(model="package OpenDDIL {}\n")
