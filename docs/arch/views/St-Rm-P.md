@@ -1,5 +1,19 @@
 # Strategic-Roadmap-Phasing (St-Rm-P)
 
+Where each capability in [Strategic-Taxonomy](St-Tx.md) stands, read from the record. Phase and evidence are computed at render from [capability-record.yaml](../capability-record.yaml), and every citation in it has to resolve or the render fails. A capability with no phase also fails the render.
+
+<!-- generated: capability-phases -->
+
+| Phase | Meaning |
+|---|---|
+| measured | The readiness doc has an entry for it, with a date and a lab. |
+| built unmeasured | The chart renders it, which may be behind a value that is off by default, and the readiness doc has no entry for it. |
+| accepted design | A decision record accepts it, and the record cites no chart template for it. |
+| proposed | A decision record proposes it or names it as still open. |
+| row | It is only a tracked row in a register, with no decision behind it yet. |
+
+## Lane: isolation increments
+
 The order in which tiers become able to work alone. The roadmap note gives an order and its dependencies, and deliberately no dates. A deployment supplies them here: {{slot:increment-dates}}.
 
 ```mermaid
@@ -21,12 +35,6 @@ None of A to D is on an increment's critical path. Each can be dropped without m
 | Claim | Source | Decision | Evidence |
 |---|---|---|---|
 | The order, the dependencies and the fold-ins | [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Not stated |
-| PDP per tier | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
-| 1 Identity per tier, 4 One session | [ADR-0045](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Design only |
-| 2 Maintenance chain per tier | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
-| 3 Workflow per tier | [ADR-0034](../../../decisions/ADR-0034-tier-analytics-are-deployment-configuration.md) | Accepted | Not stated |
-| A False-readiness view, D Cyber alerts | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Design only |
-| B Interlock refusals | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Design only |
-| C Failure record | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |
+| Each capability's phase and evidence | [capability-record.yaml](../capability-record.yaml) | Generated | Generated |
 
 The roadmap note says it is not a decision. An increment's own ADR is the decision.

@@ -1,0 +1,131 @@
+# What the record holds for each capability in CapabilityTaxonomy (St-Tx, CV-2).
+#
+# tools/capability_phases.py reads this. There is no phase field: the phase is
+# computed from what is cited here, and each citation has to resolve against the
+# record or the render fails. Evidence is read from the readiness doc only, so a
+# decision record's own wording can never make a capability measured.
+#
+#   measured          a readiness entry cited under `measured`
+#   built unmeasured  a chart template cited under `built`, and no readiness entry
+#   accepted design   a cited ADR whose Status begins with accepted
+#   proposed          a cited ADR whose Status begins with proposed, or a capability
+#                     an ADR names as still open
+#   row               only an open row in a register
+#
+# The highest one that applies is the phase. A capability with none has no phase,
+# and that fails the render.
+
+lanes:
+  ConditionMonitoring: Condition monitoring
+  Capability: Hierarchy
+  Isolation: Isolation increments
+  Correlation: Correlation
+  Releasability: Releasability
+  AnticipatedCapability: Anticipated
+
+# Labs are named by letter. A letter is declared here, not read from the entry.
+labs:
+  A: the first lab cluster
+  B: the second lab cluster
+
+# A readiness entry is an anchor line that holds its date.
+entries:
+  preflight-51:
+    anchor: "**RE-RUN 2026-09-26 on REVISION 51 (chart 0.1.58): 5 of 5 green"
+    lab: A
+  releasability-0919:
+    anchor: "## C. Releasability — re-measured 2026-09-19"
+    lab: A
+  severance-51:
+    anchor: "### RE-REHEARSED 2026-09-26 against revision 51 (chart 0.1.58)"
+    lab: A
+  cm-reseed:
+    anchor: "(2026-10-30, the first roll on the new image)"
+    lab: B
+
+capabilities:
+  DataAcquisition:
+    adrs: [ADR-0038]
+    built: [{template: edge.yaml, contains: sensor-ingest}]
+    measured: [{entry: preflight-51, line: "| 1 | advancing | exit 0 |"}]
+  DataManipulation:
+    adrs: [ADR-0038]
+    built: [{template: tier-node.yaml, contains: tier-projector}]
+    measured: [{entry: preflight-51, line: "| 3 | tier feed | clean"}]
+  StateDetection:
+    adrs: [ADR-0038]
+    built: [{template: tier-node.yaml, contains: cm-service}]
+    measured: [{entry: preflight-51, line: "| 2 | derive stage | **COMPLETING**"}]
+  HealthAssessment:
+    adrs: [ADR-0038]
+    built: [{template: tier-node.yaml, contains: logistics-fusion}]
+  PrognosticAssessment:
+    adrs: [ADR-0038, ADR-0020]
+    built: [{template: tier-node.yaml, contains: logistics-fusion}]
+    rows: [AE-4]
+  AdvisoryGeneration:
+    adrs: [ADR-0038]
+    built: [{template: tier-node.yaml, contains: logistics-fusion}]
+    rows: [AE-2]
+  InformationPresentation:
+    adrs: [ADR-0038]
+    built: [{template: tier-node.yaml, contains: tier-electric}]
+    measured: [{entry: preflight-51, line: "| 4 | shape sizes | **TOTAL 85 KiB**"}]
+  HierarchicalAggregation:
+    adrs: [ADR-0022]
+    built: [{template: regional.yaml, contains: regions}]
+    measured: [{entry: severance-51, line: "| 1.4 | rollup **4 partials / 15 assets**"}]
+  TierLocalDecision:
+    increment: "**PDP per tier**"
+    adrs: [ADR-0029]
+    built: [{template: tier-node.yaml, contains: tier-topaz}]
+  TierLocalSignIn:
+    increment: "**Identity per tier**"
+    adrs: [ADR-0045]
+    built: [{template: tier-identity.yaml, contains: identity.replica}]
+  TierLocalMaintenanceChain:
+    increment: "**Maintenance chain per tier**"
+    adrs: [ADR-0046]
+  TierLocalWorkflow:
+    increment: "**Workflow per tier**"
+    adrs: [ADR-0034]
+    built: [{template: tier-node.yaml, contains: tier-restate}]
+  OneSession:
+    increment: "**One session**"
+    still_open: [{adr: ADR-0045, says: "Federation across tiers, partly closed."}]
+  TacticalSustainmentCorrelation:
+    adrs: [ADR-0039]
+  ConfigurationStatusAccounting:
+    adrs: [ADR-0009]
+    built: [{template: tier-node.yaml, contains: cm-service}]
+    measured: [{entry: cm-reseed, line: "the first roll on the new image): through the Restate"}]
+  ArrivalDeclaration:
+    adrs: [ADR-0050]
+    built: [{template: hub.yaml, contains: declaration-intake}]
+  LabelledReadEnforcement:
+    adrs: [ADR-0029]
+    built: [{template: tier-node.yaml, contains: tier-pep}]
+    measured:
+      - {entry: preflight-51, line: "| 5 | completeness | **ALL 4 STORES PASS**"}
+      - {entry: releasability-0919, line: "* **Gate passes on all four stores**"}
+  GatedRelease:
+    adrs: [ADR-0043]
+    built: [{template: egress.yaml, contains: egress-gate}]
+  GatedIntake:
+    adrs: [ADR-0046]
+    built: [{template: egress.yaml, contains: intake}]
+  SustainmentFeasibility:
+    rows: [AE-3, AE-5, GD-10]
+  AdvisoryProvenance:
+    rows: [AE-2]
+  OfflineIntentReconciliation:
+    adrs: [ADR-0040, ADR-0042]
+  FailureReporting:
+    adrs: [ADR-0051]
+    rows: [GD-15]
+  SafetyInterlockRefusal:
+    adrs: [ADR-0052]
+    rows: [GD-16]
+  DisagreementDetection:
+    adrs: [ADR-0053]
+    rows: [GD-17]

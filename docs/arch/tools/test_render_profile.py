@@ -22,6 +22,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 ARCH = HERE.parent
+REPO = ARCH.parent.parent
 TOOL = HERE / "render_profile.py"
 PROFILES = yaml.safe_load((ARCH / "profiles.yaml").read_text(encoding="utf-8"))
 SIBLINGS = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))
@@ -30,6 +31,10 @@ BUNDLE_ROOT = Path(os.environ.get("OPENDDIL_BUNDLE", SIBLINGS / "openddil-custom
 BUNDLE = BUNDLE_ROOT / "k8s" / "tier-node-values.yaml"
 OVERLAY = BUNDLE_ROOT / "k8s" / "egress-values.yaml"
 NOTICE = "Not generated: pass --chart and --values to fill this from a bundle."
+PHASES_NOTICE = "Not generated: pass --chart to read the phases from the record, the readiness doc and the chart."
+PHASES_MARKER = "<!-- generated: capability-phases -->"
+PHASES_FILES = (("uaf", "St-Rm-P.md"), ("dodaf202", "CV-3.md"), ("naf4", "Cr.md"))
+STRIPPED = "  TacticalSustainmentCorrelation:\n    adrs: [ADR-0039]\n"
 LINK = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 
 
@@ -77,6 +82,12 @@ class Base(unittest.TestCase):
 
 
 class RealTree(Base):
+    def test_phases_notice_without_a_chart(self):
+        for prof, name in PHASES_FILES:
+            text = read(self.out[prof], name)
+            self.assertIn(PHASES_NOTICE, text, f"{prof}/{name}")
+            self.assertNotIn(PHASES_MARKER, text, f"{prof}/{name}")
+
     def test_every_expected_file_and_no_others(self):
         for p in ("uaf", "dodaf202", "naf4"):
             got = {f.name for f in self.out[p].iterdir()}
@@ -252,7 +263,39 @@ class TempTree(unittest.TestCase):
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.arch = self.tmp / "docs" / "arch"
         shutil.copytree(ARCH, self.arch, ignore=shutil.ignore_patterns("__pycache__", "out"))
+        shutil.copytree(REPO / "decisions", self.tmp / "decisions")
         self.tool = self.arch / "tools" / "render_profile.py"
+
+    def strip_a_capability(self) -> Path:
+        p = self.arch / "capability-record.yaml"
+        text = p.read_text(encoding="utf-8")
+        self.assertIn(STRIPPED, text)
+        p.write_text(text.replace(STRIPPED, "  TacticalSustainmentCorrelation: {}\n"), encoding="utf-8", newline="\n")
+        return p
+
+    def test_a_capability_with_no_phase_is_exit_1_without_a_chart(self):
+        self.strip_a_capability()
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o")
+        self.assertEqual(rc, 1, err)
+        self.assertIn("TacticalSustainmentCorrelation has no phase", err)
+        self.assertFalse((self.tmp / "o").exists())
+
+    def test_record_flag_names_the_record(self):
+        p = self.strip_a_capability()
+        rc, _, err = run(TOOL, "--profile", "uaf", "--out", self.tmp / "o", "--record", p)
+        self.assertEqual(rc, 1, err)
+        self.assertIn("TacticalSustainmentCorrelation has no phase", err)
+
+    def test_unreadable_record_is_exit_2(self):
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o", "--record", self.tmp / "none.yaml")
+        self.assertEqual(rc, 2, err)
+
+    def test_phases_marker_outside_st_rm_p_is_exit_2(self):
+        p = self.arch / "views" / "Op-If.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\n" + PHASES_MARKER + "\n", encoding="utf-8", newline="\n")
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o")
+        self.assertEqual(rc, 2, err)
+        self.assertIn("capability-phases", err)
 
     def test_unknown_model_package_is_exit_2(self):
         p = self.arch / "views" / "St-Tx.md"
@@ -397,6 +440,34 @@ class Integration(unittest.TestCase):
         d = self.render("naf4")
         self.assertIn("| FaultEvent |", read(d, "P3.md"))
         self.assertNotIn("| FaultEvent |", read(d, "L7.md"))
+
+    def test_phases_are_generated_from_the_record(self):
+        for prof, name in PHASES_FILES:
+            text = read(self.render(prof), name)
+            self.assertNotIn(PHASES_NOTICE, text, f"{prof}/{name}")
+            self.assertNotIn(PHASES_MARKER, text, f"{prof}/{name}")
+            self.assertRegex(text, r"Phases: \d+ measured, \d+ built unmeasured, \d+ accepted design, "
+                                   r"\d+ proposed, \d+ row\.")
+
+    def test_a_capability_with_no_phase_is_exit_1_with_a_chart(self):
+        record = (ARCH / "capability-record.yaml").read_text(encoding="utf-8")
+        self.assertIn(STRIPPED, record)
+        p = self.tmp / "record.yaml"
+        p.write_text(record.replace(STRIPPED, "  TacticalSustainmentCorrelation: {}\n"), encoding="utf-8", newline="\n")
+        d = self.tmp / "none-phase"
+        rc, _, err = run(TOOL, "--profile", "uaf", "--out", d, "--chart", CHART, "--release", "openddil",
+                         "--values", BUNDLE, "--values", OVERLAY, "--record", p)
+        self.assertEqual(rc, 1, err)
+        self.assertIn("TacticalSustainmentCorrelation has no phase", err)
+        self.assertFalse(d.exists())
+
+    def test_a_missing_readiness_doc_is_exit_2_and_never_not_measured(self):
+        d = self.tmp / "no-readiness"
+        rc, _, err = run(TOOL, "--profile", "uaf", "--out", d, "--chart", CHART, "--release", "openddil",
+                         "--values", BUNDLE, "--values", OVERLAY, "--readiness", self.tmp / "none.md")
+        self.assertEqual(rc, 2, err)
+        self.assertIn("--readiness", err)
+        self.assertFalse(d.exists())
 
     def test_failing_check_is_exit_1_and_writes_nothing(self):
         d = self.tmp / "none"

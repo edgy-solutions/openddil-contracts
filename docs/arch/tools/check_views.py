@@ -10,7 +10,7 @@ Usage:
     python docs/arch/tools/check_views.py [--root docs/arch]
 
 Rules: exports, appendix-a, view-files, slots, links, sources-table,
-marks, model, capabilities, trace, outputs, generated. The vocabularies for
+marks, model, capabilities, trace, outputs, generated, phases. The vocabularies for
 the Decision and Evidence columns are read from README.md, so they live once.
 The mapping from UAF views to DoDAF and NAF outputs is read from APPENDIX-A.md,
 the only copy: `exports` fails on an export it does not name, and `appendix-a`
@@ -28,15 +28,18 @@ from pathlib import Path
 
 import yaml
 
+import capability_phases
 from render_profile import mask_sysml, package_depths
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
 RULES = ["exports", "appendix-a", "view-files", "slots", "links", "sources-table",
-         "marks", "model", "capabilities", "trace", "outputs", "generated"]
+         "marks", "model", "capabilities", "trace", "outputs", "generated", "phases"]
 APPENDIX_HEADER = "| View | Name | DoDAF 2.02 | NAF 4.0 | DNDAF |"
 APPENDIX_COLUMNS = {"dodaf202": 2, "naf4": 3}
 SOURCES_HEADER = "| Claim | Source | Decision | Evidence |"
 GEN_MARKER = "<!-- generated: data-exchange -->"
+PHASES_MARKER = "<!-- generated: capability-phases -->"
+PHASES_HOME = "St-Rm-P"
 MODEL_RE = re.compile(r"<!--\s*model:\s*([A-Za-z_]\w*)\s*-->")
 SLOT_RE = re.compile(r"\{\{slot:([A-Za-z0-9_-]+)\}\}")
 LINK_RE = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
@@ -485,8 +488,28 @@ def rule_generated(t: Tree) -> list[str]:
     return fails
 
 
+def rule_phases(t: Tree) -> list[str]:
+    where = {vid: text.count(PHASES_MARKER) for vid, text in t.view_text.items() if PHASES_MARKER in text}
+    total = sum(where.values())
+    fails = []
+    if total != 1:
+        fails.append(f"phases: the capability-phases marker appears {total} times, expected once")
+    for vid in sorted(where):
+        if vid != PHASES_HOME:
+            fails.append(f"phases: the capability-phases marker is in {vid}, not in {PHASES_HOME}")
+    if total == 1 and PHASES_HOME not in where:
+        fails.append(f"phases: the capability-phases marker is not in {PHASES_HOME}")
+    try:
+        record = capability_phases.load_record(t.root / "capability-record.yaml")
+        capabilities = capability_phases.model_capabilities(t.sysml)
+    except capability_phases.InputError as e:
+        raise InputError(str(e))
+    decisions = t.root.parent.parent / "decisions"
+    return fails + [f"phases: {f}" for f in capability_phases.check_record(record, capabilities, decisions)]
+
+
 CHECKS = [rule_exports, rule_appendix, rule_view_files, rule_slots, rule_links, rule_sources_table,
-          rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated]
+          rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated, rule_phases]
 
 
 def main(argv: list[str] | None = None) -> int:

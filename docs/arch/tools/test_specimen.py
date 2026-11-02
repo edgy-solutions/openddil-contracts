@@ -10,6 +10,7 @@ check that every data-exchange output says it is declared, not measured. They
 skip, printing why, when helm, the chart or the twin is absent.
 """
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -21,6 +22,7 @@ import yaml
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import refresh_specimen as rs  # noqa: E402
+import capability_phases as cp  # noqa: E402
 
 SPECIMEN = rs.SPECIMEN
 PROFILES = rs.PROFILES
@@ -29,6 +31,8 @@ DX_OUTPUTS = (("uaf", "Rs-Cn.md"), ("dodaf202", "SV-6.md"), ("naf4", "P3.md"))
 STAMP_PREFIX = "Chart: "
 ATTRIBUTION_PREFIX = "built on OpenDDIL"
 NOT_MEASURED = "Declared, not measured"
+PHASES_OUTPUTS = (("uaf", "St-Rm-P.md"), ("dodaf202", "CV-3.md"), ("naf4", "Cr.md"))
+MEASURED_EVIDENCE = re.compile(r"\d{4}-\d{2}-\d{2}, lab [A-Z], ")
 
 WHY = rs.missing_input()
 if WHY:
@@ -177,6 +181,31 @@ class Specimen(unittest.TestCase):
                 if "OpenDDIL" in ln:
                     self.assertTrue(ln.startswith(ATTRIBUTION_PREFIX) or "package OpenDDIL" in ln,
                                     f"{rel}: {ln!r}")
+
+    def phase_rows(self, prof, name):
+        """The capability table rows of a phases output, as lists of cells."""
+        rows = []
+        for ln in read_lf(SPECIMEN / prof / name).split("\n"):
+            cells = [c.strip() for c in re.split(r"(?<!\\)\|", ln.strip().strip("|"))]
+            if ln.startswith("| ") and len(cells) == 7 and cells[0] != "Capability":
+                rows.append(cells)
+        return rows
+
+    def test_phases_have_one_row_per_capability_with_computed_evidence(self):
+        model = (rs.ARCH / "model" / "openddil.sysml").read_text(encoding="utf-8")
+        names = list(cp.model_capabilities(model))
+        self.assertTrue(names)
+        for prof, name in PHASES_OUTPUTS:
+            text = read_lf(SPECIMEN / prof / name)
+            rows = self.phase_rows(prof, name)
+            self.assertEqual([r[0] for r in rows], names, f"{prof}/{name}")
+            for r in rows:
+                self.assertIn(r[2], cp.PHASES, f"{prof}/{name}: {r[0]}")
+                if r[2] == "measured":
+                    self.assertRegex(r[3], MEASURED_EVIDENCE, f"{prof}/{name}: {r[0]}")
+                else:
+                    self.assertEqual(r[3], cp.NOT_MEASURED, f"{prof}/{name}: {r[0]}")
+            self.assertIn("{{slot:increment-dates}}", text, f"{prof}/{name}")
 
     def test_line_endings_are_lf(self):
         for name, path in tree(SPECIMEN).items():

@@ -3,7 +3,7 @@
 
 Renders every output profile with render_profile.py, using the chart's
 `openddil-demo` directory with the bundle's tier-node values and egress twin
-layered in that order, into docs/arch/specimen/<profile>/.
+layered in that order, and the readiness doc beside the chart, into docs/arch/specimen/<profile>/.
 
 Usage:
     python docs/arch/tools/refresh_specimen.py
@@ -32,6 +32,7 @@ CHART = REPOS / "openddil-helm" / "openddil-demo"
 BUNDLE_ROOT = Path(os.environ.get("OPENDDIL_BUNDLE", REPOS / "openddil-customer-bundle-example"))
 TIER_NODE = BUNDLE_ROOT / "k8s" / "tier-node-values.yaml"
 TWIN = BUNDLE_ROOT / "k8s" / "egress-values.yaml"
+READINESS = CHART.parent / "scripts" / "RECORDING-READINESS.md"
 REFRESH_COMMAND = "python docs/arch/tools/refresh_specimen.py"
 RELEASE = "openddil"
 
@@ -39,7 +40,8 @@ RELEASE = "openddil"
 def missing_input() -> str | None:
     if shutil.which("helm") is None:
         return "helm is not on PATH"
-    for label, p in (("chart", CHART), ("tier-node values", TIER_NODE), ("egress twin", TWIN)):
+    for label, p in (("chart", CHART), ("tier-node values", TIER_NODE), ("egress twin", TWIN),
+                     ("readiness doc", READINESS)):
         if not p.exists():
             return f"{label} missing at {p}"
     return None

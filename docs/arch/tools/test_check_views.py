@@ -241,6 +241,25 @@ class Perturbed(unittest.TestCase):
         edit(self.root, "views/Rs-Cn.md", "<!-- generated: data-exchange -->", "")
         self.expect("generated", "0 times")
 
+    def test_13_phases_capability_missing_from_the_record(self):
+        edit(self.root, "capability-record.yaml", "  TacticalSustainmentCorrelation:\n    adrs: [ADR-0039]\n", "")
+        self.expect("phases", "TacticalSustainmentCorrelation")
+
+    def test_13_phases_capability_with_no_citation(self):
+        edit(self.root, "capability-record.yaml", "  TacticalSustainmentCorrelation:\n    adrs: [ADR-0039]\n",
+             "  TacticalSustainmentCorrelation: {}\n")
+        self.expect("phases", "TacticalSustainmentCorrelation has no phase")
+
+    def test_13_phases_marker_twice(self):
+        p = self.root / "views" / "Op-If.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\n<!-- generated: capability-phases -->\n",
+                     encoding="utf-8", newline="\n")
+        self.expect("phases", "Op-If", "2 times")
+
+    def test_13_phases_marker_missing(self):
+        edit(self.root, "views/St-Rm-P.md", "<!-- generated: capability-phases -->", "")
+        self.expect("phases", "0 times")
+
 
 if __name__ == "__main__":
     unittest.main()

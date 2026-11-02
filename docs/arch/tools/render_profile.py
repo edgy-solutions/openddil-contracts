@@ -12,6 +12,7 @@ Usage:
         [--out DIR] [--slots FILE]
         [--chart PATH --values FILE [--values FILE ...]]
         [--allow-no-kinds REASON] [--release NAME]
+        [--record FILE] [--readiness FILE]
 
 --release is the Helm release name; --chart needs it.
 
@@ -24,18 +25,29 @@ title is as written in the view.
 Transforms on view text: `<!-- model: Pkg -->` becomes a fenced sysml block
 holding that package from model/openddil.sysml; `<!-- generated:
 data-exchange -->` (data_exchange.home only) becomes the document that
-data_exchange.py writes, or a notice when --chart is not given; relative
+data_exchange.py writes, or a notice when --chart is not given; `<!--
+generated: capability-phases -->` (St-Rm-P only) becomes the table that
+capability_phases.py computes from --record (default
+docs/arch/capability-record.yaml), the readiness doc and the chart's
+templates, or a notice when --chart is not given; relative
 links are rewritten to resolve from the output directory; `{{slot:name}}`
 is replaced from the --slots file (a YAML map of slot name to string).
 `{{slot:system-name}}` is filled from the bundle values when they name the
 system, and then --slots may not give another name.
 Unfilled slots stay as written and are counted.
 
+--readiness defaults to <chart>/../scripts/RECORDING-READINESS.md. With
+--chart, a readiness doc that cannot be read is exit 2: the phases never
+fall back to "not measured". The record is checked against the model and the
+decision records on every render, with or without --chart, and any failure
+(a capability with no phase, a citation that does not resolve) is exit 1.
+
 The default output directory is docs/arch/out/<profile>/, whose *.md files
 are cleared first. With --out, DIR must be empty, missing, or hold an
 INDEX.md (then its *.md files are cleared), else exit 2.
 
-Exit codes: 0 ok, 1 the data-exchange check failed, 2 bad input. Output is
+Exit codes: 0 ok, 1 the data-exchange check or the capability record failed,
+2 bad input. Output is
 byte-stable: no timestamps, sorted where profiles.yaml gives no order.
 Stdlib and PyYAML only.
 """
@@ -53,6 +65,8 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from data_exchange import InputError, presentation  # noqa: E402
+import capability_phases  # noqa: E402
+from capability_phases import CheckError  # noqa: E402
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
 ROOT = Path(__file__).resolve().parent.parent
@@ -60,14 +74,13 @@ TOOLS = Path(__file__).resolve().parent
 PROFILE_NAMES = ["uaf", "dodaf202", "naf4"]
 NOTICE = "Not generated: pass --chart and --values to fill this from a bundle."
 GEN_MARKER = "<!-- generated: data-exchange -->"
+PHASES_MARKER = "<!-- generated: capability-phases -->"
+PHASES_HOME = "St-Rm-P"
+PHASES_NOTICE = "Not generated: pass --chart to read the phases from the record, the readiness doc and the chart."
 MODEL_RE = re.compile(r"<!--\s*model:\s*([A-Za-z_][\w]*)\s*-->")
 SLOT_RE = re.compile(r"\{\{slot:([A-Za-z0-9_-]+)\}\}")
 LINK_RE = re.compile(r"(\[[^\]\n]*\]\()([^)\s]+)(\))")
 HEADING_RE = re.compile(r"^(#{1,6})(\s)")
-
-
-class CheckError(Exception):
-    """The data-exchange check failed: exit 1. Carries stderr to pass through."""
 
 
 # --- SysML scanning ----------------------------------------------------------
@@ -341,6 +354,25 @@ class Renderer:
         self.doc: str | None = None
         if a.chart:
             self.doc = generate_document(a, self.profile)
+        self.phases = self.phases_content()
+
+    def phases_content(self) -> str:
+        """The phases table, or the notice. The record is checked either way."""
+        record = capability_phases.load_record(self.a.record)
+        capabilities = capability_phases.model_capabilities(self.sysml)
+        decisions = ROOT.parent.parent / "decisions"
+        if not self.a.chart:
+            fails = capability_phases.check_record(record, capabilities, decisions)
+            if fails:
+                raise CheckError("".join(f"phases: {f}\n" for f in fails))
+            return PHASES_NOTICE
+        cdir = Path(self.a.chart)
+        path = Path(self.a.readiness) if self.a.readiness else cdir.parent / "scripts" / "RECORDING-READINESS.md"
+        try:
+            readiness = path.read_text(encoding="utf-8")
+        except OSError as e:
+            raise InputError(f"cannot read the readiness doc {path}: {e.strerror or e}; pass --readiness")
+        return capability_phases.render_table(record, capabilities, decisions, cdir / "templates", readiness)
 
     def dx_content(self) -> str:
         """The generated document without its H1, or the notice."""
@@ -359,11 +391,13 @@ class Renderer:
         h1, body = read_view(ROOT, entry, vid)
         if GEN_MARKER in body and vid != self.home:
             raise InputError(f"view {vid}: the data-exchange marker belongs only in {self.home}")
+        if PHASES_MARKER in body and vid != PHASES_HOME:
+            raise InputError(f"view {vid}: the capability-phases marker belongs only in {PHASES_HOME}")
         body = inline_model(body, self.sysml, self.masked)
         body = rewrite_links(body, (ROOT / entry["file"]).parent, self.out_dir)
         body = fill_slots(body, self.slot_values)
         # The generated document is final text: insert it last, slots and links untouched.
-        body = body.replace(GEN_MARKER, dx_marker)
+        body = body.replace(GEN_MARKER, dx_marker).replace(PHASES_MARKER, self.phases)
         return h1, body
 
     # uaf ------------------------------------------------------------------
@@ -475,6 +509,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--values", action="append", default=[])
     ap.add_argument("--release", help="the Helm release name the chart is rendered under")
     ap.add_argument("--allow-no-kinds", metavar="REASON")
+    ap.add_argument("--record", default=str(ROOT / "capability-record.yaml"),
+                    help="the capability record (default: docs/arch/capability-record.yaml)")
+    ap.add_argument("--readiness", help="the readiness doc (default: <chart>/../scripts/RECORDING-READINESS.md)")
     a = ap.parse_args(argv)
     try:
         if a.values and not a.chart:
