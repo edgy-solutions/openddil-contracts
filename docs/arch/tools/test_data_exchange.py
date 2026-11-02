@@ -23,8 +23,9 @@ DATA = HERE / "testdata"
 BASIC = DATA / "rendered-basic.yaml"
 ROOT = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))
 CHART = ROOT / "openddil-helm" / "openddil-demo"
-BUNDLE = ROOT / "openddil-customer-bundle-example" / "k8s" / "tier-node-values.yaml"
-OVERLAY = DATA / "example-overlay.yaml"
+BUNDLE_ROOT = Path(os.environ.get("OPENDDIL_BUNDLE", ROOT / "openddil-customer-bundle-example"))
+BUNDLE = BUNDLE_ROOT / "k8s" / "tier-node-values.yaml"
+OVERLAY = BUNDLE_ROOT / "k8s" / "egress-values.yaml"
 
 
 def run(*args):
@@ -241,17 +242,21 @@ class Content(Base):
         self.assertIn("releasability-disabled", out)
 
 
-def _why_no_integration():
+def _why_no_integration(need_twin=False):
     if shutil.which("helm") is None:
         return "helm is not on PATH"
-    if not CHART.is_dir() or not BUNDLE.is_file():
-        return f"sibling chart or public bundle missing under {ROOT}"
+    if not CHART.is_dir():
+        return f"chart missing at {CHART}"
+    if not BUNDLE.is_file():
+        return f"tier-node values missing at {BUNDLE}"
+    if need_twin and not OVERLAY.is_file():
+        return f"egress twin missing at {OVERLAY}"
     return None
 
 
 class Integration(unittest.TestCase):
     def setUp(self):
-        why = _why_no_integration()
+        why = _why_no_integration(need_twin=self._testMethodName == "test_public_bundle_with_egress_twin")
         if why:
             print(f"SKIP integration: {why}", file=sys.stderr)
             self.skipTest(why)
@@ -263,11 +268,18 @@ class Integration(unittest.TestCase):
         for t in ("edge-north", "edge-south", "region-north", "region-south", "hq"):
             self.assertIn(f"| {t} |", out)
 
-    def test_public_bundle_with_example_overlay(self):
+    def test_public_bundle_with_egress_twin(self):
         rc, out, err = run("--chart", CHART, "--values", BUNDLE, "--values", OVERLAY, "--check")
         self.assertEqual(rc, 0, err)
         self.assertIn("| FaultEvent |", out)
         self.assertIn("system:depot-ledger", out)
+        self.assertIn("| RepairOrder |", out)
+        self.assertIn("system:c2-stand-in-atl", out)
+        sys.path.insert(0, str(HERE))
+        self.addCleanup(sys.path.remove, str(HERE))
+        from data_exchange import table_after
+        exc = [r[0] for r in table_after(out, "Exceptions")]
+        self.assertNotIn("destination-without-entry", exc)
         rows = [line for line in out.splitlines() if line.startswith("| hq | hq | ")]
         sink = next(line for line in rows if "| egress-depot-sink |" in line)
         self.assertIn("egress-forwarder", sink)

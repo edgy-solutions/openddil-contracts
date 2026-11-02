@@ -4,10 +4,10 @@ Which declared artefact supplies which view's content, and which views have no s
 
 ## Gaps first
 
-1. **The public example bundle declares no kinds, no destinations and no routes, and leaves releasability off.** The chart therefore renders no egress for it at all, and a kind check on that bundle alone would prove nothing. Concrete kinds exist only in a deployment's overlay. [`tools/testdata/example-overlay.yaml`](tools/testdata/example-overlay.yaml) is a fictional overlay that exercises the kind rows through the real chart. A public twin of a full deployment does not exist yet.
+1. **The public example's base values declare no kinds, no destinations and no routes, and leave releasability off.** `k8s/tier-node-values.yaml` alone renders no egress, and a kind check on it alone would prove nothing. Its public twin, `k8s/egress-values.yaml`, adds two kinds, two destinations and two routes. The twin is authored for the sample deployment and is definitive for that only; it attests to nothing about any other deployment. [`specimen/`](specimen/) holds the views rendered from it.
 2. **A consumer group's topics are not declared.** The annotation gives broker and group only. The generator binds a group to topics only where a mounted config or environment variable says so, and names every other group as an exception. On the public bundle, 27 groups have no bound topic: the hub projector's groups, the Faust groups and the DIS mapper.
 3. **Bridges write without declaring it.** A bridge writes to its parent's broker, and its workload annotation does not list those writes. This accounts for all 26 `writer-not-annotated` rows.
-4. **No decision record defines the annotations.** The workload annotations this view rests on are defined by the chart and its check scripts.
+4. **The record that defines the annotations is only proposed.** The chart and its check scripts defined them until [ADR-0054](../../decisions/ADR-0054-workload-annotations-declare-broker-use.md), which is not yet accepted. [`tools/check_annotations.py`](tools/check_annotations.py) holds a render to that record, and no workflow runs it yet.
 5. **A decision record's status line can lag the code.** ADR-0043 says it is not deployed anywhere, and the chart renders the gate when a deployment enables it. These views copy each record's words, and the marks are not re-verified.
 
 ## Artefact to view
@@ -19,7 +19,7 @@ Which declared artefact supplies which view's content, and which views have no s
 | `produces.yaml` | 8 repositories | Rs-Cn, indirectly | Not read by the generator. `openddil-helm/scripts/check-produces-declarations.py` holds it to the chart's annotations. |
 | Consumer declarations | `openddil-helm/scripts/check_consumer_declarations.py` and its expected list | Rs-Cn, indirectly | Not read by the generator. The script holds the annotations to an expected list. |
 | Bridge and projector config | Chart ConfigMaps | Rs-Cn | Render, by the generator: topics, groups, tables |
-| Overlay kind schemas | `egress.kinds` in a deployment's values; the example in `tools/testdata/` | Rs-If, Op-If, Sc-Pr | Render, by the generator: `x-openddil` pointers |
+| Overlay kind schemas | `egress.kinds` in a deployment's values; the sample in the example bundle's `k8s/egress-values.yaml` | Rs-If, Op-If, Sc-Pr | Render, by the generator: `x-openddil` pointers |
 | Egress routes | `egress.routes` in a deployment's values | Rs-Cn, Rs-If, Sc-Cn | Render, by the generator |
 | Egress destinations | Destination entries in a deployment's values | Rs-Cn, Rs-If, Sc-Cn | Render, by the generator: display name, nations, accepts, asserted by and on. No other field is output. |
 | Labelled tables | `releasability.labeledTables` in chart values | Rs-Cn, Sc-Cn | Values, by the generator |
@@ -93,18 +93,20 @@ Appendix A's own tables label a few rows inconsistently. [`APPENDIX-A.md`](APPEN
 
 Each is named row by row in the generator's Exceptions section. None of these is a fault in a running system: each says a declaration is absent.
 
-| Exception | Public bundle | With the fictional overlay |
+Counts are from chart 0.1.161.
+
+| Exception | Base values | With the public twin |
 |---|---|---|
 | writer-not-annotated | 26 | 26 |
 | group-without-topic | 27 | 27 |
 | consumer-without-writer | 16 | 12 |
 | writer-without-consumer | 57 | 52 |
 | labels-not-declared (rows) | 34 | 35 |
-| workload-no-declaration | 18 | 23 |
-| destination-without-entry | 0 | 1 |
+| workload-no-declaration | 18 | 24 |
+| destination-without-entry | 0 | 0 |
 | releasability-disabled | 1 | 0 |
 
-The one `destination-without-entry` is the chart's default route to its C2 stand-in, which no registry entry in the overlay lists.
+[`annotation-exceptions.yaml`](annotation-exceptions.yaml) lists the writer-not-annotated, group-without-topic and workload-no-declaration rows for the twin, each class with its reason.
 
 ## Slots
 

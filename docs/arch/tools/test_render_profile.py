@@ -26,8 +26,9 @@ TOOL = HERE / "render_profile.py"
 PROFILES = yaml.safe_load((ARCH / "profiles.yaml").read_text(encoding="utf-8"))
 SIBLINGS = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))
 CHART = SIBLINGS / "openddil-helm" / "openddil-demo"
-BUNDLE = SIBLINGS / "openddil-customer-bundle-example" / "k8s" / "tier-node-values.yaml"
-OVERLAY = HERE / "testdata" / "example-overlay.yaml"
+BUNDLE_ROOT = Path(os.environ.get("OPENDDIL_BUNDLE", SIBLINGS / "openddil-customer-bundle-example"))
+BUNDLE = BUNDLE_ROOT / "k8s" / "tier-node-values.yaml"
+OVERLAY = BUNDLE_ROOT / "k8s" / "egress-values.yaml"
 NOTICE = "Not generated: pass --chart and --values to fill this from a bundle."
 LINK = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 
@@ -291,8 +292,10 @@ class TempTree(unittest.TestCase):
         self.assertTrue(block.rstrip().endswith("}"))
 
 
-HAVE_INTEGRATION = shutil.which("helm") is not None and CHART.is_dir() and BUNDLE.is_file()
-SKIP_WHY = "integration skipped: needs helm on PATH, and the sibling chart and bundle under " + str(SIBLINGS)
+HAVE_INTEGRATION = (shutil.which("helm") is not None and CHART.is_dir()
+                    and BUNDLE.is_file() and OVERLAY.is_file())
+SKIP_WHY = ("integration skipped: needs helm on PATH, the chart at " + str(CHART)
+            + ", and the tier-node and egress twin values at " + str(OVERLAY.parent))
 if not HAVE_INTEGRATION:
     print(SKIP_WHY, file=sys.stderr)
 

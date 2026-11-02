@@ -58,11 +58,11 @@ Generate the data-exchange view from a bundle:
 python docs/arch/tools/data_exchange.py \
   --chart ../openddil-helm/openddil-demo \
   --values ../openddil-customer-bundle-example/k8s/tier-node-values.yaml \
-  --values docs/arch/tools/testdata/example-overlay.yaml \
+  --values ../openddil-customer-bundle-example/k8s/egress-values.yaml \
   --profile dodaf202 --check
 ```
 
-`--check` fails when a tier, kind or route has no row. The public example bundle declares no kinds, so running it alone needs `--allow-no-kinds "<reason>"`. That exception goes red as soon as kinds appear. The example overlay is fiction and exists to exercise the kind rows.
+`--check` fails when a tier, kind or route has no row. `tier-node-values.yaml` declares no kinds, so running it without the twin needs `--allow-no-kinds "<reason>"`. That exception goes red as soon as kinds appear. The example overlay is fiction and exists to exercise the kind rows.
 
 Render a profile, then check the views:
 
@@ -70,6 +70,23 @@ Render a profile, then check the views:
 python docs/arch/tools/render_profile.py --profile naf4
 python docs/arch/tools/check_views.py
 ```
+
+[`specimen/`](specimen/) holds all three profiles rendered from the public twin, `k8s/egress-values.yaml` in the example bundle. A test compares it with a fresh render. It ignores the `Chart:` line, so a chart version bump alone passes and a content change fails. To refresh it:
+
+```sh
+python docs/arch/tools/refresh_specimen.py
+```
+
+Check the workload annotations against a render ([ADR-0054](../../decisions/ADR-0054-workload-annotations-declare-broker-use.md)):
+
+```sh
+python docs/arch/tools/check_annotations.py \
+  --chart ../openddil-helm/openddil-demo \
+  --values ../openddil-customer-bundle-example/k8s/tier-node-values.yaml \
+  --values ../openddil-customer-bundle-example/k8s/egress-values.yaml
+```
+
+This needs a chart checkout and `helm`, so `check_views.py` does not run it, and no workflow runs it yet. [`annotation-exceptions.yaml`](annotation-exceptions.yaml) names the rows it does not cover.
 
 Output goes to `docs/arch/out/<profile>/`, which is not committed. To fill slots from a private file, pass `--slots FILE` and keep the output out of this repository.
 
