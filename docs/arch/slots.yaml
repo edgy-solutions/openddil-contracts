@@ -8,9 +8,9 @@
 # declared artefact carries it, so a person has to write it.
 
 slots:
-  deployment-name:
-    fills: Name of this instantiation of the architecture.
-    source: none yet
+  system-name:
+    fills: Name of this system in its documents.
+    source: bundle values system.name
   mission-thread:
     fills: The operational thread the deployment supports, in the deployment's own words.
     source: none yet

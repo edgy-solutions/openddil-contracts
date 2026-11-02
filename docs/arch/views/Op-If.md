@@ -1,6 +1,6 @@
 # Operational-Information (Op-If)
 
-The logical information model. Field names are OpenDDIL-local: the standards in [Standards-Taxonomy](Sd-Tx.md) are aligned by concept name, and a binding is owed before any field is frozen. Bindings: {{slot:attribute-bindings}}. Variants: {{slot:platform-variants}}.
+The logical information model. Field names are local to this architecture: the standards in [Standards-Taxonomy](Sd-Tx.md) are aligned by concept name, and a binding is owed before any field is frozen. Bindings: {{slot:attribute-bindings}}. Variants: {{slot:platform-variants}}.
 
 <!-- model: Information -->
 

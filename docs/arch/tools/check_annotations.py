@@ -7,9 +7,9 @@ that data_exchange.py reads. It does not go in check_views.py because it
 needs a render.
 
 Usage:
-    python docs/arch/tools/check_annotations.py --chart PATH --values FILE
+    python docs/arch/tools/check_annotations.py --chart PATH --release NAME --values FILE
         [--values FILE ...] [--exceptions FILE]
-    python docs/arch/tools/check_annotations.py --rendered FILE [--exceptions FILE]
+    python docs/arch/tools/check_annotations.py --rendered FILE [--release NAME] [--exceptions FILE]
     python docs/arch/tools/check_annotations.py ... --print-rows
 
 Rules, against the render:
@@ -38,8 +38,8 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from data_exchange import (EXIT_CHECK, EXIT_INPUT, EXIT_OK, GROUPS, PRODUCES,  # noqa: E402
                            WORKLOAD_KINDS, InputError, Workload, build_model,
-                           helm_render, load_docs, load_yaml_file, split_pairs,
-                           strip_prefix)
+                           helm_render, load_docs, load_yaml_file, resolve_release,
+                           split_pairs)
 
 DEFAULT_EXCEPTIONS = Path(__file__).resolve().parent.parent / "annotation-exceptions.yaml"
 ANNOTATIONS = (PRODUCES, GROUPS)
@@ -86,14 +86,14 @@ def check_tokens(wname: str, ann: str, value, where: str) -> list[str]:
     return fails
 
 
-def check_render(docs: list[dict], model, ledger) -> list[str]:
+def check_render(docs: list[dict], release: str, model, ledger) -> list[str]:
     """Return FAIL lines for rules 1-5."""
     grammar, placement, broker, owner = [], [], [], []
     declared: dict[tuple[str, str], list[str]] = {}
     for doc in docs:
         if doc.get("kind") not in WORKLOAD_KINDS:
             continue
-        w = Workload(doc)
+        w = Workload(doc, release)
         own = (doc.get("metadata") or {}).get("annotations") or {}
         tmpl = (pod_template(doc).get("metadata") or {}).get("annotations") or {}
         for ann in ANNOTATIONS:
@@ -166,6 +166,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--chart")
     ap.add_argument("--values", action="append", default=[])
     ap.add_argument("--rendered")
+    ap.add_argument("--release", help="the Helm release name the render was made under")
     ap.add_argument("--exceptions", default=str(DEFAULT_EXCEPTIONS))
     ap.add_argument("--print-rows", action="store_true")
     a = ap.parse_args(argv)
@@ -173,18 +174,21 @@ def main(argv: list[str] | None = None) -> int:
         if a.rendered:
             text = Path(a.rendered).read_text(encoding="utf-8")
         elif a.chart:
-            text = helm_render(a.chart, a.values)
+            if not a.release:
+                raise InputError("--chart needs --release (the Helm release name)")
+            text = helm_render(a.chart, a.values, a.release)
         else:
             raise InputError("need --chart or --rendered")
         docs = load_docs(text)
         del text
         if not docs:
             raise InputError("no documents in the render")
+        release = resolve_release(docs, a.release)
         layers = [load_yaml_file(v) for v in a.values]
         chart_layer = {}
         if a.chart and (Path(a.chart) / "values.yaml").is_file():
             chart_layer = load_yaml_file(str(Path(a.chart) / "values.yaml"))
-        model = build_model(docs, layers, chart_layer, bool(a.values))
+        model = build_model(docs, release, layers, chart_layer, bool(a.values))
         if a.print_rows:
             sys.stdout.write(yaml.safe_dump(current_rows(model), sort_keys=False,
                                             width=1000, allow_unicode=True))
@@ -193,7 +197,7 @@ def main(argv: list[str] | None = None) -> int:
     except (InputError, OSError) as e:
         print(f"error: {e}", file=sys.stderr)
         return EXIT_INPUT
-    fails = check_render(docs, model, ledger)
+    fails = check_render(docs, release, model, ledger)
     for f in fails:
         print(f)
     if fails:

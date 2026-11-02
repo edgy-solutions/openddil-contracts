@@ -1,8 +1,8 @@
 # Summary-Overview (Sm-Ov)
 
-The architecture of {{slot:deployment-name}}, which supports {{slot:mission-thread}}.
+The architecture of {{slot:system-name}}, which supports {{slot:mission-thread}}.
 
-OpenDDIL reads a fleet's tactical signals and its sustainment records, correlates them, and keeps doing so when a tier is cut off from the tier above it. It correlates and does not transact: both provenances are kept, and the system of record stays the system of record.
+{{slot:system-name}} reads a fleet's tactical signals and its sustainment records, correlates them, and keeps doing so when a tier is cut off from the tier above it. It correlates and does not transact: both provenances are kept, and the system of record stays the system of record.
 
 Three decisions shape every other view:
 

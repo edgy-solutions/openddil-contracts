@@ -28,10 +28,18 @@ BUNDLE = BUNDLE_ROOT / "k8s" / "tier-node-values.yaml"
 OVERLAY = BUNDLE_ROOT / "k8s" / "egress-values.yaml"
 
 
-def run(*args):
+def run_raw(*args):
     p = subprocess.run([sys.executable, str(TOOL), *map(str, args)],
                        capture_output=True, text=True, encoding="utf-8")
     return p.returncode, p.stdout, p.stderr
+
+
+def run(*args):
+    """run_raw, with --release openddil for a --rendered fixture that carries no labels."""
+    args = list(map(str, args))
+    if "--rendered" in args and "--release" not in args:
+        args += ["--release", "openddil"]
+    return run_raw(*args)
 
 
 def docs():
@@ -242,6 +250,120 @@ class Content(Base):
         self.assertIn("releasability-disabled", out)
 
 
+class Naming(Base):
+    def chart(self, values=None, version="1.2.3"):
+        d = self.tmp / "chart"
+        d.mkdir(exist_ok=True)
+        (d / "Chart.yaml").write_text(f"name: demo\nversion: {version}\n" if version else "name: demo\n",
+                                      encoding="utf-8")
+        (d / "values.yaml").write_text(yaml.safe_dump(values or {}), encoding="utf-8")
+        return d
+
+    def vals(self, name, body):
+        p = self.tmp / name
+        p.write_text(yaml.safe_dump(body), encoding="utf-8")
+        return p
+
+    def labelled(self, name, instance):
+        ds = docs()
+        for d in ds:
+            d["metadata"].setdefault("labels", {})["app.kubernetes.io/instance"] = instance
+        return self.write(name, ds)
+
+    def head(self, *args):
+        rc, out, err = run("--rendered", BASIC, "--chart", self.chart(), *args)
+        self.assertEqual(rc, 0, err)
+        return out.split("\n")
+
+    def test_label_is_read_without_release(self):
+        p = self.labelled("l.yaml", "openddil")
+        rc, out, err = run_raw("--rendered", p, "--check")
+        self.assertEqual(rc, 0, err)
+        self.assertEqual(out, run("--rendered", BASIC)[1])
+
+    def test_release_disagreeing_with_labels_exits_2(self):
+        rc, _, err = run_raw("--rendered", self.labelled("l.yaml", "openddil"), "--release", "other")
+        self.assertEqual(rc, 2, err)
+
+    def test_release_with_no_labels_is_taken_as_given(self):
+        self.assertEqual(run_raw("--rendered", BASIC, "--release", "openddil")[0], 0)
+
+    def test_no_labels_and_no_release_exits_2(self):
+        rc, _, err = run_raw("--rendered", BASIC)
+        self.assertEqual(rc, 2)
+        self.assertIn("--release", err)
+
+    def test_several_labels_exit_2(self):
+        ds = docs()
+        ds[0]["metadata"]["labels"] = {"app.kubernetes.io/instance": "a"}
+        ds[1]["metadata"]["labels"] = {"app.kubernetes.io/instance": "b"}
+        rc, _, err = run_raw("--rendered", self.write("s.yaml", ds))
+        self.assertEqual(rc, 2)
+        self.assertIn("--release", err)
+
+    def test_chart_without_release_exits_2(self):
+        rc, _, err = run_raw("--chart", self.chart())
+        self.assertEqual(rc, 2)
+        self.assertIn("--release", err)
+
+    def test_name_in_title(self):
+        plain = self.head()
+        named = self.head("--values", self.vals("v.yaml", {"system": {"name": "Sys One"}}))
+        self.assertTrue(plain[0].startswith("# ") and not plain[0].startswith("# Sys One"))
+        self.assertEqual(named[0], "# Sys One: " + plain[0][2:])
+
+    def test_no_name_leaves_title_unchanged(self):
+        _, out, _ = run("--rendered", BASIC)
+        self.assertTrue(out.startswith("# "))
+        _, blank, _ = run("--rendered", BASIC, "--chart", self.chart(),
+                          "--values", self.vals("b.yaml", {"system": {"name": "  "}}))
+        self.assertEqual(blank.split("\n")[0], out.split("\n")[0])
+
+    def test_default_attribution_carries_chart_version(self):
+        lines = self.head()
+        self.assertEqual(lines[1:3], ["", "built on OpenDDIL 1.2.3"])
+        self.assertEqual(lines[3], "")
+
+    def test_default_attribution_without_chart_version(self):
+        _, out, _ = run("--rendered", BASIC)
+        self.assertEqual(out.split("\n")[2], "built on OpenDDIL")
+
+    def test_attribution_true_and_null_are_the_default(self):
+        for v in (True, None):
+            lines = self.head("--values", self.vals("t.yaml", {"system": {"attribution": v}}))
+            self.assertEqual(lines[2], "built on OpenDDIL 1.2.3")
+
+    def test_attribution_false_or_empty_drops_the_line(self):
+        for v in (False, ""):
+            lines = self.head("--values", self.vals("f.yaml", {"system": {"attribution": v}}))
+            self.assertNotIn("built on OpenDDIL 1.2.3", lines)
+            self.assertEqual(lines[1], "")
+            self.assertTrue(lines[2].startswith("Chart: demo 1.2.3"), lines[2])
+
+    def test_custom_attribution_kept_as_given(self):
+        lines = self.head("--values", self.vals("c.yaml", {"system": {"attribution": "Run by  Ops, v2"}}))
+        self.assertEqual(lines[2], "Run by  Ops, v2")
+
+    def test_bad_types_exit_2(self):
+        for body in ({"system": ["a"]}, {"system": {"name": 5}}, {"system": {"attribution": 5}},
+                     {"system": {"attribution": ["x"]}}):
+            rc, _, err = run("--rendered", BASIC, "--values", self.vals("x.yaml", body))
+            self.assertEqual(rc, 2, str(body) + err)
+
+    def test_later_layer_overrides_one_key_and_keeps_the_other(self):
+        a = self.vals("a.yaml", {"system": {"name": "First", "attribution": "by A"}})
+        b = self.vals("b.yaml", {"system": {"name": "Second"}})
+        lines = self.head("--values", a, "--values", b)
+        self.assertTrue(lines[0].startswith("# Second: "), lines[0])
+        self.assertEqual(lines[2], "by A")
+
+    def test_chart_values_are_the_first_layer(self):
+        d = self.chart({"system": {"name": "FromChart"}})
+        rc, out, err = run("--rendered", BASIC, "--chart", d)
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out.startswith("# FromChart: "))
+
+
 def _why_no_integration(need_twin=False):
     if shutil.which("helm") is None:
         return "helm is not on PATH"
@@ -256,20 +378,22 @@ def _why_no_integration(need_twin=False):
 
 class Integration(unittest.TestCase):
     def setUp(self):
-        why = _why_no_integration(need_twin=self._testMethodName == "test_public_bundle_with_egress_twin")
+        why = _why_no_integration(need_twin=self._testMethodName in (
+            "test_public_bundle_with_egress_twin", "test_release_name_is_not_in_the_output"))
         if why:
             print(f"SKIP integration: {why}", file=sys.stderr)
             self.skipTest(why)
 
     def test_public_bundle_no_kinds(self):
-        rc, out, err = run("--chart", CHART, "--values", BUNDLE, "--check",
+        rc, out, err = run("--chart", CHART, "--release", "openddil", "--values", BUNDLE, "--check",
                            "--allow-no-kinds", "public bundle declares no egress kinds")
         self.assertEqual(rc, 0, err)
         for t in ("edge-north", "edge-south", "region-north", "region-south", "hq"):
             self.assertIn(f"| {t} |", out)
 
     def test_public_bundle_with_egress_twin(self):
-        rc, out, err = run("--chart", CHART, "--values", BUNDLE, "--values", OVERLAY, "--check")
+        rc, out, err = run("--chart", CHART, "--release", "openddil", "--values", BUNDLE,
+                           "--values", OVERLAY, "--check")
         self.assertEqual(rc, 0, err)
         self.assertIn("| FaultEvent |", out)
         self.assertIn("system:depot-ledger", out)
@@ -286,6 +410,21 @@ class Integration(unittest.TestCase):
         trigger = [line for line in out.splitlines() if "| asset-cm-state |" in line and "egress-assembler" in line]
         self.assertTrue(trigger, "the assembler's trigger topic should bind its group")
         self.assertNotIn("hq/egress-assembler (egress-assembler)", out)
+
+    def test_release_name_is_not_in_the_output(self):
+        args = ("--chart", CHART, "--values", BUNDLE, "--values", OVERLAY)
+        rc1, out1, err1 = run(*args, "--release", "openddil")
+        rc2, out2, err2 = run(*args, "--release", "acme")
+        self.assertEqual((rc1, rc2), (0, 0), err1 + err2)
+        self.assertEqual(out1, out2)
+
+    def test_no_kinds_under_another_release_still_fails_closed(self):
+        args = ("--chart", CHART, "--release", "acme", "--values", BUNDLE, "--check")
+        rc, _, err = run(*args)
+        self.assertEqual(rc, 1, err)
+        self.assertIn("no kinds declared", err)
+        rc, _, err = run(*args, "--allow-no-kinds", "public bundle declares no egress kinds")
+        self.assertEqual(rc, 0, err)
 
 
 if __name__ == "__main__":

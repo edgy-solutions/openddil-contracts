@@ -130,8 +130,8 @@ class Perturbed(unittest.TestCase):
 
     def test_4_slots_deleted_from_registry(self):
         edit(self.root, "slots.yaml",
-             "  deployment-name:\n    fills: Name of this instantiation of the architecture.\n    source: none yet\n", "")
-        self.expect("slots", "deployment-name is used")
+             "  system-name:\n    fills: Name of this system in its documents.\n    source: bundle values system.name\n", "")
+        self.expect("slots", "system-name is used")
 
     def test_4_slots_unused_slot_added(self):
         p = self.root / "slots.yaml"

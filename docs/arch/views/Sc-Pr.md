@@ -25,7 +25,7 @@ The order of the checks here is for reading. The decision record fixes the reaso
 
 Intake runs the mirror of this: validate by kind, require label equality, require entitled approvers, write a local decision, then publish onward. A disagreement between two named records is surfaced to a person. Detection never enforces.
 
-Decision-record fields and the reason list are OpenDDIL-local and are not taken from a standard.
+Decision-record fields and the reason list are local to this architecture and are not taken from a standard.
 
 ## Sources
 

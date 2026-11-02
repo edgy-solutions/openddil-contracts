@@ -10,8 +10,8 @@ Who needs what from whom. This view states the needs. The topics and workloads t
 | N4 | Hub | {{slot:c2-system}} | Status and readiness, gated per destination | Not stated |
 | N5 | Hub | {{slot:maintenance-system}} | Fault records of a declared kind, gated | Not stated |
 | N6 | {{slot:maintenance-system}} | Hub | Actions of a declared kind, through intake | Not stated |
-| N7 | {{slot:sustainment-system-of-record}} | OpenDDIL | Record state, extracted | Not stated |
-| N8 | OpenDDIL | {{slot:sustainment-system-of-record}} | Intents, for the record holder to accept or refuse | Held with custody at the tier |
+| N7 | {{slot:sustainment-system-of-record}} | {{slot:system-name}} | Record state, extracted | Not stated |
+| N8 | {{slot:system-name}} | {{slot:sustainment-system-of-record}} | Intents, for the record holder to accept or refuse | Held with custody at the tier |
 | N9 | Operator | Tier | Declaration of an arriving asset | Local |
 | N10 | Peer tier | Peer tier | Whatever a lateral link is configured for | Deployment configuration |
 

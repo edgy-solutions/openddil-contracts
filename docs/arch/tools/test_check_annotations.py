@@ -33,7 +33,11 @@ CLASSES = ("writer-not-annotated", "workload-no-declaration", "group-without-top
 
 
 def run(*args):
-    p = subprocess.run([sys.executable, str(TOOL), *map(str, args)],
+    """Run the tool; a --rendered fixture with no labels gets --release openddil."""
+    args = list(map(str, args))
+    if "--rendered" in args and "--release" not in args:
+        args += ["--release", "openddil"]
+    p = subprocess.run([sys.executable, str(TOOL), *args],
                        capture_output=True, text=True, encoding="utf-8")
     return p.returncode, p.stdout, p.stderr
 
@@ -221,10 +225,30 @@ class Integration(unittest.TestCase):
         if why:
             print(f"SKIP integration: {why}", file=sys.stderr)
             self.skipTest(why)
-        rc, out, err = run("--chart", CHART, "--values", TIER_NODE, "--values", TWIN,
-                           "--exceptions", LEDGER)
+        rc, out, err = run("--chart", CHART, "--release", "openddil", "--values", TIER_NODE,
+                           "--values", TWIN, "--exceptions", LEDGER)
         self.assertEqual(rc, 0, out + err)
         self.assertTrue(out.startswith("ok:"), out)
+
+    def test_another_release_gives_the_same_result_and_rows(self):
+        why = _why_no_integration()
+        if why:
+            print(f"SKIP integration: {why}", file=sys.stderr)
+            self.skipTest(why)
+        got = {}
+        for rel in ("openddil", "acme"):
+            base = ("--chart", CHART, "--release", rel, "--values", TIER_NODE, "--values", TWIN)
+            rc, out, err = run(*base, "--exceptions", LEDGER)
+            rows = run(*base, "--print-rows")
+            self.assertEqual(rows[0], 0, rows[2])
+            got[rel] = (rc, out, rows[1])
+        self.assertEqual(got["acme"][0], 0, got["acme"][1])
+        self.assertEqual(got["acme"], got["openddil"])
+
+    def test_chart_without_release_exits_2(self):
+        rc, _, err = run("--chart", CHART, "--values", TIER_NODE)
+        self.assertEqual(rc, 2)
+        self.assertIn("--release", err)
 
 
 if __name__ == "__main__":

@@ -12,7 +12,7 @@ is printed as an exception, never filled in.
 
 Usage:
     python docs/arch/tools/data_exchange.py --chart PATH --values FILE
-        [--values FILE ...] [--rendered FILE] [--profile uaf|dodaf202|naf4]
+        [--values FILE ...] [--rendered FILE] [--release NAME] [--profile uaf|dodaf202|naf4]
         [--out FILE] [--allow-no-kinds REASON] [--check] [--check-file FILE]
 
 What --check validates, on the document text (Exchanges table read by
@@ -40,7 +40,6 @@ from pathlib import Path
 import yaml
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
-RELEASE_PREFIX = "openddil-"
 WORKLOAD_KINDS = {"Deployment", "StatefulSet", "DaemonSet", "Job", "CronJob"}
 PRODUCES = "openddil.io/produces-topics"
 GROUPS = "openddil.io/consumer-groups"
@@ -82,8 +81,64 @@ def load_docs(text: str) -> list[dict]:
     return docs
 
 
-def strip_prefix(name: str) -> str:
-    return name[len(RELEASE_PREFIX):] if name.startswith(RELEASE_PREFIX) else name
+def strip_prefix(name: str, release: str) -> str:
+    prefix = f"{release}-"
+    return name[len(prefix):] if name.startswith(prefix) else name
+
+
+def resolve_release(docs: list[dict], given: str | None) -> str:
+    """The Helm release of a render: the one `--release` names, or the one the labels carry."""
+    found = set()
+    for d in docs:
+        labels = (d.get("metadata") or {}).get("labels")
+        v = labels.get("app.kubernetes.io/instance") if isinstance(labels, dict) else None
+        if isinstance(v, str) and v:
+            found.add(v)
+    if given:
+        if found and found != {given}:
+            raise InputError(f"--release {given} but the render's app.kubernetes.io/instance "
+                             f"labels say {', '.join(sorted(found))}")
+        return given
+    if len(found) == 1:
+        return next(iter(found))
+    if not found:
+        raise InputError("the render carries no app.kubernetes.io/instance label: give --release")
+    raise InputError("the render carries several app.kubernetes.io/instance labels "
+                     f"({', '.join(sorted(found))}): give --release")
+
+
+def presentation(layers: list[dict], chart_version: str | None) -> tuple[str | None, str | None]:
+    """(system name, attribution line) from the `system` map of the values layers.
+
+    Layers merge as Helm does for a map: later wins per key; a null removes the key.
+    """
+    system: dict = {}
+    for layer in layers:
+        if "system" not in layer or layer["system"] is None:
+            continue
+        sysmap = layer["system"]
+        if not isinstance(sysmap, dict):
+            raise InputError("values: system must be a map")
+        for key in ("name", "attribution"):
+            if key in sysmap:
+                if sysmap[key] is None:
+                    system.pop(key, None)
+                else:
+                    system[key] = sysmap[key]
+    name = system.get("name")
+    if name is not None and not isinstance(name, str):
+        raise InputError("values: system.name must be a string")
+    name = (name or "").strip() or None
+    att = system.get("attribution")
+    if att is not None and not isinstance(att, (str, bool)):
+        raise InputError("values: system.attribution must be a string or a boolean")
+    if att is None or att is True:
+        line = "built on OpenDDIL" + (f" {chart_version}" if chart_version else "")
+    elif att is False or att == "":
+        line = None
+    else:
+        line = att
+    return name, line
 
 
 def split_pairs(value) -> list[tuple[str, str]]:
@@ -96,10 +151,10 @@ def split_pairs(value) -> list[tuple[str, str]]:
 
 
 class Workload:
-    def __init__(self, doc: dict):
+    def __init__(self, doc: dict, release: str):
         self.kind = doc["kind"]
         meta = doc.get("metadata") or {}
-        self.name = strip_prefix(str(meta.get("name", "")))
+        self.name = strip_prefix(str(meta.get("name", "")), release)
         spec = doc.get("spec") or {}
         if self.kind == "CronJob":
             tmpl = ((spec.get("jobTemplate") or {}).get("spec") or {}).get("template") or {}
@@ -115,10 +170,10 @@ class Workload:
         self.cms: list[str] = []
         for vol in pod.get("volumes") or []:
             if (vol.get("configMap") or {}).get("name"):
-                self.cms.append(strip_prefix(vol["configMap"]["name"]))
+                self.cms.append(strip_prefix(vol["configMap"]["name"], release))
             for src in (vol.get("projected") or {}).get("sources") or []:
                 if (src.get("configMap") or {}).get("name"):
-                    self.cms.append(strip_prefix(src["configMap"]["name"]))
+                    self.cms.append(strip_prefix(src["configMap"]["name"], release))
         self.env: list[tuple[str, str]] = []
         for c in (pod.get("containers") or []) + (pod.get("initContainers") or []):
             for e in c.get("env") or []:
@@ -153,8 +208,8 @@ def as_list(v) -> list[str]:
     return []
 
 
-def broker_of_address(addr: str) -> str | None:
-    m = re.match(r"^redpanda-(.+?)(?:\.[^:/]*)?(?::\d+)?$", strip_prefix(addr))
+def broker_of_address(addr: str, release: str) -> str | None:
+    m = re.match(r"^redpanda-(.+?)(?:\.[^:/]*)?(?::\d+)?$", strip_prefix(addr, release))
     return m.group(1) if m else None
 
 
@@ -199,14 +254,14 @@ class Model:
         self.label_tables: list[str] = []
 
 
-def build_model(docs: list[dict], value_layers: list[dict], chart_layer: dict,
+def build_model(docs: list[dict], release: str, value_layers: list[dict], chart_layer: dict,
                 has_values: bool) -> Model:
     m = Model()
-    workloads = [Workload(d) for d in docs if d.get("kind") in WORKLOAD_KINDS]
+    workloads = [Workload(d, release) for d in docs if d.get("kind") in WORKLOAD_KINDS]
     cms: dict[str, dict] = {}
     for d in docs:
         if d.get("kind") == "ConfigMap":
-            cms[strip_prefix(str((d.get("metadata") or {}).get("name", "")))] = d.get("data") or {}
+            cms[strip_prefix(str((d.get("metadata") or {}).get("name", "")), release)] = d.get("data") or {}
     parsed_cache: dict[tuple[str, str], object] = {}
 
     def parsed(cm: str, key: str):
@@ -307,7 +362,7 @@ def build_model(docs: list[dict], value_layers: list[dict], chart_layer: dict,
             continue
         inp = ((conn.get("input") or {}).get("kafka") or {})
         out = ((conn.get("output") or {}).get("kafka") or {})
-        out_broker = next((b for b in map(broker_of_address, as_list(out.get("addresses"))) if b), None)
+        out_broker = next((b for b in (broker_of_address(x, release) for x in as_list(out.get("addresses"))) if b), None)
         otopic = out.get("topic")
         if not out_broker or not isinstance(otopic, str):
             continue
@@ -457,12 +512,15 @@ def load_profiles() -> dict:
         return yaml.safe_load(f)
 
 
-def render_document(m: Model, profile: str, stamps: list[str], allow_no_kinds: str | None) -> str:
+def render_document(m: Model, profile: str, stamps: list[str], allow_no_kinds: str | None,
+                    name: str | None = None, attribution: str | None = None) -> str:
     prof = load_profiles()
     dx = prof["data_exchange"]
     ident, title = dx[profile]["id"], dx[profile]["title"]
     cols = dx["columns"][profile]
-    lines = [f"# {ident} {title} ({prof['profiles'][profile]['label']})", ""]
+    lines = [f"# {name + ': ' if name else ''}{ident} {title} ({prof['profiles'][profile]['label']})", ""]
+    if attribution:
+        lines += [attribution, ""]
     lines += [s for s in stamps] + [STAMP_NOT_MEASURED, ""]
     lines += ["## Tiers", ""]
     lines += table(["Tier", "Broker", "Exchange rows"], [
@@ -560,8 +618,8 @@ def check_document(text: str, m: Model, allow_no_kinds: str | None) -> list[str]
 
 # --- main -------------------------------------------------------------------
 
-def helm_render(chart: str, values: list[str]) -> str:
-    cmd = ["helm", "template", "openddil", chart, "-n", "openddil"]
+def helm_render(chart: str, values: list[str], release: str) -> str:
+    cmd = ["helm", "template", release, chart, "-n", release]
     for v in values:
         cmd += ["-f", v]
     env = dict(os.environ, KUBECONFIG="/nonexistent")
@@ -579,6 +637,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--chart")
     ap.add_argument("--values", action="append", default=[])
     ap.add_argument("--rendered")
+    ap.add_argument("--release", help="the Helm release name the render was made under")
     ap.add_argument("--profile", default="uaf", choices=["uaf", "dodaf202", "naf4"])
     ap.add_argument("--out")
     ap.add_argument("--allow-no-kinds", metavar="REASON")
@@ -589,15 +648,18 @@ def main(argv: list[str] | None = None) -> int:
         if a.rendered:
             text = Path(a.rendered).read_text(encoding="utf-8")
         elif a.chart:
-            text = helm_render(a.chart, a.values)
+            if not a.release:
+                raise InputError("--chart needs --release (the Helm release name)")
+            text = helm_render(a.chart, a.values, a.release)
         else:
             raise InputError("need --chart or --rendered")
         docs = load_docs(text)
         del text  # never kept, never written
         if not docs:
             raise InputError("no documents in the render")
+        release = resolve_release(docs, a.release)
         layers = [load_yaml_file(v) for v in a.values]
-        chart_layer, stamps = {}, []
+        chart_layer, stamps, version = {}, [], None
         if a.chart:
             cdir = Path(a.chart)
             if (cdir / "values.yaml").is_file():
@@ -605,12 +667,14 @@ def main(argv: list[str] | None = None) -> int:
             if (cdir / "Chart.yaml").is_file():
                 c = load_yaml_file(str(cdir / "Chart.yaml"))
                 stamps.append(f"Chart: {c.get('name')} {c.get('version')}")
+                version = str(c["version"]) if c.get("version") is not None else None
         stamps += [f"Values: {os.path.basename(v)}" for v in a.values]
-        model = build_model(docs, layers, chart_layer, bool(a.values))
+        model = build_model(docs, release, layers, chart_layer, bool(a.values))
+        name, attribution = presentation([chart_layer] + layers, version)
     except InputError as e:
         print(f"error: {e}", file=sys.stderr)
         return EXIT_INPUT
-    doc = render_document(model, a.profile, stamps, a.allow_no_kinds)
+    doc = render_document(model, a.profile, stamps, a.allow_no_kinds, name, attribution)
     if a.out:
         Path(a.out).write_text(doc, encoding="utf-8", newline="\n")
     else:

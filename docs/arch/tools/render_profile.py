@@ -11,7 +11,15 @@ Usage:
     python docs/arch/tools/render_profile.py --profile uaf|dodaf202|naf4
         [--out DIR] [--slots FILE]
         [--chart PATH --values FILE [--values FILE ...]]
-        [--allow-no-kinds REASON]
+        [--allow-no-kinds REASON] [--release NAME]
+
+--release is the Helm release name; --chart needs it.
+
+Every file starts with `# <system name>: <title>` and a line saying what the
+bundle is built on, both read from the bundle values `system.name` and
+`system.attribution` (data_exchange.presentation). Without a name from the
+values, a `system-name` value in --slots is the name; with neither, the
+title is as written in the view.
 
 Transforms on view text: `<!-- model: Pkg -->` becomes a fenced sysml block
 holding that package from model/openddil.sysml; `<!-- generated:
@@ -19,6 +27,8 @@ data-exchange -->` (data_exchange.home only) becomes the document that
 data_exchange.py writes, or a notice when --chart is not given; relative
 links are rewritten to resolve from the output directory; `{{slot:name}}`
 is replaced from the --slots file (a YAML map of slot name to string).
+`{{slot:system-name}}` is filled from the bundle values when they name the
+system, and then --slots may not give another name.
 Unfilled slots stay as written and are counted.
 
 The default output directory is docs/arch/out/<profile>/, whose *.md files
@@ -41,6 +51,9 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from data_exchange import InputError, presentation  # noqa: E402
+
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
 ROOT = Path(__file__).resolve().parent.parent
 TOOLS = Path(__file__).resolve().parent
@@ -51,10 +64,6 @@ MODEL_RE = re.compile(r"<!--\s*model:\s*([A-Za-z_][\w]*)\s*-->")
 SLOT_RE = re.compile(r"\{\{slot:([A-Za-z0-9_-]+)\}\}")
 LINK_RE = re.compile(r"(\[[^\]\n]*\]\()([^)\s]+)(\))")
 HEADING_RE = re.compile(r"^(#{1,6})(\s)")
-
-
-class InputError(Exception):
-    """Bad input: exit 2."""
 
 
 class CheckError(Exception):
@@ -265,7 +274,8 @@ def unfilled(text: str) -> set[str]:
 # --- data exchange -----------------------------------------------------------
 
 def generate_document(a: argparse.Namespace, profile: str) -> str:
-    cmd = [sys.executable, str(TOOLS / "data_exchange.py"), "--chart", a.chart, "--profile", profile, "--check"]
+    cmd = [sys.executable, str(TOOLS / "data_exchange.py"), "--chart", a.chart, "--release", a.release,
+           "--profile", profile, "--check"]
     for v in a.values:
         cmd += ["--values", v]
     if a.allow_no_kinds:
@@ -276,13 +286,17 @@ def generate_document(a: argparse.Namespace, profile: str) -> str:
     return p.stdout.decode("utf-8").replace("\r\n", "\n")
 
 
-def drop_h1(doc: str) -> str:
+def drop_h1(doc: str, attribution: str | None) -> str:
+    """The document without its H1 and attribution line, so the file that embeds it carries them once."""
     lines = doc.split("\n")
     if lines and lines[0].startswith("# "):
         lines = lines[1:]
     while lines and not lines[0].strip():
         lines.pop(0)
-    return "\n".join(lines).rstrip("\n")
+    text = "\n".join(lines)
+    if attribution and text.startswith(attribution):
+        text = text[len(attribution):].lstrip("\n")
+    return text.rstrip("\n")
 
 
 # --- rendering ---------------------------------------------------------------
@@ -305,6 +319,25 @@ class Renderer:
             raise InputError(f"cannot read {sysml_path}: {e}")
         self.masked = mask_sysml(self.sysml)
         self.slot_values = load_slot_values(a.slots, load_slots_registry(ROOT))
+        layers, version = [], None
+        if a.chart:
+            cdir = Path(a.chart)
+            files = [cdir / "values.yaml"] if (cdir / "values.yaml").is_file() else []
+            for f in files + [Path(v) for v in a.values]:
+                layer = load_yaml(f)
+                layers.append(layer if isinstance(layer, dict) else {})
+            if (cdir / "Chart.yaml").is_file():
+                v = (load_yaml(cdir / "Chart.yaml") or {}).get("version")
+                version = str(v) if v is not None else None
+        self.name, self.attribution = presentation(layers, version)
+        given = self.slot_values.get("system-name")
+        if self.name:
+            if given is not None and given.strip() != self.name:
+                raise InputError(f"--slots system-name '{given}' differs from system.name '{self.name}' "
+                                 "in the bundle values")
+            self.slot_values["system-name"] = self.name
+        elif given is not None and given.strip():
+            self.name = given.strip()
         self.doc: str | None = None
         if a.chart:
             self.doc = generate_document(a, self.profile)
@@ -313,7 +346,12 @@ class Renderer:
         """The generated document without its H1, or the notice."""
         if self.doc is None:
             return NOTICE
-        return drop_h1(self.doc)
+        return drop_h1(self.doc, self.attribution)
+
+    def head(self, title: str) -> str:
+        """The H1 and the attribution line, each followed by a blank line."""
+        h1 = "# " + (f"{self.name}: " if self.name else "") + title
+        return h1 + "\n\n" + (self.attribution + "\n\n" if self.attribution else "")
 
     def view_text(self, vid: str, dx_marker: str) -> tuple[str, str]:
         """(H1, body) of a view with every transform applied; dx_marker replaces the data-exchange marker."""
@@ -333,8 +371,8 @@ class Renderer:
         files: dict[str, str] = {}
         for vid in self.views:
             h1, body = self.view_text(vid, demote(self.dx_content()))
-            files[f"{vid}.md"] = h1 + "\n\n" + body.rstrip("\n") + "\n"
-        rows = ["# Index (" + self.label + ")", "", "| View | Name |", "|---|---|"]
+            files[f"{vid}.md"] = self.head(h1[2:]) + body.rstrip("\n") + "\n"
+        rows = [self.head("Index (" + self.label + ")") + "| View | Name |", "|---|---|"]
         rows += [f"| [{vid}]({vid}.md) | {e['name']} |" for vid, e in self.views.items()]
         files["INDEX.md"] = "\n".join(rows) + "\n"
         return files
@@ -370,7 +408,7 @@ class Renderer:
         return body.rstrip("\n")
 
     def render_export(self, export_id: str, sources: list[str]) -> str:
-        lines = [f"# {export_id} {self.title_for(export_id)} ({self.label})", ""]
+        lines = [self.head(f"{export_id} {self.title_for(export_id)} ({self.label})").rstrip("\n"), ""]
         lines += [f"From {self.uaf_label} {self.views[v]['name']} ({v})." for v in sources]
         lines.append("")
         if len(sources) == 1:
@@ -386,11 +424,11 @@ class Renderer:
         sources = self.export_sources()
         for x in sorted(sources):
             files[f"{x}.md"] = self.render_export(x, sources[x])
-        rows = [f"# Index ({self.label})", "", "| Export | Title | Source views |", "|---|---|---|"]
+        rows = [self.head(f"Index ({self.label})") + "| Export | Title | Source views |", "|---|---|---|"]
         rows += [f"| [{x}]({x}.md) | {self.title_for(x)} | {', '.join(sources[x])} |" for x in sorted(sources)]
         files["INDEX.md"] = "\n".join(rows) + "\n"
         left = unfilled("\n".join(t for n, t in files.items() if n != "INDEX.md"))
-        ne = [f"# Not exported ({self.label})", "",
+        ne = [self.head(f"Not exported ({self.label})").rstrip("\n"), "",
               f"Views that {self.label} has no view for, with the reason. Nothing is dropped silently.", ""]
         ne += ["| View | Reason |", "|---|---|"]
         for vid, e in self.views.items():
@@ -435,11 +473,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--slots")
     ap.add_argument("--chart")
     ap.add_argument("--values", action="append", default=[])
+    ap.add_argument("--release", help="the Helm release name the chart is rendered under")
     ap.add_argument("--allow-no-kinds", metavar="REASON")
     a = ap.parse_args(argv)
     try:
         if a.values and not a.chart:
             raise InputError("--values needs --chart")
+        if a.chart and not a.release:
+            raise InputError("--chart needs --release (the Helm release name)")
         out_dir = prepare_out(a.out, a.profile)
         files = Renderer(a, out_dir).render()
     except InputError as e:

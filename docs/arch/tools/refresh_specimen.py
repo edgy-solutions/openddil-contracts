@@ -33,6 +33,7 @@ BUNDLE_ROOT = Path(os.environ.get("OPENDDIL_BUNDLE", REPOS / "openddil-customer-
 TIER_NODE = BUNDLE_ROOT / "k8s" / "tier-node-values.yaml"
 TWIN = BUNDLE_ROOT / "k8s" / "egress-values.yaml"
 REFRESH_COMMAND = "python docs/arch/tools/refresh_specimen.py"
+RELEASE = "openddil"
 
 
 def missing_input() -> str | None:
@@ -46,7 +47,7 @@ def missing_input() -> str | None:
 
 def render_profile(profile: str, out: Path) -> subprocess.CompletedProcess:
     cmd = [sys.executable, str(HERE / "render_profile.py"), "--profile", profile,
-           "--out", str(out), "--chart", str(CHART),
+           "--out", str(out), "--chart", str(CHART), "--release", RELEASE,
            "--values", str(TIER_NODE), "--values", str(TWIN)]
     return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
 

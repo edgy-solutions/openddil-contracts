@@ -111,7 +111,7 @@ package OpenDDIL {
     }
 
     package Information {
-        doc /* Logical entities only. Field names are OpenDDIL-local; the wire shape is in the proto contracts. */
+        doc /* Logical entities only. Field names are local to this architecture; the wire shape is in the proto contracts. */
 
         item def Asset {
             doc /* ADR-0047: the id is opaque inside the system; every boundary has a mapper. */

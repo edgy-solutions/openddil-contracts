@@ -56,11 +56,13 @@ Generate the data-exchange view from a bundle:
 
 ```sh
 python docs/arch/tools/data_exchange.py \
-  --chart ../openddil-helm/openddil-demo \
+  --chart ../openddil-helm/openddil-demo --release openddil \
   --values ../openddil-customer-bundle-example/k8s/tier-node-values.yaml \
   --values ../openddil-customer-bundle-example/k8s/egress-values.yaml \
   --profile dodaf202 --check
 ```
+
+`--release` is the Helm release the render is made under, and the tools strip it from the names they read. `--chart` needs it. With `--rendered`, it may be left out when every document carries the same `app.kubernetes.io/instance` label.
 
 `--check` fails when a tier, kind or route has no row. `tier-node-values.yaml` declares no kinds, so running it without the twin needs `--allow-no-kinds "<reason>"`. That exception goes red as soon as kinds appear. The example overlay is fiction and exists to exercise the kind rows.
 
@@ -81,7 +83,7 @@ Check the workload annotations against a render ([ADR-0054](../../decisions/ADR-
 
 ```sh
 python docs/arch/tools/check_annotations.py \
-  --chart ../openddil-helm/openddil-demo \
+  --chart ../openddil-helm/openddil-demo --release openddil \
   --values ../openddil-customer-bundle-example/k8s/tier-node-values.yaml \
   --values ../openddil-customer-bundle-example/k8s/egress-values.yaml
 ```
@@ -97,6 +99,15 @@ python -m unittest discover -s docs/arch/tools -p "test_*.py"
 ```
 
 The integration tests need `helm`, and look for the chart and the example bundle beside this repository or under `OPENDDIL_REPOS`. They print why when they skip.
+
+## Naming a deployment
+
+Two bundle values set how the generated documents present a deployment. Both sit under `system` in the values files passed with `--values`, and later files win per key, as in Helm.
+
+- `system.name` is the name of the system. It leads every title as `# <name>: <title>`, and it fills the `system-name` slot. Without it the titles are as written. A `system-name` in `--slots` is used when the values give no name, and it is an error when it differs from one that they give.
+- `system.attribution` sets the line under the title. Left out, or `true`, it reads `built on OpenDDIL <chart version>`. `false` or an empty string drops the line. Any other string is printed as given.
+
+The framework's name appears in a rendered document only in that attribution line. The views say "this architecture" or use the slot. The one other place is the SysML `package OpenDDIL`.
 
 ## Profile mapping
 

@@ -210,7 +210,32 @@ class RealTree(Base):
         sr = read(d, "Op-Sr.md")
         self.assertIn("one root, two edges", sr)
         self.assertNotIn("{{slot:tier-tree}}", sr)
-        self.assertIn("{{slot:deployment-name}}", "".join(read(d, f.name) for f in d.glob("*.md")))
+        self.assertIn("{{slot:system-name}}", "".join(read(d, f.name) for f in d.glob("*.md")))
+
+    def test_slots_name_titles_every_file_and_carries_the_default_attribution_once(self):
+        slots = self.tmp / "name-slots.yaml"
+        slots.write_text("system-name: Slot Named\n", encoding="utf-8")
+        for prof in ("uaf", "naf4"):
+            d = self.tmp / f"named-{prof}"
+            rc, _, err = run(TOOL, "--profile", prof, "--out", d, "--slots", slots)
+            self.assertEqual(rc, 0, err)
+            for f in d.glob("*.md"):
+                lines = f.read_text(encoding="utf-8").split("\n")
+                self.assertTrue(lines[0].startswith("# Slot Named: "), f"{prof}/{f.name}: {lines[0]}")
+                self.assertEqual(lines.count("built on OpenDDIL"), 1, f"{prof}/{f.name}")
+        self.assertIn("Slot Named reads a fleet", read(self.tmp / "named-uaf", "Sm-Ov.md"))
+
+    def test_no_name_leaves_titles_and_slot_alone(self):
+        for f in self.out["uaf"].glob("*.md"):
+            self.assertFalse(f.read_text(encoding="utf-8").startswith("# : "), f.name)
+        self.assertEqual(read(self.out["uaf"], "Sm-Ov.md").split("\n")[0], "# Summary-Overview (Sm-Ov)")
+        self.assertIn("{{slot:system-name}} reads a fleet", read(self.out["uaf"], "Sm-Ov.md"))
+
+    def test_chart_without_release_is_exit_2(self):
+        rc, _, err = run(TOOL, "--profile", "uaf", "--out", self.tmp / "norel", "--chart", CHART)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("--release", err)
+        self.assertFalse((self.tmp / "norel").exists())
 
     def test_unknown_slot_key_is_exit_2(self):
         slots = self.tmp / "bad-slots.yaml"
@@ -306,12 +331,61 @@ class Integration(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmp, True)
 
-    def render(self, prof):
+    def render(self, prof, *extra):
         d = self.tmp / prof
-        rc, _, err = run(TOOL, "--profile", prof, "--out", d, "--chart", CHART,
-                         "--values", BUNDLE, "--values", OVERLAY)
+        rc, _, err = run(TOOL, "--profile", prof, "--out", d, "--chart", CHART, "--release", "openddil",
+                         "--values", BUNDLE, "--values", OVERLAY, *extra)
         self.assertEqual(rc, 0, err)
         return d
+
+    def values(self, body):
+        p = self.tmp / "system-values.yaml"
+        p.write_text(yaml.safe_dump(body), encoding="utf-8")
+        return p
+
+    def chart_version(self):
+        return str(yaml.safe_load((CHART / "Chart.yaml").read_text(encoding="utf-8"))["version"])
+
+    def test_name_leads_every_file_and_attribution_is_there_once(self):
+        v = self.values({"system": {"name": "Sys One"}})
+        line = f"built on OpenDDIL {self.chart_version()}"
+        for prof in ("uaf", "dodaf202", "naf4"):
+            d = self.render(prof, "--values", v)
+            names = {f.name for f in d.glob("*.md")}
+            self.assertEqual(names, expected_files(prof))
+            for n in sorted(names):
+                lines = read(d, n).split("\n")
+                self.assertTrue(lines[0].startswith("# Sys One: "), f"{prof}/{n}: {lines[0]}")
+                self.assertEqual(lines[1:3], ["", line], f"{prof}/{n}")
+                self.assertEqual(lines.count(line), 1, f"{prof}/{n}")
+        uaf = self.tmp / "uaf"
+        self.assertIn("Sys One reads a fleet", read(uaf, "Sm-Ov.md"))
+        self.assertNotIn("{{slot:system-name}}", "".join(read(uaf, f.name) for f in uaf.glob("*.md")))
+        self.assertIn("| FaultEvent |", read(uaf, "Rs-Cn.md"))
+
+    def test_attribution_false_leaves_none(self):
+        v = self.values({"system": {"name": "Sys One", "attribution": False}})
+        for prof in ("uaf", "naf4"):
+            d = self.render(prof, "--values", v)
+            for f in d.glob("*.md"):
+                text = f.read_text(encoding="utf-8")
+                self.assertNotIn("built on OpenDDIL", text, f"{prof}/{f.name}")
+                self.assertTrue(text.startswith("# Sys One: "), f"{prof}/{f.name}")
+
+    def test_conflicting_slots_name_is_exit_2_and_the_same_is_fine(self):
+        v = self.values({"system": {"name": "Sys One"}})
+        slots = self.tmp / "slots-name.yaml"
+        slots.write_text("system-name: Other\n", encoding="utf-8")
+        d = self.tmp / "conflict"
+        rc, _, err = run(TOOL, "--profile", "uaf", "--out", d, "--chart", CHART, "--release", "openddil",
+                         "--values", BUNDLE, "--values", v, "--slots", slots)
+        self.assertEqual(rc, 2, err)
+        self.assertIn("system-name", err)
+        self.assertFalse(d.exists())
+        slots.write_text("system-name: Sys One\n", encoding="utf-8")
+        rc, _, err = run(TOOL, "--profile", "uaf", "--out", d, "--chart", CHART, "--release", "openddil",
+                         "--values", BUNDLE, "--values", OVERLAY, "--values", v, "--slots", slots)
+        self.assertEqual(rc, 0, err)
 
     def test_dodaf202_sv6_has_the_kind_row(self):
         d = self.render("dodaf202")
@@ -326,7 +400,8 @@ class Integration(unittest.TestCase):
 
     def test_failing_check_is_exit_1_and_writes_nothing(self):
         d = self.tmp / "none"
-        rc, _, err = run(TOOL, "--profile", "dodaf202", "--out", d, "--chart", CHART, "--values", BUNDLE)
+        rc, _, err = run(TOOL, "--profile", "dodaf202", "--out", d, "--chart", CHART, "--release", "openddil",
+                         "--values", BUNDLE)
         self.assertEqual(rc, 1, err)
         self.assertIn("FAIL", err)
         self.assertFalse(d.exists())
