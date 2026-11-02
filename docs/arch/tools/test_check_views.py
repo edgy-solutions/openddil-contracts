@@ -1,0 +1,205 @@
+"""Tests for check_views.py.
+
+Run from the worktree root:
+    python -m unittest discover -s docs/arch/tools -p "test_*.py"
+
+The real tree is checked once. Each rule is then proved by copying docs/arch
+and decisions into a temp tree (keeping their relative distance), breaking
+one thing for real, and asserting that rule's FAIL line appears.
+"""
+import shutil
+import subprocess
+import sys
+import tempfile
+import unittest
+from pathlib import Path
+
+HERE = Path(__file__).resolve().parent
+ARCH = HERE.parent
+REPO = ARCH.parent.parent
+TOOL = HERE / "check_views.py"
+
+
+def run(root):
+    p = subprocess.run([sys.executable, str(TOOL), "--root", str(root)],
+                       capture_output=True, text=True, encoding="utf-8")
+    return p.returncode, p.stdout, p.stderr
+
+
+def copy_tree(dest: Path) -> Path:
+    """docs/arch and decisions under dest, same relative distance as in the repo."""
+    ignore = shutil.ignore_patterns("__pycache__", "out")
+    shutil.copytree(ARCH, dest / "docs" / "arch", ignore=ignore)
+    shutil.copytree(REPO / "decisions", dest / "decisions")
+    return dest / "docs" / "arch"
+
+
+def edit(root: Path, rel: str, old: str, new: str, count: int = 1) -> None:
+    p = root / rel
+    text = p.read_text(encoding="utf-8")
+    assert old in text, f"perturbation text not found in {rel}: {old[:60]}"
+    p.write_text(text.replace(old, new, count), encoding="utf-8", newline="\n")
+
+
+class RealTree(unittest.TestCase):
+    def test_real_tree_passes(self):
+        rc, out, err = run(ARCH)
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out.startswith("ok:"), out)
+
+    def test_missing_root_is_bad_input(self):
+        rc, _, err = run(ARCH / "nowhere")
+        self.assertEqual(rc, 2, err)
+
+
+class Perturbed(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.root = copy_tree(self.tmp)
+
+    def expect(self, rule, *fragments):
+        rc, out, err = run(self.root)
+        self.assertEqual(rc, 1, f"expected exit 1, got {rc}: {out}{err}")
+        lines = [l for l in err.splitlines() if l.startswith(f"FAIL: {rule}:")]
+        self.assertTrue(lines, f"no FAIL for {rule} in:\n{err}")
+        for frag in fragments:
+            self.assertTrue(any(frag in l for l in lines), f"'{frag}' not in {lines}")
+
+    def test_1_exports(self):
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [OV-1], naf4: [L1]}",
+             "exports: {dodaf202: [OV-1, ZZ-9], naf4: [L1]}")
+        self.expect("exports", "Op-Tx", "ZZ-9")
+
+    def test_2_stale_deviation_export_now_in_appendix(self):
+        edit(self.root, "profiles.yaml", "appendix_a: {dodaf202: [DIV-3], naf4: [P7]}",
+             "appendix_a: {dodaf202: [DIV-3, SV-6], naf4: [P7]}")
+        self.expect("stale-deviation", "Rs-If dodaf202 SV-6", "stale")
+
+    def test_2_stale_deviation_home_not_a_view(self):
+        edit(self.root, "profiles.yaml", "appendix_a_home: Rs-Cn", "appendix_a_home: Rs-Nowhere")
+        self.expect("stale-deviation", "Rs-Nowhere")
+
+    def test_2_stale_deviation_home_does_not_name_export(self):
+        edit(self.root, "profiles.yaml", "appendix_a_home: Op-If", "appendix_a_home: Op-Pr")
+        self.expect("stale-deviation", "Op-Pr does not name L7")
+
+    def test_3_view_files_bad_first_line(self):
+        edit(self.root, "views/Op-Cn.md", "# Operational-Connectivity (Op-Cn)", "# Operational-Connectivity")
+        self.expect("view-files", "Op-Cn")
+
+    def test_3_view_files_unlisted_file(self):
+        (self.root / "views" / "Zz-Zz.md").write_text("# Extra (Zz-Zz)\n", encoding="utf-8")
+        self.expect("view-files", "Zz-Zz.md")
+
+    def test_4_slots_deleted_from_registry(self):
+        edit(self.root, "slots.yaml",
+             "  deployment-name:\n    fills: Name of this instantiation of the architecture.\n    source: none yet\n", "")
+        self.expect("slots", "deployment-name is used")
+
+    def test_4_slots_unused_slot_added(self):
+        p = self.root / "slots.yaml"
+        p.write_text(p.read_text(encoding="utf-8") + "  unused-slot:\n    fills: Nothing.\n    source: none yet\n",
+                     encoding="utf-8", newline="\n")
+        self.expect("slots", "unused-slot is in slots.yaml and used in no view")
+
+    def test_4_slots_entry_lacks_source(self):
+        edit(self.root, "slots.yaml", "    fills: Name of the root tier.\n    source: chart values\n",
+             "    fills: Name of the root tier.\n")
+        self.expect("slots", "root-node lacks 'source'")
+
+    def test_5_links_broken(self):
+        p = self.root / "README.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\nSee [gone](views/Nope.md).\n", encoding="utf-8", newline="\n")
+        self.expect("links", "README.md", "views/Nope.md")
+
+    def test_5_links_broken_in_view(self):
+        edit(self.root, "views/Op-Pr.md", "(Rs-Tr.md)", "(Rs-Gone.md)")
+        self.expect("links", "Op-Pr.md", "Rs-Gone.md")
+
+    def test_6_sources_table_bad_decision(self):
+        edit(self.root, "views/Op-If.md", "| An asset id is opaque inside the system | [ADR-0047](../../../decisions/ADR-0047-asset-id-is-opaque.md) | Accepted |",
+             "| An asset id is opaque inside the system | [ADR-0047](../../../decisions/ADR-0047-asset-id-is-opaque.md) | Settled |")
+        self.expect("sources-table", "Op-If", "Settled")
+
+    def test_6_sources_table_header(self):
+        edit(self.root, "views/Op-If.md", "| Claim | Source | Decision | Evidence |", "| Claim | Source | Decision |")
+        self.expect("sources-table", "Op-If", "header")
+
+    def test_6_sources_table_no_link(self):
+        edit(self.root, "views/Op-If.md", "[ADR-0047](../../../decisions/ADR-0047-asset-id-is-opaque.md)", "ADR-0047")
+        self.expect("sources-table", "Op-If", "no link")
+
+    def test_6_sources_table_no_rows(self):
+        p = self.root / "views" / "Sc-Sr.md"
+        lines = p.read_text(encoding="utf-8").split("\n")
+        i = lines.index("## Sources")
+        keep = [l for k, l in enumerate(lines) if k <= i + 3 or not l.startswith("|")]
+        p.write_text("\n".join(keep), encoding="utf-8", newline="\n")
+        self.expect("sources-table", "Sc-Sr", "no rows")
+
+    def test_7_marks_proposed_flipped_to_accepted(self):
+        edit(self.root, "views/Op-If.md", "ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed |",
+             "ADR-0043-egress-gate-one-predicate-two-subjects.md) | Accepted |")
+        self.expect("marks", "ADR-0043")
+
+    def test_7_marks_design_only_flipped_to_built(self):
+        edit(self.root, "views/Op-If.md", "ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |",
+             "ADR-0051-failure-records-for-fracas.md) | Accepted | Built |")
+        self.expect("marks", "ADR-0051", "design only")
+
+    def test_7_marks_accepted_flipped_to_proposed(self):
+        edit(self.root, "views/Op-If.md", "ADR-0047-asset-id-is-opaque.md) | Accepted |",
+             "ADR-0047-asset-id-is-opaque.md) | Proposed |")
+        self.expect("marks", "ADR-0047")
+
+    def test_8_model_package_renamed(self):
+        edit(self.root, "model/openddil.sysml", "package Information {", "package InformationModel {")
+        self.expect("model", "Information", "InformationModel")
+
+    def test_9_capabilities_row_removed(self):
+        p = self.root / "views" / "St-Tx.md"
+        lines = [l for l in p.read_text(encoding="utf-8").split("\n") if not l.startswith("| ArrivalDeclaration |")]
+        p.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+        self.expect("capabilities", "ArrivalDeclaration")
+
+    def test_9_capabilities_name_not_in_model(self):
+        edit(self.root, "views/Rs-Tr.md", "| DataAcquisition |", "| DataAcquiring |")
+        self.expect("capabilities", "DataAcquiring")
+
+    def test_10_trace_leaf_row_removed(self):
+        p = self.root / "views" / "Rs-Tr.md"
+        lines = [l for l in p.read_text(encoding="utf-8").split("\n") if not l.startswith("| A1.1 ")]
+        p.write_text("\n".join(lines), encoding="utf-8", newline="\n")
+        self.expect("trace", "A1.1")
+
+    def test_10_trace_function_missing(self):
+        edit(self.root, "views/Rs-Tr.md", "| A1.2 Map semantics | F2 |", "| A1.2 Map semantics | F99 |")
+        self.expect("trace", "F99")
+
+    def test_10_trace_activity_not_in_op_pr(self):
+        edit(self.root, "views/Rs-Tr.md", "| A1.2 Map semantics |", "| A9.9 Map semantics |")
+        self.expect("trace", "A9.9")
+
+    def test_11_outputs_ov1_removed(self):
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [OV-1], naf4: [L1]}", "exports: {naf4: [L1]}")
+        self.expect("outputs", "OV-1")
+
+    def test_11_outputs_data_exchange_id_not_exported(self):
+        edit(self.root, "profiles.yaml", "exports: {dodaf202: [DIV-3, SV-6], naf4: [P7, L7]}",
+             "exports: {dodaf202: [DIV-3], naf4: [P7, L7]}")
+        self.expect("outputs", "SV-6")
+
+    def test_12_generated_twice(self):
+        p = self.root / "views" / "Op-If.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\n<!-- generated: data-exchange -->\n",
+                     encoding="utf-8", newline="\n")
+        self.expect("generated", "Op-If")
+
+    def test_12_generated_missing(self):
+        edit(self.root, "views/Rs-If.md", "<!-- generated: data-exchange -->", "")
+        self.expect("generated", "0 times")
+
+
+if __name__ == "__main__":
+    unittest.main()
