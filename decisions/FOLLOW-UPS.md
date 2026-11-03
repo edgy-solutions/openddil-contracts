@@ -4,6 +4,16 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — the logistics sim labels from the declaration topic, so a window can lose a declared asset's label
+
+**From code, not exercised, except the empty-topic case.** `asset_telemetry_windows` and `inventory_items` take their label from the sim's element envelope, and the sim resolves it from the `asset-declarations` topic, then the file row, then defaults (`releasability.py`). It does not read the `asset_declaration` table. Its consumer is best effort and never blocks publishing, and it rebuilds its map from earliest on every start. So a declared asset with no file row can go out unlabelled while the HQ broker is unreachable, and its window row reads NULL at every tier until the consumer catches up. A declared row written only to the table reads NULL for as long as it stands: measured, in a test that planted one.
+
+**This is the safe direction,** and ADR-0050 s2 asks for it, as long as no default is set. **A `releasability_edge_defaults` or `site_nation` on a deployment with declared assets turns this into the mislabel Connect had:** the default would stamp the asset's window with the wrong nation for as long as the consumer is down.
+
+**Not read:** what fusion does with an unlabelled window beside its stored label; what a viewer sees while the row is NULL.
+
+Close when the sim withholds a declared asset's envelope until its map is loaded, or when this is decided as acceptable and a default on such a deployment is refused at render.
+
 ## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
 
 **Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
