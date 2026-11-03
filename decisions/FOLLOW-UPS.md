@@ -4,6 +4,16 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
+
+**Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
+
+**The same run answers the backlog.** Intake resumes at the group offset; there is no replay. First position at or past it on all 9 held keys, about 378 records per key never handled, and a planted Fire nobody had handled was never counted. So waiting for handlers to drain saves the backlog and does not save the counts.
+
+**Not shown:** a backlog in the shape a slow handler leaves, rather than a hold; in-flight journals at the wipe; `cm-events`.
+
+Close when a count survives an upgrade, from a durable source other than Restate, or the reset is decided and written where an operator would read it.
+
 ## OPEN 2026-11-03 — a projector is OOM-killed about 46 min into a store outage
 
 **A finding, measured once; the cause is not read.** On a tier with its Postgres scaled to 0 and the backoff fix mounted, the projector's memory read 143 Mi at the start, 251 at 6 min and 392 at 36 min, and the container was OOM-killed at 46 min at its 512 Mi limit. The restarted process waits in `pool.connect()` with no workers, at 32 Mi. When Postgres came back it left that loop in 3 s and drained about 15,000 records in under 70 s, with no pod touched, so the end state recovers by itself.
