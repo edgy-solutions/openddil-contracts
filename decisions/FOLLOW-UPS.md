@@ -116,6 +116,24 @@ Close when a worker that ends unexpectedly ends the process, so the pod restarts
 worker state the way `cmService.stallProbe` and `logisticsFusion.stallProbe` read theirs, with a test that kills a
 worker and sees the signal fail.
 
+## OPEN 2026-11-03 — a projector's custom-mode handlers commit past a store outage
+
+**A finding, measured, and a decision: fix after the walk.** Custom mode in `openddil-projector` `src/main.py` catches
+every exception from a handler, logs `custom handler ... raised`, counts a decode error and returns, and the offset
+commits. It cannot tell a bad record from a store that is down. Measured on a test lab on 2026-11-03: a Fire planted
+during a tier store outage gave one log line, effector group lag 0, and no row. Upstream tiers write theirs, so the loss
+is that tier's table. `effector_launch`, `munition_track` and `asset_element_telemetry` take this path. Element current
+state heals on the next snapshot, by code; a Fire does not come again.
+
+During an outage, lag 0 on these groups means skipped, not healthy.
+
+This path never reaches the retry loops, so the overflow fix above (`openddil-projector` 9647105) neither causes nor
+closes it. It waits because a change here alters the code that fix was soaked on. It predates the roll that carries that
+fix, which does not make it worse, and that roll carries it as a named risk.
+
+Close when a connection error in custom mode retries as the other modes do while a bad record still does not block its
+partition, with a test that drops the store under a Fire and sees the row arrive after it returns.
+
 ## CLOSED 2026-10-30 (opened 2026-10-30) — lab2 pins cm-service by digest after the roll that measures the re-seed fix
 
 lab2 runs `cm-service:latest` with pull policy Always and no `cmService.image.digest`, so any cm-service push changes
