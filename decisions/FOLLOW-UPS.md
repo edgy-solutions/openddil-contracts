@@ -4,6 +4,17 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a consumer group's lag does not show a Restate handler's position
+
+**A finding, measured.** A Restate subscription's group offset is its intake, not its handlers' progress. On a tier after
+a store outage, CM's `observe` was handling records 12 h 47 m old while that group's lag read 6, and the same handler's
+Logistics counterpart held the same position. A second Logistics handler on that tier was 1 h 41 m behind and falling
+further back. So a CM row can be hours stale behind a lag check that passes, and no lag gate can see it. The position is
+readable today only from `kafka.offset` on the Input entry of a journal. Where the queue sits, when it began and why are
+not read.
+
+Close when a tier exposes each subscribed handler's position against its log end, and a test fails on a handler held behind.
+
 ## OPEN 2026-11-03 — a CM row cannot say what wrote its label
 
 **A finding, measured.** `asset_cm_state` has no provenance column, and `declared_by` exists only on `asset_declaration`.
