@@ -262,7 +262,7 @@ class TempTree(unittest.TestCase):
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, self.tmp, True)
         self.arch = self.tmp / "docs" / "arch"
-        shutil.copytree(ARCH, self.arch, ignore=shutil.ignore_patterns("__pycache__", "out"))
+        shutil.copytree(ARCH, self.arch, ignore=shutil.ignore_patterns("__pycache__", "out", "node_modules"))
         shutil.copytree(REPO / "decisions", self.tmp / "decisions")
         self.tool = self.arch / "tools" / "render_profile.py"
 

@@ -30,7 +30,7 @@ def run(root, *extra):
 
 def copy_tree(dest: Path) -> Path:
     """docs/arch and decisions under dest, same relative distance as in the repo."""
-    ignore = shutil.ignore_patterns("__pycache__", "out")
+    ignore = shutil.ignore_patterns("__pycache__", "out", "node_modules")
     shutil.copytree(ARCH, dest / "docs" / "arch", ignore=ignore)
     shutil.copytree(REPO / "decisions", dest / "decisions")
     return dest / "docs" / "arch"

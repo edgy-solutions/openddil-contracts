@@ -84,7 +84,7 @@ def main(argv: list[str] | None = None) -> int:
 
 
 def run_cases(a: argparse.Namespace, tmp: Path) -> int:
-    ignore = shutil.ignore_patterns("__pycache__", "out")
+    ignore = shutil.ignore_patterns("__pycache__", "out", "node_modules")
     shutil.copytree(ARCH, tmp / "docs" / "arch", ignore=ignore)
     shutil.copytree(REPO / "decisions", tmp / "decisions")
     shutil.copytree(REPO / ".github", tmp / ".github")  # the README links to the workflows
