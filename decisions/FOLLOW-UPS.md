@@ -4,6 +4,25 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — CM's handler has little margin over its stream, so a backlog takes most of a day to clear
+
+**A finding, measured; the cause is a first suspect.** After a Restate outage of about 22 h, `observe` advanced 7.3 to 9.2
+offsets/s across three readings on two tiers, one stretch of 347 s and one of 603 s among them. One of those tiers' raw stream
+writes about 5.7 offsets/s. At the best reading that tier clears 16 h of backlog in about 15 h, and every further outage
+starts from there. The tier's rows are stale for all of it, behind no alarm (see the row below).
+
+**First suspect: the six-second rewrite.** On the running image `observe` writes the observation clock and republishes the
+CM record on every sample, whether or not CM content changed. A completed `observe` took 646 ms, created to completed. On an
+image whose journals show no publish for an unchanged sample, it took 68 ms on one tier and 146 ms on another. cm-service
+6fd212e removed the rewrite and is due to ride the next roll, unproven as the cure.
+
+**Not shown.** The two figures are not like for like: the slow one was draining a backlog and the fast ones were at the head.
+The image with the fast figures has not been tied to 6fd212e by hash. Whether the limit is per key or across the tier is not
+read; at 646 ms one key could not pass about 1.5 invocations/s if a key's invocations run one at a time.
+
+Close when `observe`'s drain rate is measured on the fixed image with a deliberate backlog on a tier, its margin over that
+tier's stream rate is written here, and the time to clear a 24 h outage is stated from it.
+
 ## OPEN 2026-11-03 — a consumer group's lag does not show a Restate handler's position
 
 **A finding, measured.** A Restate subscription's group offset is its intake, not its handlers' progress. On a tier whose
