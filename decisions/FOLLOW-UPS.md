@@ -4,6 +4,25 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a CM row cannot say what wrote its label
+
+**A finding, measured.** `asset_cm_state` has no provenance column, and `declared_by` exists only on `asset_declaration`.
+A CM row labelled differently from its asset had to be traced through the topic, by offset, because the row could not
+name its writer. With the topic's 24 h retention an older relabel cannot be traced at all: one log row stays unexplained
+for that reason. ADR-0050 s2 requires a declared origin on every record; this is the row that cannot show one.
+
+Close when a CM row carries the provenance of the record that last set its label, with a test that reads it back.
+
+## OPEN 2026-11-03 — an effector record cannot take a declared label
+
+**From a code reading, not seen on a cluster.** `openddil-demo` `dynamic-mappings/dis-effector.yaml` ranks the file's
+assets row, then the sidecar's stamp, then the file default. It has no declared-label lookup, so a launch by a declared
+asset carries the stamp whenever the stamp differs from the declaration. No such launch has been read yet, because the
+declared asset that showed the mismatch has not fired.
+
+Close when a launch takes its launcher's declared label under the same failed-lookup rule as `declared-label.yaml`, with
+a test on the real binary.
+
 ## OPEN 2026-11-03 — a projector's health must reflect its workers
 
 **A finding, measured.** A Postgres outage killed 3 of a projector's consumer workers. The pod read Running and Ready
