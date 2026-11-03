@@ -5,6 +5,13 @@ name: check-views
 # list) and `floor` (the chart's render against the capability record). Then a
 # canary run that breaks a copy of the record and proves both can fail.
 #
+# It then builds the single-file HTML export of the views (render_html.py, with
+# the Mermaid diagrams drawn by mermaid-cli), checks it (check_export.py: the
+# view count equals check_views', no barred value, provenance on every page, no
+# network reference, under 16 MB), drives it in a browser (check_export_browser.mjs)
+# and attaches it as the architecture-export artifact. The export is not
+# committed anywhere.
+#
 # The floor reads a render of the chart, so the chart changing is a reason to
 # run. openddil-helm sends chart-version-bumped when it does. The daily
 # schedule is a floor under that dispatch: a dropped or missed dispatch
@@ -64,7 +71,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - run: pip install pyyaml
+      - run: pip install pyyaml markdown-it-py==4.0.0
 
       - name: Install helm at its pinned version and check its hash
         run: |
@@ -110,3 +117,49 @@ jobs:
             --release openddil \
             --readiness "$READINESS" \
             --barred docs/arch/tools/barred-sample.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Chrome is the runner's own, so puppeteer downloads none.
+      - name: Install the export tooling
+        working-directory: docs/arch/tools/export
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: npm ci
+
+      - name: Build the HTML export
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          echo '{"args": ["--no-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
+          python docs/arch/tools/render_html.py \
+            --out "$RUNNER_TEMP/export/openddil-architecture.html" \
+            --chart "$CHART" \
+            --values "$BUNDLE/k8s/tier-node-values.yaml" \
+            --values "$BUNDLE/k8s/egress-values.yaml" \
+            --release openddil \
+            --readiness "$READINESS" \
+            --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
+
+      - name: Check the export
+        run: |
+          python docs/arch/tools/check_export.py \
+            --export "$RUNNER_TEMP/export/openddil-architecture.html" \
+            --barred docs/arch/tools/barred-sample.txt
+
+      - name: Check the export in a browser
+        working-directory: docs/arch/tools/export
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          node check_export_browser.mjs "$RUNNER_TEMP/export/openddil-architecture.html" \
+            --shots "$RUNNER_TEMP/shots" --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-export
+          path: ${{ runner.temp }}/export/openddil-architecture.html
+          if-no-files-found: error
+          retention-days: 30

@@ -109,6 +109,24 @@ python -m unittest discover -s docs/arch/tools -p "test_*.py"
 
 The integration tests need `helm`, and look for the chart and the example bundle beside this repository or under `OPENDDIL_REPOS`. They print why when they skip.
 
+## The HTML export
+
+`render_html.py` writes the views as one self-contained HTML file, from the same source and by the same generator as the markdown profiles: it builds a `render_profile.py` renderer for each profile and takes each view's text from it. The front page is the UAF grid, with the views that are written linked and the ids Appendix A names but nobody has written shown empty. Each view has a page. Mermaid is drawn to inline SVG when the file is built, so the file needs no network to read. The exceptions table is collapsed, there is a search box and a print stylesheet, and the DoDAF and NAF profiles are a toggle that changes names and the grid only. Every page says the chart version, a digest of the values files read, the date and that the contents are declared, not measured.
+
+```sh
+cd docs/arch/tools/export && npm ci && cd -
+python docs/arch/tools/render_html.py --out out/openddil-architecture.html \
+  --chart ../openddil-helm/openddil-demo --release openddil \
+  --values ../openddil-customer-bundle-example/k8s/tier-node-values.yaml \
+  --values ../openddil-customer-bundle-example/k8s/egress-values.yaml
+```
+
+It needs Node 22, Chrome (`PUPPETEER_EXECUTABLE_PATH`) and `markdown-it-py==4.0.0`. All of `--chart`, `--values` and `--release` are required, so there is no partial export. A diagram that does not draw fails the build and names the view.
+
+Check it with `check_export.py --export FILE --barred FILE`: the view count equals `check_views.py`'s, no barred value is in the file, every page carries its provenance, nothing refers to the network, the file is under 16 MB, no link is dead, every Mermaid fence became an SVG, and the exception table is there. `node tools/export/check_export_browser.mjs FILE --shots DIR` loads it offline and checks the toggle, the search, the print view and the phone width.
+
+CI builds the export from the public twin, checks it and attaches it to the check-views run as the `architecture-export` artifact. The file is not committed. CI runs the check on the public sample list, so a green check is not evidence that any private scan ran.
+
 ## Naming a deployment
 
 Two bundle values set how the generated documents present a deployment. Both sit under `system` in the values files passed with `--values`, and later files win per key, as in Helm.
