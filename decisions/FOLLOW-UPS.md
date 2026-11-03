@@ -4,6 +4,22 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a projector is OOM-killed about 46 min into a store outage
+
+**A finding, measured once; the cause is not read.** On a tier with its Postgres scaled to 0 and the backoff fix mounted, the projector's memory read 143 Mi at the start, 251 at 6 min and 392 at 36 min, and the container was OOM-killed at 46 min at its 512 Mi limit. The restarted process waits in `pool.connect()` with no workers, at 32 Mi. When Postgres came back it left that loop in 3 s and drained about 15,000 records in under 70 s, with no pod touched, so the end state recovers by itself.
+
+**Why it matters beyond the restart.** The soak meant to prove the backoff fix past attempt 1,024 failed on this: workers reached about attempt 97. An older image at the same limit reached 1,024 on another cluster, and that difference is not explained. **Suspects, neither read:** the element handler keeps polling and failing while other workers block; librdkafka's fetch queues. Consumer groups that went Empty at about 5 min stopped fetching, and growth continued after that.
+
+Close when the growth is attributed and either bounded or the limit is set from it, and a projector outlives a 9 h outage at the chart's limit.
+
+## OPEN 2026-11-03 — custom projector handlers commit past a store outage
+
+**Part measured, part read from code.** `_persist` catches every exception from a `mode: custom` handler, logs it as a handler bug and returns, and the batch then commits. A store connection error takes that path. Measured: with the store down, `asset_element_telemetry` raised about every 1 to 2 s while its group read lag 0. From the code, that handler advances its state only after a durable write and its snapshots carry the full tree, so current values catch up and only mid-outage transitions are skipped.
+
+**Read from code, not measured:** `effector_launch` and `munition_track` call pool methods that do not retry. A Fire or Detonation arriving during a store outage would raise, be logged, and have its offset committed, and it is not a snapshot, so nothing re-sends it. Their groups read lag 0 through the outage, which fits this and also fits no traffic.
+
+Close with a planted event during a short outage, read in the table after. If it is lost, connection errors must retry as `execute` does, and only a genuine handler fault may skip a record.
+
 ## OPEN 2026-11-03 — CM's handler has little margin over its stream, so a backlog takes most of a day to clear
 
 **A finding, measured; the cause is a first suspect.** After a Restate outage of about 22 h, `observe` advanced 7.3 to 9.2
@@ -19,6 +35,8 @@ image whose journals show no publish for an unchanged sample, it took 68 ms on o
 **Not shown.** The two figures are not like for like: the slow one was draining a backlog and the fast ones were at the head.
 The image with the fast figures has not been tied to 6fd212e by hash. Whether the limit is per key or across the tier is not
 read; at 646 ms one key could not pass about 1.5 invocations/s if a key's invocations run one at a time.
+
+**Corrected the same day.** The rates above are one sampled key's, and a tier's backlog is not one number. On one partition of one handler, three keys were at the head while three others were 6.5 h behind; a second tier had 12 keys at 12.8 h and 4 at 15.7 h. Keys drain in groups, and that the groups are Restate's partitions is not read. One key's rate later read 12.9, 15.3 and 19.9 offsets/s, so "clears 16 h in about 15 h" is too simple. The margin must be measured per key.
 
 Close when `observe`'s drain rate is measured on the fixed image with a deliberate backlog on a tier, its margin over that
 tier's stream rate is written here, and the time to clear a 24 h outage is stated from it.
@@ -36,6 +54,8 @@ held for hours on another cluster, on a newer image. The better reading is Resta
 behind started about 22 h after a node's disk pressure left them Pending. That is an inference from start times. A second tier
 reads 16 h behind with its own group lag at 156,000, so lag shows part of the backlog there and none of it on the first. Where
 the part past the group offset sits is not read.
+
+**Corrected again the same day.** "A second tier reads 16 h behind" was one key: that tier's others read 12.8 h. A handler's position belongs to a key, not a tier. The first version of `check_handler_position.py` took the maximum across three sampled keys and passed a partition with half its keys 6.5 h behind, which its own proof run found. It now reads every key in a window at each partition's head and fails if any is behind.
 
 Close when a tier exposes each subscribed handler's position against its log end, and a test fails on a handler held behind.
 
