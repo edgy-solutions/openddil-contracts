@@ -30,15 +30,9 @@ Close when a count survives an upgrade, from a durable source other than Restate
 
 **Why it matters beyond the restart.** The soak meant to prove the backoff fix past attempt 1,024 failed on this: workers reached about attempt 97. An older image at the same limit reached 1,024 on another cluster, and that difference is not explained. **Suspects, neither read:** the element handler keeps polling and failing while other workers block; librdkafka's fetch queues. Consumer groups that went Empty at about 5 min stopped fetching, and growth continued after that.
 
+**A second soak, at a 3,500 Mi limit, held the store down for 9 h 30 min.** Memory started at 144 Mi, peaked at 655 Mi and ended at 576 Mi, so it did not grow without bound, and the peak is above the chart's 512 Mi. The backoff fix held at that limit: every retrying worker passed attempt 1,024, no overflow, no restart, and all groups drained within 46 s of the store returning, with no pod touched. A tier at the chart's limit still restarts in a long outage and recovers by itself.
+
 Close when the growth is attributed and either bounded or the limit is set from it, and a projector outlives a 9 h outage at the chart's limit.
-
-## OPEN 2026-11-03 — custom projector handlers commit past a store outage
-
-**Part measured, part read from code.** `_persist` catches every exception from a `mode: custom` handler, logs it as a handler bug and returns, and the batch then commits. A store connection error takes that path. Measured: with the store down, `asset_element_telemetry` raised about every 1 to 2 s while its group read lag 0. From the code, that handler advances its state only after a durable write and its snapshots carry the full tree, so current values catch up and only mid-outage transitions are skipped.
-
-**Read from code, not measured:** `effector_launch` and `munition_track` call pool methods that do not retry. A Fire or Detonation arriving during a store outage would raise, be logged, and have its offset committed, and it is not a snapshot, so nothing re-sends it. Their groups read lag 0 through the outage, which fits this and also fits no traffic.
-
-Close with a planted event during a short outage, read in the table after. If it is lost, connection errors must retry as `execute` does, and only a genuine handler fault may skip a record.
 
 ## OPEN 2026-11-03 — CM's handler has little margin over its stream, so a backlog takes most of a day to clear
 
@@ -123,7 +117,8 @@ every exception from a handler, logs `custom handler ... raised`, counts a decod
 commits. It cannot tell a bad record from a store that is down. Measured on a test lab on 2026-11-03: a Fire planted
 during a tier store outage gave one log line, effector group lag 0, and no row. Upstream tiers write theirs, so the loss
 is that tier's table. `effector_launch`, `munition_track` and `asset_element_telemetry` take this path. Element current
-state heals on the next snapshot, by code; a Fire does not come again.
+state heals on the next snapshot, by code, so only mid-outage transitions are skipped; a Fire does not come again. A
+Detonation on `munition_track` is read from code, not planted.
 
 During an outage, lag 0 on these groups means skipped, not healthy.
 
