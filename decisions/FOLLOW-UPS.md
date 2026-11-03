@@ -4,6 +4,24 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a projector's health must reflect its workers
+
+**A finding, measured.** A Postgres outage killed 3 of a projector's consumer workers. The pod read Running and Ready
+with 0 restarts for as long as nobody deleted it, and the 3 groups read Empty with lag rising. A health signal that
+cannot see a dead worker cannot fail. The projector Deployment has no probe (`openddil-helm`
+`openddil-demo/templates/tier-node.yaml`), and `main()` in `openddil-projector` `src/main.py` waits on its stop event
+and only gathers its worker tasks at shutdown, so a `run()` that raises ends silently, with no log line at the time
+and no restart.
+
+The cause of this death is fixed separately: the retry loops could overflow computing their backoff at attempt 1,024
+(`openddil-projector` 9647105, with a test past attempt 1,024). That closes one way to die, not this row. Any other
+exception out of `run()` behaves the same. Empty alone is not the signal: a worker blocked on a long retry also goes
+Empty after the consumer's poll interval, and it recovers on its own.
+
+Close when a worker that ends unexpectedly ends the process, so the pod restarts, or when a liveness probe reads
+worker state the way `cmService.stallProbe` and `logisticsFusion.stallProbe` read theirs, with a test that kills a
+worker and sees the signal fail.
+
 ## CLOSED 2026-10-30 (opened 2026-10-30) — lab2 pins cm-service by digest after the roll that measures the re-seed fix
 
 lab2 runs `cm-service:latest` with pull policy Always and no `cmService.image.digest`, so any cm-service push changes
