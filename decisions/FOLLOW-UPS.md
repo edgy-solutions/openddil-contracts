@@ -4,6 +4,25 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a retraction clears no label, and a declaration cannot be corrected through the product
+
+**A finding, measured on a test lab.** A real declaration through the PEP followed on every path: stream, hub registry
+under its fix, CM, logistics, latest, element rows, windows and inventory. Then a null on `asset-declarations`: it reached
+the region and HQ brokers, and the logistics sim folded it to no label. Nothing else moved. The projector logs one decode
+warning and leaves the `asset_declaration` row, since its handler has no delete branch. With that row deleted by hand and
+the stream carrying no nation, every path kept the declared nation, windows and inventory included, on rows written after
+the sim stopped sending a label.
+
+Each path relabels on a positive statement and never on absence. That is right for an outage (ADR-0050 s2). It leaves no
+way back from a retraction.
+
+The declare route is single-shot and refuses an asset already declared, and there is no route to retract. So a wrong
+declaration can be cleared only by hand, on the topic and in the tables, and the labels then need something else to state
+the right nation.
+
+Close when a declaration can be corrected through the product by a statement of the new label, read on every path after,
+or when "a declaration is final" is decided and written where an operator would read it.
+
 ## OPEN 2026-11-03 — the logistics sim labels from the declaration topic, so a window can lose a declared asset's label
 
 **From code, not exercised, except the empty-topic case.** `asset_telemetry_windows` and `inventory_items` take their label from the sim's element envelope, and the sim resolves it from the `asset-declarations` topic, then the file row, then defaults (`releasability.py`). It does not read the `asset_declaration` table. Its consumer is best effort and never blocks publishing, and it rebuilds its map from earliest on every start. So a declared asset with no file row can go out unlabelled while the HQ broker is unreachable, and its window row reads NULL at every tier until the consumer catches up. A declared row written only to the table reads NULL for as long as it stands: measured, in a test that planted one.
