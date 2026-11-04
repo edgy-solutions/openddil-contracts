@@ -61,7 +61,7 @@ except ImportError:  # reported as an input error by main
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import check_views  # noqa: E402
 import render_profile as rp  # noqa: E402
-from capability_phases import CheckError  # noqa: E402
+from capability_phases import PHASES, CheckError  # noqa: E402
 from data_exchange import InputError  # noqa: E402
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
@@ -234,7 +234,7 @@ def grid_selected(r: "rp.Renderer", rows, names: dict[str, str]) -> str:
     filled = sum(1 for i in ids if i in sources)
     legend = (f"{filled} of {len(ids)} {r.label} views written. A linked id is exported from the UAF view "
               "it links to; a muted id is named by Appendix A and not written.")
-    return grid_wrap(r.profile, legend, table, not_exported(r, names))
+    return grid_wrap(r.profile, legend, table, style_tables(not_exported(r, names)))
 
 
 # --- the data-exchange header rows -------------------------------------------
@@ -503,10 +503,105 @@ def provenance(a: argparse.Namespace, date: str) -> str:
             f'<p data-prov="declared">{esc(DECLARED)}</p></div>')
 
 
+PROSE_MIN_CH = 20
+NB_PLAIN = frozenset("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.,:;'()")
+SVG_RE = re.compile(r"(<svg\b.*?</svg>)", re.S)
+TABLE_RE = re.compile(r"<table\b[^>]*>.*?</table>", re.S)
+ROW_RE = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.S)
+CELL_RE = re.compile(r"<(th|td)\b([^>]*)>(.*?)</\1>", re.S)
+TAG_RE = re.compile(r"(<[^>]*>)")
+
+
+def plain(cell: str) -> str:
+    return " ".join(html.unescape(re.sub(r"<[^>]*>", "", cell)).split())
+
+
+def hold_words(content: str) -> str:
+    """Wrap each token with a hyphen, slash or similar in a nowrap span; the text is unchanged."""
+    def tok(m: re.Match) -> str:
+        t = html.unescape(m.group(0))
+        if len(t) > 1 and any(c not in NB_PLAIN for c in t):
+            return f'<span class="nb">{m.group(0)}</span>'
+        return m.group(0)
+    parts = TAG_RE.split(content)
+    return "".join(p if i % 2 else re.sub(r"\S+", tok, p) for i, p in enumerate(parts))
+
+
+def style_table(t: str) -> str:
+    split = t.find("<tbody")
+    rows = list(ROW_RE.finditer(t))
+    if not rows:
+        return t
+    head_starts = {m.start() for m in rows if (m.start() < split if split >= 0 else m is rows[0])}
+    grid = [[(c.group(1), c.group(2), c.group(3)) for c in CELL_RE.finditer(m.group(1))] for m in rows]
+    ncols = max(len(r) for r in grid)
+    head_texts = [plain(c[2]) for c in grid[0]] if rows[0].start() in head_starts else []
+    lane_col = head_texts.index("Lane") if "Lane" in head_texts else -1
+    phase_col = head_texts.index("Phase") if "Phase" in head_texts else -1
+    mins: dict[int, int] = {}
+    for col in range(ncols):
+        words, cell = 0, 0
+        for r in grid:
+            if col < len(r):
+                text = plain(r[col][2])
+                cell = max(cell, len(text))
+                words = max([words] + [len(w) for w in text.split()])
+        mins[col] = min(cell, max(words, PROSE_MIN_CH))
+    state = {"row": -1, "prev": None, "body": 0}
+
+    def do_row(m: re.Match) -> str:
+        state["row"] += 1
+        cells = grid[state["row"]]
+        is_head = m.start() in head_starts
+        out = []
+        for col, (tag, attrs, content) in enumerate(cells):
+            pname = "pname" in attrs
+            text = plain(content)
+            badge = False
+            if is_head:
+                if not pname and text:
+                    attrs += f' style="min-width:{mins[col]}ch"'
+            elif col == phase_col:
+                if text not in PHASES:
+                    raise CheckError(f"phase column: {text!r} is not one of {', '.join(PHASES)}\n")
+                content = f'<span class="badge phase-{text.replace(" ", "-")}">{text}</span>'
+                badge = True
+            if not pname and not badge:
+                content = hold_words(content)
+            out.append(f"<{tag}{attrs}>{content}</{tag}>")
+        cls = ""
+        if not is_head:
+            if lane_col >= 0 and lane_col < len(cells):
+                lane = plain(cells[lane_col][2])
+                if state["body"] > 0 and lane != state["prev"]:
+                    cls = ' class="lane-start"'
+                state["prev"] = lane
+            state["body"] += 1
+        tr_open = m.group(0)[: m.group(0).index(">") + 1]
+        if cls:
+            tr_open = tr_open[:-1] + cls + ">"
+        return tr_open + "".join(out) + "</tr>"
+
+    return ROW_RE.sub(do_row, t)
+
+
+def style_tables(body_html: str) -> str:
+    """Table styling the CSS cannot do alone: words held whole, column minimums, phase badges, lane rules.
+    Call it after apply_header_cells. Text inside svg blocks and in grid tables is left alone."""
+    def one(m: re.Match) -> str:
+        t = m.group(0)
+        return t if "gridtable" in t[: t.index(">")] else style_table(t)
+    parts = SVG_RE.split(body_html)
+    return "".join(p if i % 2 else TABLE_RE.sub(one, p) for i, p in enumerate(parts))
+
+
 # --- the page ----------------------------------------------------------------
 
 CSS = """
-:root{--fg:#1d2430;--muted:#6b7480;--line:#d5dae1;--bg:#fff;--soft:#f3f5f8;--accent:#0b5cad}
+:root{--fg:#1d2430;--muted:#6b7480;--line:#d5dae1;--bg:#fff;--soft:#f3f5f8;--accent:#0b5cad;
+--head:#1f3a5f;--zebra:#f3f5f8;--filled:#d9e8fb;
+--m-bg:#d6f0e0;--m-fg:#0f5132;--b-bg:#d9e8fb;--b-fg:#0b4080;--a-bg:#fdecc8;--a-fg:#7a4d00;
+--p-bg:#f0e1f7;--p-fg:#5b2a78;--r-bg:#e6e8eb;--r-fg:#3a424d}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--fg);background:var(--bg)}
@@ -521,18 +616,30 @@ a{color:var(--accent)}
 #results[hidden]{display:none}
 #results li{margin:6px 0}
 #results .snip{color:var(--muted);display:block;font-size:14px}
-main{padding:0 16px 48px;max-width:1100px;margin:0 auto}
+main{padding:0 16px 48px}
+main p,main ul,main ol,main h1,main h2,main h3,main nav{max-width:1100px}
 .page{display:none}
 .page:target{display:block}
 body:not(:has(.page:target)) #front{display:block}
 h1{font-size:1.5rem;line-height:1.25;overflow-wrap:anywhere}
 h2{font-size:1.25rem;margin-top:2rem}
 h3{font-size:1.1rem}
-p,li,td,th,summary{overflow-wrap:anywhere}
+p,li,summary{overflow-wrap:anywhere}
 .scroll{overflow-x:auto;max-width:100%;margin:1em 0}
+.scroll table{width:100%}
+.nb,th.pname{white-space:nowrap}
 table{border-collapse:collapse;font-size:14px}
 th,td{border:1px solid var(--line);padding:4px 8px;vertical-align:top;text-align:left}
-th{background:var(--soft)}
+thead th{background:var(--head);color:#fff}
+tbody th{background:var(--soft)}
+tbody tr:nth-child(even)>*{background:var(--zebra)}
+tr.lane-start>*{border-top:2px solid var(--head)}
+.badge{display:inline-block;white-space:nowrap;padding:0 8px;border-radius:10px;font-size:13px;font-weight:600}
+.phase-measured{background:var(--m-bg);color:var(--m-fg)}
+.phase-built-unmeasured{background:var(--b-bg);color:var(--b-fg)}
+.phase-accepted-design{background:var(--a-bg);color:var(--a-fg)}
+.phase-proposed{background:var(--p-bg);color:var(--p-fg)}
+.phase-row{background:var(--r-bg);color:var(--r-fg)}
 pre{margin:0;padding:12px;background:var(--soft);font-size:13px;line-height:1.4}
 code{font-family:ui-monospace,Consolas,monospace;font-size:.92em}
 figure.diagram{margin:1em 0;padding:8px;border:1px solid var(--line);overflow-x:auto;background:#fff}
@@ -545,6 +652,8 @@ details.exceptions summary{cursor:pointer;font-weight:600}
 .grid{display:none}
 html[data-profile="uaf"] #grid-uaf,html[data-profile="dodaf202"] #grid-dodaf202,html[data-profile="naf4"] #grid-naf4{display:block}
 .gridtable td{min-width:3.5em}
+.gridtable tbody tr>*{border-top:2px solid var(--head)}
+.gridtable td:has(.filled){background:var(--filled)}
 .gridtable td span{white-space:nowrap;margin-right:6px}
 .gridtable small{color:var(--muted);margin-left:2px}
 .legend{color:var(--muted);font-size:14px}
@@ -555,6 +664,7 @@ html[data-profile="dodaf202"] .profile-only[data-for="dodaf202"],html[data-profi
 .provenance p{margin:2px 0}
 .provenance .note{display:block}
 nav.views ul{columns:2 280px;padding-left:1.2em}
+@page{size:landscape}
 @media (max-width:600px){h1{font-size:1.3rem}.bar{gap:6px 8px}}
 @media print{
   .bar,#results{display:none!important}
@@ -565,7 +675,12 @@ nav.views ul{columns:2 280px;padding-left:1.2em}
   .page:first-of-type{break-before:auto}
   .scroll{overflow:visible}
   table{font-size:9pt;width:100%}
-  th,td{overflow-wrap:anywhere;word-break:break-word}
+  thead th{background:none;color:inherit;border-bottom:2px solid var(--head)}
+  tbody tr:nth-child(even)>*,tbody th,.gridtable td:has(.filled){background:none}
+  .badge,.phase-measured,.phase-built-unmeasured,.phase-accepted-design,.phase-proposed,.phase-row{background:none;color:inherit;padding:0;border-radius:0;font-weight:600}
+  th:nth-child(n+4){min-width:0!important}
+  table:has(thead th:nth-child(8)) td:nth-child(n+4),table:has(thead th:nth-child(8)) th:nth-child(n+4){overflow-wrap:anywhere}
+  table:has(thead th:nth-child(8)) td:nth-child(n+4) .nb,table:has(thead th:nth-child(8)) th:nth-child(n+4) .nb{white-space:normal}
   pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:8.5pt}
   figure.diagram{overflow:visible;break-inside:avoid}
   svg{max-width:100%;height:auto}
@@ -703,6 +818,7 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
             body_html = apply_header_cells(body_html, dx_cells)
             if "zzpname" in body_html:
                 raise CheckError(f"view {vid}: a data-exchange header marker was not placed\n")
+        body_html = style_tables(body_html)
         total_exceptions += page.exceptions
         attribution = f'<p class="attribution">{esc(uaf.attribution)}</p>' if uaf.attribution else ""
         sections.append(

@@ -400,5 +400,108 @@ class Built(unittest.TestCase):
         self.assertRegex(cm.exception.args[0], r"view \S+ diagram 1")
 
 
+def tbl(head, rows, extra=""):
+    h = "".join(f"<th>{c}</th>" for c in head)
+    b = "".join("<tr>" + "".join(f"<td>{c}</td>" for c in r) + "</tr>" for r in rows)
+    return f"<table>\n<thead>\n<tr>{h}</tr>\n</thead>\n<tbody>\n{b}\n</tbody>\n</table>{extra}"
+
+
+def text_of(h):
+    return html.unescape(re.sub(r"<[^>]*>", "", h))
+
+
+class StyleTables(unittest.TestCase):
+    st = staticmethod(render_html.style_tables)
+
+    def test_hyphen_and_slash_tokens_are_wrapped_and_text_is_unchanged(self):
+        src = tbl(["A"], [["see a-b and c/d now"]])
+        out = self.st(src)
+        self.assertIn('<span class="nb">a-b</span>', out)
+        self.assertIn('<span class="nb">c/d</span>', out)
+        self.assertEqual(text_of(out), text_of(src))
+
+    def test_plain_words_are_not_wrapped(self):
+        out = self.st(tbl(["A"], [["plain words, with_under. and (parens) x"]]))
+        self.assertNotIn('class="nb"', out)
+
+    def test_tags_and_attributes_are_untouched(self):
+        out = self.st(tbl(["A"], [['<a href="x/y-z" title="a-b">go-on</a> <code>k-v</code>']]))
+        self.assertIn('<a href="x/y-z" title="a-b"><span class="nb">go-on</span></a>', out)
+        self.assertIn('<code><span class="nb">k-v</span></code>', out)
+
+    def test_an_entity_stays_whole(self):
+        out = self.st(tbl(["A"], [["x&amp;y &lt;b&gt; a &amp; b"]]))
+        self.assertIn('<span class="nb">x&amp;y</span>', out)
+        self.assertIn('<span class="nb">&lt;b&gt;</span>', out)
+        self.assertNotIn('<span class="nb">&amp;</span>', out)
+
+    def test_an_svg_block_is_unchanged(self):
+        svg = "<svg><text>a-b c/d</text><table><tr><td>a-b</td></tr></table></svg>"
+        self.assertEqual(self.st(svg), svg)
+        out = self.st(svg + tbl(["A"], [["a-b"]]))
+        self.assertTrue(out.startswith(svg))
+        self.assertIn('<span class="nb">a-b</span>', out[len(svg):])
+
+    def test_a_grid_table_is_unchanged(self):
+        g = '<table class="gridtable"><thead><tr><th>a-b</th></tr></thead><tbody><tr><td>c/d</td></tr></tbody></table>'
+        self.assertEqual(self.st(g), g)
+
+    def test_minimum_short_cell_prose_and_long_word(self):
+        out = self.st(tbl(["Short", "Prose", "Long"], [
+            ["ab", "word " * 20, "x" * 40],
+            ["abc", "more", "y"]]))
+        self.assertIn('<th style="min-width:5ch">Short</th>', out)
+        self.assertIn('<th style="min-width:20ch">Prose</th>', out)
+        self.assertIn('<th style="min-width:40ch">Long</th>', out)
+
+    def test_a_pname_header_and_an_empty_header_get_no_minimum(self):
+        src = ('<table><thead><tr><th class="pname" data-uaf="Writer">Writer</th><th></th></tr></thead>'
+               '<tbody><tr><td>a</td><td>b</td></tr></tbody></table>')
+        out = self.st(src)
+        self.assertNotIn("min-width", out)
+        self.assertIn('<th class="pname" data-uaf="Writer">Writer</th>', out)
+
+    def test_an_unknown_phase_raises(self):
+        with self.assertRaises(CheckError) as cm:
+            self.st(tbl(["Phase"], [["measured"], ["almost"]]))
+        self.assertIn("almost", cm.exception.args[0])
+
+    def test_each_phase_gets_its_badge_class(self):
+        for ph in ("measured", "built unmeasured", "accepted design", "proposed", "row"):
+            out = self.st(tbl(["Phase"], [[ph]]))
+            cls = "phase-" + ph.replace(" ", "-")
+            self.assertIn(f'<span class="badge {cls}">{ph}</span>', out)
+
+    def test_lane_start_on_changes_and_not_on_the_first_row(self):
+        out = self.st(tbl(["Lane", "X"], [["a", "1"], ["a", "2"], ["b", "3"], ["b", "4"], ["a", "5"]]))
+        self.assertEqual(out.count('<tr class="lane-start">'), 2)
+        self.assertEqual(out.count("<tr>"), 4)  # header row and three body rows
+        first = out.index("<td>", out.index("<tbody"))
+        self.assertNotIn("lane-start", out[:first])
+
+    def test_no_lane_column_adds_no_class(self):
+        self.assertNotIn("lane-start", self.st(tbl(["Name"], [["a"], ["b"]])))
+
+    def test_pname_th_is_untouched(self):
+        src = '<table><thead><tr><th class="pname" data-uaf="a-b">a-b</th></tr></thead><tbody><tr><td>x</td></tr></tbody></table>'
+        self.assertIn('<th class="pname" data-uaf="a-b">a-b</th>', self.st(src))
+
+
+class Css(unittest.TestCase):
+    def test_print_block_holds_the_table_rules(self):
+        css = render_html.CSS
+        self.assertIn("@page", css)
+        printed = css[css.index("@media print"):]
+        self.assertIn(".badge", printed)
+        self.assertNotIn("word-break:break-word", css)
+
+    def test_screen_td_th_have_no_overflow_wrap_anywhere(self):
+        css = render_html.CSS
+        screen = css[:css.index("@media print")]
+        for m in re.finditer(r"([^{}]*)\{([^{}]*)\}", screen):
+            if "overflow-wrap:anywhere" in m.group(2):
+                self.assertNotRegex(m.group(1), r"(^|,)\s*(td|th)\s*(,|$)")
+
+
 if __name__ == "__main__":
     unittest.main()
