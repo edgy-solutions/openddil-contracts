@@ -7,6 +7,9 @@ declaration record in the owning tier's store. Uses ADR-0047 (the observed id is
 mapper's concern) and ADR-0044 (lifecycle columns unchanged). Adds a fielding record to Contract B
 (DESIGN-2026-09-06 §2), read side.
 
+**Amended 2026-11-04:** a store outage serves the last known answer per asset. See
+[the amendment](#amendment-2026-11-04-a-store-outage-serves-the-last-known-answer).
+
 ## Context
 
 - **Labels come from one file today.** Ingress stamps `originator_nation` and `releasable_to` from the deployment's
@@ -91,7 +94,8 @@ edge is cut.
    - The file's rows win over a declaration for the same id, so a declaration for an id the file already labels
      is refused (already in fleet). Only `assets` rows count; the default never does.
    - An asset labelled only by a default is still undeclared and may be declared.
-   - A failed lookup stamps nothing. A store outage withholds and never mislabels.
+   - A failed lookup stamps nothing. A store outage serves the store's last answer per asset, withholds a record
+     with no answer and no file row, and never mislabels. See the amendment of 2026-11-04.
 
 **From that record forward the asset is in the fleet.**
 - The next sample carries labels.
@@ -163,6 +167,29 @@ The HQ fleet summary shows **undeclared N · expected M** per edge.
 
 The field names are OpenDDIL-local, with a declared alignment intent. Binding them to named elements is owed before any
 field is frozen.
+
+## Amendment 2026-11-04: a store outage serves the last known answer
+
+Item 2.6 said a store outage withholds. Withholding every record would take every asset on that tier off the wire for
+the whole outage, and a last answer is still a declared label, which is what the item protects. So, on a failed lookup
+at ingress:
+
+1. **An asset with an answer keeps it.** The process serves the store's last answer for that asset.
+2. **A record with no answer is withheld,** unless the file's `assets` row labels it. That row is the one source a
+   declaration may not contradict, so it stands.
+3. **No stamp and no default.** Neither labels a record whose lookup failed with no answer.
+
+**The class this closes:** a store outage puts a declared asset's Entity State record under its stamp or a default. It
+was seen twice before `openddil-demo` 2309dc5, which makes it impossible.
+
+**Outside that class, each a row in `FOLLOW-UPS.md`:**
+
+- A stored "no row" is an answer. An asset declared after the process last read it can take that answer into an outage.
+- A file row added after a declaration, with a restart in an outage, wins for that time.
+- A Fire record has no declaration lookup at all, store up or down, so this amendment does not reach it.
+
+**Not proven:** a real declaration under a real outage. The outage branch was read with a row inserted directly and on
+the real binary. A real declaration was read with the store up.
 
 ## Consequences
 
