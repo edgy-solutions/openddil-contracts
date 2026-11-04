@@ -101,6 +101,21 @@ for that reason. ADR-0050 s2 requires a declared origin on every record; this is
 
 Close when a CM row carries the provenance of the record that last set its label, with a test that reads it back.
 
+## OPEN 2026-11-04 — a stored "no row" answer can outlast a declaration into a store outage
+
+**Half tested, not run end to end.** `openddil-demo` `dynamic-mappings/declared-label.yaml` keeps its last answer per asset
+for use through a store outage, and "no row" is an answer. An asset declared after the process last read it, with the
+store going down before its next read, takes the stored "no row", and the record falls through to the sidecar's stamp. For
+an asset sending steadily the window is the short cache's TTL, 10 s by default. For a quiet asset it lasts as long as the
+asset is quiet. `test_declared_label_branch` pins the stored answer on the real binary (row a2); the fall-through to the stamp
+is read from `sim-dis-mapping.yaml`.
+
+The file's comment says a declaration cannot change while the store that holds it is down. That is true of the store. The
+process's copy can be older than the store.
+
+Close when a stored "no row" does not admit the stamp on a failed lookup, or the window is decided acceptable and written
+where an operator would read it, with a test on the real binary either way.
+
 ## OPEN 2026-11-03 — an effector record cannot take a declared label
 
 **From a code reading, not seen on a cluster.** `openddil-demo` `dynamic-mappings/dis-effector.yaml` ranks the file's
