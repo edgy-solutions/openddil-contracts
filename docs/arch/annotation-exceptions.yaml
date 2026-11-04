@@ -1,0 +1,89 @@
+# Rows the annotation check does not cover, named with a reason. Generated rows are from
+# the public twin render: `python docs/arch/tools/check_annotations.py --print-rows ...`.
+# A new row or a stale row fails the check.
+writer-not-annotated:
+  reason: A bridge writes these to its parent broker. Its annotation lists only the topics it originates, so the write is inferred from the bridge's config. ADR-0054 decision 5 lists them, and is not built.
+  rows:
+  - hq/asset-capability-snapshot (edge-hq-bridge-edge-north)
+  - hq/asset-capability-snapshot (edge-hq-bridge-edge-south)
+  - hq/asset-cm-state (edge-hq-bridge-edge-north)
+  - hq/asset-cm-state (edge-hq-bridge-edge-south)
+  - hq/asset-declarations (edge-hq-bridge-edge-north)
+  - hq/asset-declarations (edge-hq-bridge-edge-south)
+  - hq/asset-element-inventory (edge-hq-bridge-edge-north)
+  - hq/asset-element-inventory (edge-hq-bridge-edge-south)
+  - hq/asset-fielding (edge-hq-bridge-edge-north)
+  - hq/asset-fielding (edge-hq-bridge-edge-south)
+  - hq/asset-logistics-status (edge-hq-bridge-edge-north)
+  - hq/asset-logistics-status (edge-hq-bridge-edge-south)
+  - hq/asset-telemetry-windows (edge-hq-bridge-edge-north)
+  - hq/asset-telemetry-windows (edge-hq-bridge-edge-south)
+  - hq/derived-sustainment (edge-hq-bridge-edge-north)
+  - hq/derived-sustainment (edge-hq-bridge-edge-south)
+  - hq/effector-events (edge-hq-bridge-edge-north)
+  - hq/effector-events (edge-hq-bridge-edge-south)
+  - hq/link-heartbeat (edge-hq-bridge-edge-north)
+  - hq/link-heartbeat (edge-hq-bridge-edge-south)
+  - hq/munition-tracks (edge-hq-bridge-edge-north)
+  - hq/munition-tracks (edge-hq-bridge-edge-south)
+  - hq/tactical-events (edge-hq-bridge-edge-north)
+  - hq/tactical-events (edge-hq-bridge-edge-south)
+  - hq/telemetry-latest-state (edge-hq-bridge-edge-north)
+  - hq/telemetry-latest-state (edge-hq-bridge-edge-south)
+workload-no-declaration:
+  reason: These workloads render with neither annotation. They touch no broker topic, or their use of one is not yet declared. ADR-0054 keeps them as named exceptions.
+  rows:
+  - egress-pane-api
+  - egress-stub-sink
+  - electric-sync
+  - frontend
+  - pep
+  - postgres-hq
+  - redpanda-edge-north
+  - redpanda-edge-south
+  - redpanda-hq
+  - restate-hub
+  - restate-server
+  - tier-electric-edge-north
+  - tier-electric-edge-south
+  - tier-frontend-edge-north
+  - tier-frontend-edge-south
+  - tier-pep-edge-north
+  - tier-pep-edge-south
+  - tier-pg-edge-north
+  - tier-pg-edge-south
+  - tier-restate-edge-north
+  - tier-restate-edge-south
+  - tier-topaz-edge-north
+  - tier-topaz-edge-south
+  - topaz-hq
+group-without-topic:
+  reason: The annotation names the consumer group and not its topics, so the generator cannot bind this group to a topic from the render. ADR-0054 decision 6 adds the topics, and is not built.
+  rows:
+  - edge-north/connect-dis-mapper (redpanda-connect-edge-north)
+  - edge-north/openddil-edge-north (faust-edge-edge-north)
+  - edge-north/region-region-north-source-edge-north (faust-regional-region-north)
+  - edge-south/connect-dis-mapper (redpanda-connect-edge-south)
+  - edge-south/openddil-edge-south (faust-edge-edge-south)
+  - edge-south/region-region-south-source-edge-south (faust-regional-region-south)
+  - hq/projector-asset-correlation (projector-hq)
+  - hq/projector-asset-declaration (projector-hq)
+  - hq/projector-asset-element-inventory (projector-hq)
+  - hq/projector-asset-element-telemetry (projector-hq)
+  - hq/projector-asset-fielding (projector-hq)
+  - hq/projector-capability-state (projector-hq)
+  - hq/projector-cm-state (projector-hq)
+  - hq/projector-effector-launch (projector-hq)
+  - hq/projector-logistics-status (projector-hq)
+  - hq/projector-munition-track (projector-hq)
+  - hq/projector-parts-availability (projector-hq)
+  - hq/projector-region-fleet-summary (projector-hq)
+  - hq/projector-region-top-factors (projector-hq)
+  - hq/projector-region-wear-trends (projector-hq)
+  - hq/projector-tactical-events (projector-hq)
+  - hq/projector-telemetry-latest (projector-hq)
+  - hq/projector-telemetry-windows (projector-hq)
+  - hq/region-region-north-aggregator (faust-regional-region-north)
+  - hq/region-region-north-hq-source (faust-regional-region-north)
+  - hq/region-region-south-aggregator (faust-regional-region-south)
+  - hq/region-region-south-hq-source (faust-regional-region-south)

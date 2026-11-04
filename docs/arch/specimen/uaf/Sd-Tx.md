@@ -1,0 +1,46 @@
+# Sample Fleet System: Standards-Taxonomy (Sd-Tx)
+
+built on OpenDDIL 0.1.161
+
+The standards the decision records align with, and how strongly. Alignment is by concept name only. Field names stay local to this architecture, and a binding is owed before any field is frozen. Editions: {{slot:standards-editions}}. Bindings: {{slot:attribute-bindings}}.
+
+No row here is a conformance claim.
+
+| Standard | Used for | Rung | Cited by |
+|---|---|---|---|
+| EIA-649, NATO ACMP-2000 | Configuration status accounting | Concept aligned | ADR-0009, ADR-0051 |
+| ISO 3166-1 alpha-3 | Nation codes in labels | Concept aligned | ADR-0029, CoT design |
+| STANAG 4774, STANAG 4778 | Confidentiality label concepts; not implemented | Declared intent | ADR-0029, CoT design |
+| IC ISM | Security marking vocabulary | Citation verified | Citations note, CoT design |
+| JC3IEDM, MIP | Status vocabulary | Declared intent, not fetched | ADR-0044, ADR-0050, CoT design |
+| DIS, IEEE 1278.1 | Entity state, fire and detonation signals | Concept aligned | ADR-0044, ADR-0048 |
+| ASD S5000F | In-service data feedback | Concept aligned | ADR-0044, ADR-0046, ADR-0050, ADR-0051, ADR-0052 |
+| MIMOSA OSA-CBM | State detection, health assessment, advisory | Concept aligned | ADR-0046 |
+| MIL-HDBK-2155 | Failure reporting, closure verification | Concept aligned | ADR-0051 |
+| MIL-STD-1388-2B | Usage meters | Concept aligned | ADR-0051 |
+| MIL-STD-882E | Hazard and risk vocabulary | Concept aligned | ADR-0052 |
+| NIST SP 800-82, MITRE ATT&CK for ICS | Control-system detection vocabulary | Concept aligned | ADR-0053 |
+| STIX 2.1 | Indicators through the gate | Concept aligned | ADR-0053 |
+| CJCSM 6510.01 | Incident handling vocabulary | Concept aligned | ADR-0053 |
+| ISO 13374 | Reading of the condition-monitoring blocks | A reading, not conformance | ADR-0038 |
+| Cursor on Target | Bridge shape | Not in the citations note | CoT design |
+| BFO, CCO, IOF maintenance, W3C SOSA/SSN, PROV-O, OGC GeoSPARQL | Ontology alignment | Citation verified | Citations note |
+| QUDT, OWL-Time | Ontology alignment | Not verified | Citations note |
+
+Editions the citations note could not verify: the JC3IEDM edition, the date of GeoSPARQL 1.1 and the ISM.XML DES version.
+
+## Sources
+
+| Claim | Source | Decision | Evidence |
+|---|---|---|---|
+| The rungs for the ontologies and IC ISM | [Citations note](../../../../decisions/CITATIONS-2026-09-08-standard-ontologies.md) | Design note | Not stated |
+| The configuration row | [ADR-0009](../../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
+| The status rows | [ADR-0044](../../../../decisions/ADR-0044-lifecycle-two-columns-no-deletes.md) | Proposed | Not stated |
+| The label rows | [ADR-0029](../../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md), [CoT design](../../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Accepted | Not stated |
+| The maintenance rows | [ADR-0046](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
+| The failure rows | [ADR-0051](../../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |
+| The hazard row | [ADR-0052](../../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Design only |
+| The detection rows | [ADR-0053](../../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Design only |
+| The ISO 13374 reading | [ADR-0038](../../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
+| Arrival alignment | [ADR-0050](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| Munition signal alignment | [ADR-0048](../../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md) | Accepted | Not stated |

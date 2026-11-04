@@ -1,0 +1,165 @@
+name: check-views
+
+# Runs the architecture view checks (docs/arch/tools/check_views.py): all
+# thirteen view rules, plus `quotes` (evidence quotes against the public sample
+# list) and `floor` (the chart's render against the capability record). Then a
+# canary run that breaks a copy of the record and proves both can fail.
+#
+# It then builds the single-file HTML export of the views (render_html.py, with
+# the Mermaid diagrams drawn by mermaid-cli), checks it (check_export.py: the
+# view count equals check_views', no barred value, provenance on every page, no
+# network reference, under 16 MB), drives it in a browser (check_export_browser.mjs)
+# and attaches it as the architecture-export artifact. The export is not
+# committed anywhere.
+#
+# The floor reads a render of the chart, so the chart changing is a reason to
+# run. openddil-helm sends chart-version-bumped when it does. The daily
+# schedule is a floor under that dispatch: a dropped or missed dispatch
+# still gets caught within a day.
+#
+# This workflow uses no secret. Green here shows the structural checks and the
+# scan's mechanics, and is not evidence that any private scan ran.
+on:
+  push:
+    branches: [main, 'docs/arch-*']
+    paths:
+      - 'docs/arch/**'
+      - 'decisions/**'
+      - '.github/workflows/check-views.yml'
+  pull_request:
+    paths:
+      - 'docs/arch/**'
+      - 'decisions/**'
+      - '.github/workflows/check-views.yml'
+  repository_dispatch:
+    types: [chart-version-bumped]
+  schedule:
+    - cron: '17 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  # Same helm as openddil-helm's chart-checks.yml. Release tarball from get.helm.sh.
+  HELM_VERSION: v3.16.2
+  HELM_SHA256: 9318379b847e333460d33d291d4c088156299a26cd93d570a7f5d0c36e50b5bb
+  CHART: repos/openddil-helm/openddil-demo
+  BUNDLE: repos/openddil-customer-bundle-example
+  READINESS: repos/openddil-helm/scripts/RECORDING-READINESS.md
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/checkout@v4
+        with:
+          repository: edgy-solutions/openddil-helm
+          ref: master
+          path: repos/openddil-helm
+
+      - uses: actions/checkout@v4
+        with:
+          repository: edgy-solutions/openddil-customer-bundle-example
+          ref: master
+          path: repos/openddil-customer-bundle-example
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - run: pip install pyyaml markdown-it-py==4.0.0
+
+      - name: Install helm at its pinned version and check its hash
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/helm.tar.gz" \
+            "https://get.helm.sh/helm-$HELM_VERSION-linux-amd64.tar.gz"
+          echo "$HELM_SHA256  $RUNNER_TEMP/helm.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/helm"
+          tar -xzf "$RUNNER_TEMP/helm.tar.gz" -C "$RUNNER_TEMP/helm" --strip-components=1 linux-amd64/helm
+          echo "$RUNNER_TEMP/helm" >> "$GITHUB_PATH"
+
+      # A skipped specimen test means a sibling was not found. In CI that is
+      # not a pass.
+      - name: Tests
+        run: |
+          set +e
+          OPENDDIL_REPOS="$PWD/repos" OPENDDIL_BUNDLE="$PWD/$BUNDLE" \
+            python -m unittest discover -s docs/arch/tools -p 'test_*.py' > "$RUNNER_TEMP/tests.log" 2>&1
+          rc=$?
+          set -e
+          tail -n 8 "$RUNNER_TEMP/tests.log"
+          if [ "$rc" != 0 ]; then exit "$rc"; fi
+          if grep -q 'skipped=' "$RUNNER_TEMP/tests.log"; then
+            echo "tests: some were skipped; in CI a skipped test is not a pass"
+            exit 1
+          fi
+
+      - name: Check the views
+        run: |
+          python docs/arch/tools/check_views.py \
+            --chart "$CHART" \
+            --values "$BUNDLE/k8s/tier-node-values.yaml" \
+            --values "$BUNDLE/k8s/egress-values.yaml" \
+            --release openddil \
+            --readiness "$READINESS" \
+            --barred docs/arch/tools/barred-sample.txt
+
+      - name: Canary (quotes and floor must fail when the copy is broken)
+        run: |
+          python docs/arch/tools/check_views_canary.py \
+            --chart "$CHART" \
+            --values "$BUNDLE/k8s/tier-node-values.yaml" \
+            --values "$BUNDLE/k8s/egress-values.yaml" \
+            --release openddil \
+            --readiness "$READINESS" \
+            --barred docs/arch/tools/barred-sample.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # Chrome is the runner's own, so puppeteer downloads none.
+      - name: Install the export tooling
+        working-directory: docs/arch/tools/export
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: "true"
+        run: npm ci
+
+      - name: Build the HTML export
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          echo '{"args": ["--no-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
+          python docs/arch/tools/render_html.py \
+            --out "$RUNNER_TEMP/export/openddil-architecture.html" \
+            --chart "$CHART" \
+            --values "$BUNDLE/k8s/tier-node-values.yaml" \
+            --values "$BUNDLE/k8s/egress-values.yaml" \
+            --release openddil \
+            --readiness "$READINESS" \
+            --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
+
+      - name: Check the export
+        run: |
+          python docs/arch/tools/check_export.py \
+            --export "$RUNNER_TEMP/export/openddil-architecture.html" \
+            --barred docs/arch/tools/barred-sample.txt
+
+      - name: Check the export in a browser
+        working-directory: docs/arch/tools/export
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+        run: |
+          node check_export_browser.mjs "$RUNNER_TEMP/export/openddil-architecture.html" \
+            --shots "$RUNNER_TEMP/shots" --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: architecture-export
+          path: ${{ runner.temp }}/export/openddil-architecture.html
+          if-no-files-found: error
+          retention-days: 30

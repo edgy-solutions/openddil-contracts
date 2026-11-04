@@ -1,0 +1,13 @@
+{
+  "name": "openddil-architecture-export",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Build and browser-check tooling for the single-file HTML export of the architecture views.",
+  "license": "MIT",
+  "engines": {"node": ">=22"},
+  "type": "module",
+  "dependencies": {
+    "@mermaid-js/mermaid-cli": "12.0.0",
+    "puppeteer": "25.14.0"
+  }
+}

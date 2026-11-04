@@ -1,0 +1,6 @@
+# A sample barred list, so the quote scan runs where no other list is given.
+# It shows the format and that the scan runs. These values mean nothing, and
+# passing this list says nothing about any other list.
+# One regex per line, case-insensitive, optional |label.
+sample-barred-value|format sample
+another[- ]sample[- ]value|format sample

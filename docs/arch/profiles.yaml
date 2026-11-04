@@ -1,0 +1,146 @@
+# Output profiles for the architecture views. The content lives once, in
+# views/ under its UAF 1.2 view specification; a profile only renames and
+# selects. tools/render_profile.py and tools/data_exchange.py both read this.
+#
+# `exports` is the selection this repository makes from APPENDIX-A.md, the
+# committed copy of the UAF 1.2 Appendix A mapping. tools/check_views.py fails
+# on an export that table does not name for that view.
+
+profiles:
+  uaf: {label: "UAF 1.2"}
+  dodaf202: {label: "DoDAF 2.02"}
+  naf4: {label: "NAF v4"}
+
+data_exchange:
+  home: Rs-Cn
+  uaf: {id: Rs-Cn, title: "Resources-Connectivity: data exchange"}
+  dodaf202: {id: SV-6, title: "Systems Resource Flow Matrix"}
+  naf4: {id: P3, title: "Resource Connectivity"}
+  columns:
+    uaf: {writer: Writer, consumers: Consumers, topic: Topic}
+    dodaf202: {writer: Sending resource, consumers: Receiving resources, topic: Resource flow}
+    naf4: {writer: Producer, consumers: Consumers, topic: Information flow}
+
+export_titles:
+  dodaf202:
+    AV-1: Overview and Summary Information
+    CV-2: Capability Taxonomy
+    CV-3: Capability Phasing
+    OV-1: High Level Operational Concept Graphic
+    OV-2: Operational Resource Flow Description
+    OV-3: Operational Resource Flow Matrix
+    OV-5a: Operational Activity Decomposition Tree
+    OV-5b: Operational Activity Model
+    OV-6b: State Transition Description
+    DIV-2: Logical Data Model
+    DIV-3: Physical Data Model
+    SV-1: Systems Interface Description
+    SV-2: Systems Resource Flow Description
+    SV-3: Systems-Systems Matrix
+    SV-4: Systems Functionality Description
+    SV-5a: Operational Activity to Systems Function Traceability Matrix
+    SV-5b: Operational Activity to Systems Traceability Matrix
+    SV-6: Systems Resource Flow Matrix
+    StdV-1: Standards Profile
+  naf4:
+    A8: Standards
+    C1: Capability Taxonomy
+    Cr: Capability Roadmap
+    L1: Node Types
+    L2: Logical Scenario
+    L3: Node Interactions
+    L4: Logical Activities
+    L5: Logical States
+    L7: Information Model
+    L4-P4: Activity to Function Mapping
+    P2: Resource Structure
+    P3: Resource Connectivity
+    P4: Resource Functions
+    P7: Data Model
+
+# One entry per view file under views/. `no_target` says why a profile
+# selects a view out; a view that a profile cannot name is listed in that
+# profile's NOT-EXPORTED.md, never silently dropped.
+views:
+  Sm-Ov:
+    name: Summary-Overview
+    file: views/Sm-Ov.md
+    exports: {dodaf202: [AV-1]}
+    no_target: {naf4: "Table 2:3 gives Summary & Overview no NAF 4.0 view."}
+  St-Tx:
+    name: Strategic-Taxonomy
+    file: views/St-Tx.md
+    exports: {dodaf202: [CV-2], naf4: [C1]}
+  St-Rm-P:
+    name: Strategic-Roadmap-Phasing
+    file: views/St-Rm-P.md
+    exports: {dodaf202: [CV-3], naf4: [Cr]}
+  Op-Tx:
+    name: Operational-Taxonomy
+    file: views/Op-Tx.md
+    exports: {dodaf202: [OV-1], naf4: [L1]}
+  Op-Sr:
+    name: Operational-Structure
+    file: views/Op-Sr.md
+    exports: {dodaf202: [OV-2], naf4: [L2]}
+  Op-Cn:
+    name: Operational-Connectivity
+    file: views/Op-Cn.md
+    exports: {dodaf202: [OV-2, OV-3], naf4: [L3]}
+  Op-Pr:
+    name: Operational-Processes
+    file: views/Op-Pr.md
+    exports: {dodaf202: [OV-5a, OV-5b], naf4: [L4]}
+  Op-St:
+    name: Operational-States
+    file: views/Op-St.md
+    exports: {dodaf202: [OV-6b], naf4: [L5]}
+  Op-If:
+    name: Operational-Information
+    file: views/Op-If.md
+    exports: {dodaf202: [DIV-2], naf4: [L7]}
+  Rs-Sr:
+    name: Resources-Structure
+    file: views/Rs-Sr.md
+    exports: {dodaf202: [SV-1, SV-2], naf4: [P2]}
+  Rs-Cn:
+    name: Resources-Connectivity
+    file: views/Rs-Cn.md
+    exports: {dodaf202: [SV-3, SV-6], naf4: [P3]}
+  Rs-Pr:
+    name: Resources-Processes
+    file: views/Rs-Pr.md
+    exports: {dodaf202: [SV-4], naf4: [P4]}
+  Rs-If:
+    name: Resources-Information
+    file: views/Rs-If.md
+    exports: {dodaf202: [DIV-3], naf4: [P7]}
+  Rs-Tr:
+    name: Resources-Traceability
+    file: views/Rs-Tr.md
+    exports: {dodaf202: [SV-5a, SV-5b], naf4: [L4-P4]}
+  Sc-Sr:
+    name: Security-Structure
+    file: views/Sc-Sr.md
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:1 gives Security Structure no DoDAF 2.02 view."
+      naf4: "Table 2:3 gives Security Structure no NAF 4.0 view."
+  Sc-Cn:
+    name: Security-Connectivity
+    file: views/Sc-Cn.md
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2:1 gives no DoDAF 2.02 view."
+      naf4: "Table 2:5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2:3 gives no NAF 4.0 view."
+  Sc-Pr:
+    name: Security-Processes
+    file: views/Sc-Pr.md
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:1 gives no DoDAF 2.02 view."
+      naf4: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:3 gives no NAF 4.0 view."
+  Sd-Tx:
+    name: Standards-Taxonomy
+    file: views/Sd-Tx.md
+    exports: {dodaf202: [StdV-1], naf4: [A8]}

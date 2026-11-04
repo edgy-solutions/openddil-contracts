@@ -205,6 +205,14 @@ openddil-helm `scripts/RECORDING-READINESS.md` §G item 3.
 **Closed by lab2 rev 14**, the first roll on the new image. The in-compliance fixture asset stayed in compliance in its
 tier store and at HQ, its stored part and mod times were byte-identical across the wipe, and no event was re-sent.
 
+## OPEN 2026-11-02 — workload annotations: the next increment, and the check in chart CI
+
+Decisions 5 and 6 of ADR-0054 are accepted as the next increment and are not built: `openddil.io/forwards-topics` on each
+bridge and `openddil.io/consumer-topics` on each consumer. `docs/arch/tools/check_annotations.py` runs by hand, and no
+workflow runs it. Close when the chart renders both keys, the `writer-not-annotated` and `group-without-topic` classes in
+`docs/arch/annotation-exceptions.yaml` are empty, and the check runs in openddil-helm `.github/workflows/chart-checks.yml`.
+Home: `decisions/ADR-0054-workload-annotations-declare-broker-use.md`.
+
 ## OPEN 2026-10-29 — resilience: a healed tier's bridge resumes on its crash backoff, not on the heal
 
 **A finding, not a leak.** On edgy-lab2, edge-01 was cut from its parent for about 3 minutes and then healed. Its
@@ -2810,6 +2818,7 @@ heading, where nothing can be split. Verified by diffing: the change is
 | GD-15 | FRACAS usage meters named in code, not declared per variant | open |
 | GD-16 | Interlock state vocabulary closed, bound to columns in code | open |
 | GD-17 | Readiness disagreement mark forces three bands | open |
+| GD-18 | Faust app names and consumer groups carry a fixed `openddil` prefix | open |
 
 ### UD — undetected failure modes (`ADR-0036`)
 
