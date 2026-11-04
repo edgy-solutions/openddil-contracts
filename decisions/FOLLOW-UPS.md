@@ -33,16 +33,6 @@ or when "a declaration is final" is decided and written where an operator would 
 
 Close when the sim withholds a declared asset's envelope until its map is loaded, or when this is decided as acceptable and a default on such a deployment is refused at render.
 
-## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
-
-**Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
-
-**The same run answers the backlog.** Intake resumes at the group offset; there is no replay. First position at or past it on all 9 held keys, about 378 records per key never handled, and a planted Fire nobody had handled was never counted. So waiting for handlers to drain saves the backlog and does not save the counts.
-
-**Not shown:** a backlog in the shape a slow handler leaves, rather than a hold; in-flight journals at the wipe; `cm-events`.
-
-Close when a count survives an upgrade, from a durable source other than Restate, or the reset is decided and written where an operator would read it.
-
 ## OPEN 2026-11-03 — a projector is OOM-killed about 46 min into a store outage
 
 **A finding, measured once; the cause is not read.** On a tier with its Postgres scaled to 0 and the backoff fix mounted, the projector's memory read 143 Mi at the start, 251 at 6 min and 392 at 36 min, and the container was OOM-killed at 46 min at its 512 Mi limit. The restarted process waits in `pool.connect()` with no workers, at 32 Mi. When Postgres came back it left that loop in 3 s and drained about 15,000 records in under 70 s, with no pod touched, so the end state recovers by itself.
@@ -116,15 +106,63 @@ process's copy can be older than the store.
 Close when a stored "no row" does not admit the stamp on a failed lookup, or the window is decided acceptable and written
 where an operator would read it, with a test on the real binary either way.
 
-## OPEN 2026-11-03 — an effector record cannot take a declared label
+## OPEN 2026-11-04 — a Fire record has two defects: no declared label, and lost at a tier in a store outage
 
-**From a code reading, not seen on a cluster.** `openddil-demo` `dynamic-mappings/dis-effector.yaml` ranks the file's
-assets row, then the sidecar's stamp, then the file default. It has no declared-label lookup, so a launch by a declared
-asset carries the stamp whenever the stamp differs from the declaration. No such launch has been read yet, because the
-declared asset that showed the mismatch has not fired.
+Decided 2026-11-04: both are fixed after the walk, and each roll until then carries them as named risks. They are one
+row because they are one path. They are two fixes, and the row closes when both close.
 
-Close when a launch takes its launcher's declared label under the same failed-lookup rule as `declared-label.yaml`, with
-a test on the real binary.
+**1. Labels: no launch sees a declaration. From a code reading, not seen on a cluster.** `openddil-demo`
+`dynamic-mappings/dis-effector.yaml` runs before the declared-label lookup and ranks the file's assets row, then the
+ingest sidecar's stamp, then the file default. So a launcher with a file row takes that row, one with neither goes out by
+the default or unlabelled, and a declared launcher takes its stamp whenever the stamp differs from the declaration, store
+up or down. That reaches the effector ledger for any launcher. No such launch has been read yet, because the declared
+asset that showed the mismatch has not fired.
+
+The fix is its own lookup keyed by launcher. Element rows are not a model to copy: they take their label from the tier's
+`telemetry_latest_state`, and a launch can arrive before its launcher's first row.
+
+Close when a launch takes its launcher's declared label under the same failed-lookup rule as `declared-label.yaml`
+(ADR-0050 amendment 2026-11-04), with a test on the real binary.
+
+**2. Loss: custom-mode handlers commit past a store outage. Measured.** Custom mode in `openddil-projector`
+`src/main.py` catches every exception from a handler, logs `custom handler ... raised`, counts a decode error and
+returns, and the offset commits. It cannot tell a bad record from a store that is down. Measured on a test lab on
+2026-11-03: a Fire planted during a tier store outage gave one log line, effector group lag 0, and no row. Upstream tiers
+write theirs, so the loss is that tier's table. `effector_launch`, `munition_track` and `asset_element_telemetry` take
+this path. Element current state heals on the next snapshot, by code, so only mid-outage transitions are skipped; a Fire
+does not come again. A Detonation on `munition_track` is read from code, not planted.
+
+During an outage, lag 0 on these groups means skipped, not healthy.
+
+This path never reaches the retry loops, so the overflow fix above (`openddil-projector` 9647105) neither causes nor
+closes it. It waits because a change here alters the code that fix was soaked on. It predates the roll that carries that
+fix, which does not make it worse.
+
+Close when a connection error in custom mode retries as the other modes do while a bad record still does not block its
+partition, with a test that drops the store under a Fire and sees the row arrive after it returns.
+
+## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
+
+**Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
+
+**The same run answers the backlog.** Intake resumes at the group offset; there is no replay. First position at or past it on all 9 held keys, about 378 records per key never handled, and a planted Fire nobody had handled was never counted. So waiting for handlers to drain saves the backlog and does not save the counts.
+
+**Not shown:** a backlog in the shape a slow handler leaves, rather than a hold; in-flight journals at the wipe; `cm-events`.
+
+**A real defect for a customer, decided 2026-11-04: ledger counts belong in the store, not only in Restate state.** A roll on a lab with one launcher, an empty count and a last launch days old goes ahead with the wipe and loses nothing; that is the reason for that roll, not for this design.
+
+Close when a count survives an upgrade, from the store.
+
+## OPEN 2026-11-04 — a file row added after a declaration wins through a restart in a store outage
+
+**Half measured.** With a failed lookup and no answer, `dynamic-mappings/sim-dis-mapping.yaml` keeps only the file's
+`assets` row, by design (ADR-0050 amendment 2026-11-04). The declare path refuses a declaration for an id the file already
+labels, so the two disagree only if a row is added to the file afterwards. A test lab measured the file row winning on a
+restart in an outage, with the row and the declaration set up directly. A row added after a real declaration has not been
+run.
+
+Close when a file row that contradicts a declaration is refused or reported at load, or the window is decided acceptable
+and written where an operator would read it.
 
 ## OPEN 2026-11-03 — a projector's health must reflect its workers
 
@@ -143,25 +181,6 @@ Empty after the consumer's poll interval, and it recovers on its own.
 Close when a worker that ends unexpectedly ends the process, so the pod restarts, or when a liveness probe reads
 worker state the way `cmService.stallProbe` and `logisticsFusion.stallProbe` read theirs, with a test that kills a
 worker and sees the signal fail.
-
-## OPEN 2026-11-03 — a projector's custom-mode handlers commit past a store outage
-
-**A finding, measured, and a decision: fix after the walk.** Custom mode in `openddil-projector` `src/main.py` catches
-every exception from a handler, logs `custom handler ... raised`, counts a decode error and returns, and the offset
-commits. It cannot tell a bad record from a store that is down. Measured on a test lab on 2026-11-03: a Fire planted
-during a tier store outage gave one log line, effector group lag 0, and no row. Upstream tiers write theirs, so the loss
-is that tier's table. `effector_launch`, `munition_track` and `asset_element_telemetry` take this path. Element current
-state heals on the next snapshot, by code, so only mid-outage transitions are skipped; a Fire does not come again. A
-Detonation on `munition_track` is read from code, not planted.
-
-During an outage, lag 0 on these groups means skipped, not healthy.
-
-This path never reaches the retry loops, so the overflow fix above (`openddil-projector` 9647105) neither causes nor
-closes it. It waits because a change here alters the code that fix was soaked on. It predates the roll that carries that
-fix, which does not make it worse, and that roll carries it as a named risk.
-
-Close when a connection error in custom mode retries as the other modes do while a bad record still does not block its
-partition, with a test that drops the store under a Fire and sees the row arrive after it returns.
 
 ## CLOSED 2026-10-30 (opened 2026-10-30) — lab2 pins cm-service by digest after the roll that measures the re-seed fix
 
