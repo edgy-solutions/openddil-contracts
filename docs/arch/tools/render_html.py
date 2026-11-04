@@ -674,7 +674,7 @@ nav.views ul{columns:2 280px;padding-left:1.2em}
   .page{break-before:page}
   .page:first-of-type{break-before:auto}
   .scroll{overflow:visible}
-  table{font-size:9pt;width:100%}
+  table{font-size:8pt;width:100%}
   thead th{background:none;color:inherit;border-bottom:2px solid var(--head)}
   tbody tr:nth-child(even)>*,tbody th,.gridtable td:has(.filled){background:none}
   .badge,.phase-measured,.phase-built-unmeasured,.phase-accepted-design,.phase-proposed,.phase-row{background:none;color:inherit;padding:0;border-radius:0;font-weight:600}

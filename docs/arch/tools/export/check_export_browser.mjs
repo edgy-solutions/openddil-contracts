@@ -377,9 +377,20 @@ try {
   const cap = await page.evaluate(() => {
     const t = document.querySelector("#view-St-Rm-P .scroll table");
     const s = t && t.closest(".scroll");
-    return s ? [t.rows[0].cells.length, s.scrollWidth, s.clientWidth] : null;
+    if (!s) return null;
+    const c = document.createElement("span");
+    c.style.cssText = "display:inline-block;width:1ch";
+    t.rows[1].cells[0].appendChild(c);
+    const ch = c.getBoundingClientRect().width;
+    c.remove();
+    return [t.rows[0].cells.length, s.scrollWidth, s.clientWidth, ch];
   });
-  check(cap !== null && cap[0] === 7 && cap[1] <= cap[2] + 1, "tables: the seven-column capability table does not scroll at 1280", String(cap));
+  // Minimums are in ch, so the fit depends on the reader's font. A wide default font fits at 1600 instead.
+  const capWide = cap !== null && cap[3] > 8;
+  if (capWide) await page.setViewport({ width: 1600, height: 900 });
+  const capFit = capWide ? await page.evaluate(() => { const s = document.querySelector("#view-St-Rm-P .scroll"); return s.scrollWidth <= s.clientWidth + 1; }) : cap !== null && cap[1] <= cap[2] + 1;
+  if (capWide) await page.setViewport({ width: 1280, height: 900 });
+  check(cap !== null && cap[0] === 7 && capFit, `tables: the seven-column capability table does not scroll at ${capWide ? 1600 : 1280} (ch ${cap && cap[3].toFixed(2)} px)`, String(cap));
   await go("#view-Rs-Cn");
   const nine = await page.evaluate(() => {
     const t = [...document.querySelectorAll("#view-Rs-Cn table")].find((x) => x.rows[0] && x.rows[0].cells.length === 9);
@@ -468,12 +479,22 @@ try {
       lanes: ls.length, laneBad: ls.filter((r) => getComputedStyle(r.cells[0]).borderTopWidth !== "2px").length,
       wide: wide.length };
   `);
+  const wideFont = await page.addStyleTag({ content: 'body,table,th,td{font-family:Verdana,"DejaVu Sans"!important}' });
+  const pr3 = await page.evaluate(() => {
+    const open = [...document.querySelectorAll("details")].map((d) => [d, d.open]);
+    open.forEach(([d]) => { d.open = true; });
+    const over = [...document.querySelectorAll("table")].filter((t) => t.scrollWidth > t.parentElement.clientWidth + 1).length;
+    open.forEach(([d, was]) => { d.open = was; });
+    return over;
+  });
+  await wideFont.evaluate((e) => e.remove());
   await page.emulateMediaType("screen");
   await page.setViewport({ width: 1280, height: 900 });
   check(pr2.texts === screenBadges && pr2.badgeClear === 0, "print: badges lose their fill and keep their words", `${pr2.badgeClear} filled`);
   check(pr2.headBad === 0, "print: thead th has no fill and no white text", String(pr2.headBad));
   check(pr2.lanes > 0 && pr2.laneBad === 0, "print: lane rules are still 2px", `${pr2.lanes} ${pr2.laneBad}`);
   check(pr2.wide === 0, "print: no table is wider than its parent at 980", String(pr2.wide));
+  check(pr3 === 0, "print: no table is wider than its parent at 980 under a wide font", String(pr3));
   const boxes = [...pdf.toString("latin1").matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
   check(boxes.length >= 19 && boxes.every(([w, h]) => w > h), "print: the PDF's pages are landscape", `${boxes.length} boxes, first ${boxes[0]}`);
 
