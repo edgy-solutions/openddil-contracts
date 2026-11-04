@@ -123,7 +123,7 @@ python docs/arch/tools/render_html.py --out out/openddil-architecture.html \
 
 It needs Node 22, Chrome (`PUPPETEER_EXECUTABLE_PATH`) and `markdown-it-py==4.0.0`. All of `--chart`, `--values` and `--release` are required, so there is no partial export. A diagram that does not draw fails the build and names the view.
 
-Check it with `check_export.py --export FILE --barred FILE`: the view count equals `check_views.py`'s, no barred value is in the file, every page carries its provenance, nothing refers to the network, the file is under 16 MB, no link is dead, every Mermaid fence became an SVG, and the exception table is there. `node tools/export/check_export_browser.mjs FILE --shots DIR` loads it offline and checks the toggle, the search, the print view and the phone width.
+Check it with `check_export.py --export FILE --barred FILE`: the view count equals `check_views.py`'s, no barred value is in the file, every page carries its provenance, nothing refers to the network, the file is under 16 MB, no link is dead, every Mermaid fence became an SVG, and the exception table is there. `node tools/export/check_export_browser.mjs FILE --shots DIR` loads it offline and checks the toggle, the search, the print view and the phone width, and it fails on any word wrapped mid-word in the first three columns of a table.
 
 CI builds the export from the public twin, checks it and attaches it to the check-views run as the `architecture-export` artifact. The file is not committed. CI runs the check on the public sample list, so a green check is not evidence that any private scan ran.
 

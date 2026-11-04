@@ -235,7 +235,7 @@ try {
   const gridsShown = await page.evaluate(() => [...document.querySelectorAll(".grid")].filter((e) => getComputedStyle(e).display !== "none").length);
   check(gridsShown === 1, "print: only the current profile's grid is shown", String(gridsShown));
   await shot("print-view.png");
-  const pdf = Buffer.from(await page.pdf({ format: "A4", printBackground: true }));
+  const pdf = Buffer.from(await page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true }));
   const count = (pdf.toString("latin1").match(/\/Type\s*\/Page(?![A-Za-z])/g) || []).length;
   check(count >= 19, "print: the PDF has at least 19 pages", String(count));
   const openAtPrint = await page.evaluate(() => window.__printOpen);
@@ -243,6 +243,239 @@ try {
   await page.emulateMediaType("screen");
   const restored = await page.evaluate(() => [...document.querySelectorAll("details")].every((d) => !d.open));
   check(restored, "print: details are restored afterwards");
+
+  // --- table styling ---
+  // Words: measure every whitespace-delimited token in the visible tables; wrapped if its last character sits
+  // below the bottom of its first. Details are opened for the measure and restored.
+  const measure = (firstCol, lastCol) =>
+    page.evaluate((c0, c1) => {
+      const dets = [...document.querySelectorAll("details")];
+      const was = dets.map((d) => d.open);
+      dets.forEach((d) => { d.open = true; });
+      const out = { tokens: 0, wrapped: 0, unmeasured: 0, fails: [] };
+      const tables = [...document.querySelectorAll("table")].filter((t) => t.getClientRects().length > 0);
+      for (const t of tables) {
+        const sec = t.closest("section,.grid");
+        const where = sec ? (sec.dataset.view || sec.id || "front") : "?";
+        for (const tr of t.querySelectorAll("tr")) {
+          const cells = [...tr.children].filter((c) => c.tagName === "TD" || c.tagName === "TH");
+          for (let ci = c0; ci < Math.min(cells.length, c1); ci++) {
+            const w = document.createTreeWalker(cells[ci], NodeFilter.SHOW_TEXT);
+            let cur = null;
+            const end = () => {
+              if (!cur) return;
+              const rect = (n, o) => {
+                const r = document.createRange();
+                r.setStart(n, o);
+                r.setEnd(n, o + 1);
+                return r.getClientRects()[0];
+              };
+              const a = rect(cur.fn, cur.fo);
+              const b = rect(cur.ln, cur.lo);
+              if (!a || !b) out.unmeasured++;
+              else {
+                out.tokens++;
+                if (b.top >= a.bottom - 2) {
+                  out.wrapped++;
+                  if (out.fails.length < 5) out.fails.push(`${where} col ${ci + 1} "${cur.text.slice(0, 30)}"`);
+                }
+              }
+              cur = null;
+            };
+            for (let n = w.nextNode(); n; n = w.nextNode()) {
+              const s = n.nodeValue;
+              for (let i = 0; i < s.length; i++) {
+                if (/\s/.test(s[i])) end();
+                else if (!cur) cur = { fn: n, fo: i, ln: n, lo: i, text: s[i] };
+                else { cur.ln = n; cur.lo = i; cur.text += s[i]; }
+              }
+            }
+            end();
+          }
+        }
+      }
+      dets.forEach((d, i) => { d.open = was[i]; });
+      return out;
+    }, firstCol, lastCol);
+  const sweep = async (firstCol, lastCol, profiles, pagesAtOnce) => {
+    const tot = { tokens: 0, wrapped: 0, unmeasured: 0, fails: [] };
+    const add = (r, tag) => {
+      tot.tokens += r.tokens;
+      tot.wrapped += r.wrapped;
+      tot.unmeasured += r.unmeasured;
+      for (const f of r.fails) if (tot.fails.length < 5) tot.fails.push(`${f} ${tag}`);
+    };
+    for (const p of profiles) {
+      await go("#front");
+      if (!pagesAtOnce) await click(p);
+      if (pagesAtOnce) add(await measure(firstCol, lastCol), `${p} ${pagesAtOnce}`);
+      else {
+        const vw = page.viewport().width;
+        for (const v of ["front", ...views.map((x) => `view-${x}`)]) {
+          await go(`#${v}`);
+          add(await measure(firstCol, lastCol), `${p} ${vw}px`);
+        }
+      }
+    }
+    await go("#front");
+    if (!pagesAtOnce) await click("uaf");
+    return tot;
+  };
+  const midWord = { tokens: 0, wrapped: 0, unmeasured: 0, fails: [] };
+  const fold = (r) => {
+    midWord.tokens += r.tokens;
+    midWord.wrapped += r.wrapped;
+    midWord.unmeasured += r.unmeasured;
+    midWord.fails.push(...r.fails);
+  };
+  const info = [];
+  fold(await sweep(0, 3, PROFILES));
+  info.push(["screen 1280", await sweep(3, 99, PROFILES)]);
+  await page.setViewport({ width: 390, height: 800 });
+  fold(await sweep(0, 3, PROFILES));
+  info.push(["screen 390", await sweep(3, 99, PROFILES)]);
+  await page.setViewport({ width: 980, height: 700 });
+  await page.emulateMediaType("print");
+  fold(await sweep(0, 3, ["uaf"], "print 980"));
+  info.push(["print 980", await sweep(3, 99, ["uaf"], "print 980")]);
+  await page.emulateMediaType("screen");
+  await page.setViewport({ width: 1280, height: 900 });
+  check(midWord.wrapped === 0 && midWord.unmeasured === 0 && midWord.tokens >= 1000,
+    `mid-word: no word wraps in the first three columns (${midWord.tokens} tokens, ${midWord.wrapped} wrapped, ${midWord.unmeasured} unmeasured)`,
+    `${midWord.tokens} tokens, ${midWord.wrapped} wrapped, ${midWord.unmeasured} unmeasured; first: ${midWord.fails.slice(0, 5).join("; ")}`);
+  for (const [tag, r] of info) console.log(`info: columns 4 and later, ${tag}: ${r.tokens} tokens, ${r.wrapped} wrapped, ${r.unmeasured} unmeasured`);
+
+  // Styling, by computed style.
+  const lum = `
+    const rgb = (s) => (s.match(/[\\d.]+/g) || []).slice(0, 3).map(Number);
+    const lin = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    const L = (c) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+    const contrast = (a, b) => { const x = L(rgb(a)), y = L(rgb(b)); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  `;
+  const inPage = (body, ...args) => page.evaluate(new Function("...a", `${lum}; return (async (...a) => { ${body} })(...a);`), ...args);
+  const TRANSPARENT = "rgba(0, 0, 0, 0)";
+
+  await page.setViewport({ width: 1600, height: 900 });
+  await go("#view-Op-Tx");
+  const full = await page.evaluate(() => {
+    const m = document.querySelector("main");
+    const cs = getComputedStyle(m);
+    const inner = m.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const t = document.querySelector("#view-Op-Tx .scroll table");
+    return [inner, t.getBoundingClientRect().width];
+  });
+  await page.setViewport({ width: 1280, height: 900 });
+  check(full[0] > 1100 && full[1] >= 0.95 * full[0], "tables: a view table is at least 95% of main, and main is wider than 1100 at 1600", full.join(" "));
+
+  const mins = await page.evaluate(() => {
+    const ths = [...document.querySelectorAll("th[style*=min-width]")];
+    return [new Set(ths.map((t) => t.closest("table"))).size, ths.filter((t) => { const v = getComputedStyle(t).minWidth; return v === "0px" || v === "" || v === "auto"; }).length];
+  });
+  check(mins[0] >= 30 && mins[1] === 0, "tables: min-width headers on at least 30 tables, none computing to 0", mins.join(" "));
+
+  await go("#view-St-Rm-P");
+  const cap = await page.evaluate(() => {
+    const t = document.querySelector("#view-St-Rm-P .scroll table");
+    const s = t && t.closest(".scroll");
+    return s ? [t.rows[0].cells.length, s.scrollWidth, s.clientWidth] : null;
+  });
+  check(cap !== null && cap[0] === 7 && cap[1] <= cap[2] + 1, "tables: the seven-column capability table does not scroll at 1280", String(cap));
+  await go("#view-Rs-Cn");
+  const nine = await page.evaluate(() => {
+    const t = [...document.querySelectorAll("#view-Rs-Cn table")].find((x) => x.rows[0] && x.rows[0].cells.length === 9);
+    if (!t) return null;
+    const s = t.closest(".scroll");
+    return [s.scrollWidth, s.clientWidth, document.documentElement.scrollWidth, document.documentElement.clientWidth];
+  });
+  check(nine !== null && nine[0] > nine[1] && nine[2] <= nine[3], "tables: the nine-column table scrolls inside .scroll while the page does not (known sideways scroll at 1280)", String(nine));
+
+  await go("#view-St-Rm-P");
+  const badges = await inPage(`
+    const bs = [...document.querySelectorAll("#view-St-Rm-P .badge")];
+    const names = ["measured", "built unmeasured", "accepted design", "proposed", "row"];
+    const cs = bs.map((b) => getComputedStyle(b));
+    return { n: bs.length, bgs: new Set(cs.map((c) => c.backgroundColor)).size,
+      names: bs.every((b) => names.includes(b.textContent)),
+      minC: Math.min(...cs.map((c) => contrast(c.color, c.backgroundColor))) };
+  `);
+  check(badges.n === 30 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 30 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
+
+  const head = await inPage(`
+    const hs = [...document.querySelectorAll("#view-Op-Tx thead th")].map((h) => getComputedStyle(h));
+    return { n: hs.length, clear: hs.filter((c) => c.backgroundColor === "${TRANSPARENT}").length,
+      minC: Math.min(...hs.map((c) => contrast(c.color, c.backgroundColor))) };
+  `);
+  check(head.n > 0 && head.clear === 0 && head.minC >= 4.5, "header: thead th has a background and contrast at least 4.5", JSON.stringify(head));
+
+  const zebra = await page.evaluate(() => {
+    const t = [...document.querySelectorAll("#view-Op-Tx table, #view-Rs-Cn table")].find((x) => x.tBodies[0] && x.tBodies[0].rows.length >= 4);
+    if (!t) return null;
+    const r = t.tBodies[0].rows;
+    return [getComputedStyle(r[0].cells[1] || r[0].cells[0]).backgroundColor, getComputedStyle(r[1].cells[1] || r[1].cells[0]).backgroundColor];
+  });
+  check(zebra !== null && zebra[0] !== zebra[1], "zebra: rows 1 and 2 of a table differ in background", String(zebra));
+
+  const lanes = await page.evaluate(() => {
+    const r = [...document.querySelectorAll("#view-St-Rm-P tr.lane-start")];
+    return [r.length, r.filter((x) => getComputedStyle(x.cells[0]).borderTopWidth !== "2px").length];
+  });
+  check(lanes[0] === 9 && lanes[1] === 0, "lane rules: 9 lane starts in the roadmap, each a 2px top rule", lanes.join(" "));
+
+  const viewHead = await page.evaluate(() => getComputedStyle(document.querySelector("#view-Op-Tx thead th")).backgroundColor);
+  const filledBg = await page.evaluate(() => {
+    const p = document.createElement("i");
+    p.style.background = "var(--filled)";
+    document.body.appendChild(p);
+    const c = getComputedStyle(p).backgroundColor;
+    p.remove();
+    return c;
+  });
+  await go("#front");
+  const gridRes = [];
+  for (const p of PROFILES) {
+    await click(p);
+    gridRes.push(await page.evaluate((q, fb, vh) => {
+      const g = document.querySelector(`#grid-${q}`);
+      const bg = (e) => getComputedStyle(e).backgroundColor;
+      const fcells = [...g.querySelectorAll(".filled")].map((e) => e.closest("td"));
+      const plain = [...g.querySelectorAll(".gridtable tbody td")].filter((c) => !c.querySelector(".filled") && !c.classList.contains("filled"));
+      const heads = [...g.querySelectorAll(".gridtable thead th")];
+      const rows = [...g.querySelectorAll(".gridtable tbody tr")];
+      return {
+        head: heads.every((h) => bg(h) === vh),
+        filled: fcells.length > 0 && fcells.every((c) => bg(c) === fb),
+        plain: plain.length > 0 && plain.every((c) => bg(c) !== fb),
+        rules: rows.length > 0 && rows.every((r) => [...r.children].every((c) => getComputedStyle(c).borderTopWidth === "2px")),
+      };
+    }, p, filledBg, viewHead));
+  }
+  await click("uaf");
+  check(gridRes.every((g) => g.head && g.filled && g.plain && g.rules), "grid: header matches a view table, filled cells are --filled and others are not, 2px row rules, in every profile", JSON.stringify(gridRes));
+
+  // Print emulation, all pages at once.
+  await go("#view-St-Rm-P");
+  const screenBadges = await page.evaluate(() => [...document.querySelectorAll(".badge")].map((b) => b.textContent).join("|"));
+  await page.setViewport({ width: 980, height: 700 });
+  await page.emulateMediaType("print");
+  const pr2 = await inPage(`
+    const bs = [...document.querySelectorAll(".badge")];
+    const hs = [...document.querySelectorAll("thead th")].map((h) => getComputedStyle(h));
+    const ls = [...document.querySelectorAll("tr.lane-start")];
+    const wide = [...document.querySelectorAll("table")].filter((t) => t.getClientRects().length > 0 && t.scrollWidth > t.parentElement.clientWidth + 1);
+    return { texts: bs.map((b) => b.textContent).join("|"),
+      badgeClear: bs.filter((b) => getComputedStyle(b).backgroundColor !== "${TRANSPARENT}").length,
+      headBad: hs.filter((c) => c.backgroundColor !== "${TRANSPARENT}" || c.color === "rgb(255, 255, 255)").length,
+      lanes: ls.length, laneBad: ls.filter((r) => getComputedStyle(r.cells[0]).borderTopWidth !== "2px").length,
+      wide: wide.length };
+  `);
+  await page.emulateMediaType("screen");
+  await page.setViewport({ width: 1280, height: 900 });
+  check(pr2.texts === screenBadges && pr2.badgeClear === 0, "print: badges lose their fill and keep their words", `${pr2.badgeClear} filled`);
+  check(pr2.headBad === 0, "print: thead th has no fill and no white text", String(pr2.headBad));
+  check(pr2.lanes > 0 && pr2.laneBad === 0, "print: lane rules are still 2px", `${pr2.lanes} ${pr2.laneBad}`);
+  check(pr2.wide === 0, "print: no table is wider than its parent at 980", String(pr2.wide));
+  const boxes = [...pdf.toString("latin1").matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
+  check(boxes.length >= 19 && boxes.every(([w, h]) => w > h), "print: the PDF's pages are landscape", `${boxes.length} boxes, first ${boxes[0]}`);
 
   check(badRequests.length === 0, "no request but file: and data:", badRequests.slice(0, 3).join(" "));
   check(consoleErrors.length === 0, "no console error", consoleErrors.slice(0, 3).join(" | "));
