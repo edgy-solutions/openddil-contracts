@@ -208,9 +208,45 @@ class Perturbed(unittest.TestCase):
         self.expect("marks", "ADR-0043")
 
     def test_7_marks_design_only_flipped_to_built(self):
-        edit(self.root, "views/Op-If.md", "ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |",
+        edit(self.root, "views/Op-If.md", "ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |",
              "ADR-0051-failure-records-for-fracas.md) | Accepted | Built |")
-        self.expect("marks", "ADR-0051", "design only")
+        self.expect("marks", "ADR-0051", "as Design only", "not Built")
+
+    def test_7_marks_not_stated_on_a_design_record(self):
+        # The reader once read ADR- files only, so this row passed against a status line saying Nothing built.
+        edit(self.root, "views/Op-Cn.md", "DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |",
+             "DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |")
+        self.expect("marks", "Op-Cn", "DESIGN-2026-09-06-interface-contracts.md", "as Nothing built", "not Not stated")
+
+    def test_7_marks_copied_word_where_the_token_belongs(self):
+        edit(self.root, "views/Op-Cn.md", "DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |",
+             "DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |")
+        self.expect("marks", "Op-Cn", "must say Status line, not Nothing built")
+
+    def test_7_marks_token_where_the_status_fixes_nothing(self):
+        edit(self.root, "views/Op-If.md", "ADR-0047-asset-id-is-opaque.md) | Accepted | Not stated |",
+             "ADR-0047-asset-id-is-opaque.md) | Accepted | Status line |")
+        self.expect("marks", "Op-If", "no record it cites fixes the evidence")
+
+    def test_7_marks_token_with_no_record(self):
+        edit(self.root, "views/Am-If.md", "(../../../ontology/) | Generated | Generated |",
+             "(../../../ontology/) | Generated | Status line |")
+        self.expect("marks", "Am-If", "cites no record")
+
+    def test_7_marks_cited_records_disagree(self):
+        edit(self.root, "../../decisions/ADR-0042-intent-custody-retention-and-multi-tier-reconciliation.md",
+             "Nothing built, and nothing here", "Design only, and nothing here")
+        self.expect("marks", "St-Tx", "OfflineIntentReconciliation", "disagree")
+
+    def test_7_marks_a_status_change_reaches_every_citing_row(self):
+        edit(self.root, "../../decisions/DESIGN-2026-09-06-interface-contracts.md",
+             "PLAN ONLY. Nothing built.", "Approved.")
+        rc, out, err = run(self.root)
+        self.assertEqual(rc, 1, out + err)
+        rows = [l for l in err.splitlines() if l.startswith("FAIL: marks:") and "no record it cites" in l]
+        views = sorted({l.split(":")[2].strip() for l in rows})
+        self.assertEqual(len(rows), 11, err)
+        self.assertEqual(views, ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Sm-Ov", "Sv-Cn"], err)
 
     def test_7_marks_accepted_flipped_to_proposed(self):
         edit(self.root, "views/Op-If.md", "ADR-0047-asset-id-is-opaque.md) | Accepted |",

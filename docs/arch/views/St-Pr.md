@@ -35,8 +35,8 @@ When the system of record cannot be reached, the intent queues and is shown as u
 
 | Claim | Source | Decision | Evidence |
 |---|---|---|---|
-| The correlation layer, and readiness in the intersection | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Nothing built |
-| The three commitments | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Nothing built |
-| The chain, and the procedure as its middle | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Nothing built |
-| The intent queues when the system of record is unreachable | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Nothing built |
+| The correlation layer, and readiness in the intersection | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
+| The three commitments | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
+| The chain, and the procedure as its middle | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
+| The intent queues when the system of record is unreachable | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Status line |
 | The course-of-action fence the third commitment argues for | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |

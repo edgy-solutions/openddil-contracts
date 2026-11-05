@@ -170,6 +170,11 @@ class RealTree(Base):
             self.assertRegex(t, r"Unfilled slots in this output: \d+\.")
         self.assertFalse((self.out["uaf"] / "NOT-EXPORTED.md").exists())
 
+    def test_no_status_line_token_is_left(self):
+        for p in ("uaf", "dodaf202", "naf4"):
+            for f in self.out[p].glob("*.md"):
+                self.assertNotIn("| Status line |", read(self.out[p], f.name), f"{p}/{f.name}")
+
     def test_every_relative_link_resolves(self):
         checked = 0
         for p in ("uaf", "dodaf202", "naf4"):
@@ -305,6 +310,42 @@ class TempTree(unittest.TestCase):
         rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
         self.assertIn("NoSuchPackage", err)
+
+    def design_rows(self, d):
+        """{view: [Evidence of each Sources row citing the interface contracts design]}."""
+        got = {}
+        for f in sorted(Path(d).glob("*.md")):
+            for line in read(d, f.name).split("\n"):
+                if "DESIGN-2026-09-06-interface-contracts.md)" in line and line.count("|") == 5:
+                    got.setdefault(f.stem, []).append(line.strip().strip("|").split("|")[3].strip())
+        return got
+
+    def test_a_status_line_change_moves_every_citing_view_together(self):
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "before")
+        self.assertEqual(rc, 0, err)
+        before = self.design_rows(self.tmp / "before")
+        views = ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Sm-Ov", "Sv-Cn"]
+        self.assertEqual(sorted(before), views)
+        self.assertEqual({v for vs in before.values() for v in vs}, {"Nothing built"})
+        d = self.tmp / "decisions" / "DESIGN-2026-09-06-interface-contracts.md"
+        text = d.read_text(encoding="utf-8")
+        self.assertIn("PLAN ONLY. Nothing built.", text)
+        d.write_text(text.replace("PLAN ONLY. Nothing built.", "Design only."), encoding="utf-8", newline="\n")
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "after")
+        self.assertEqual(rc, 0, err)
+        after = self.design_rows(self.tmp / "after")
+        self.assertEqual(sorted(after), views)
+        self.assertEqual({k: len(v) for k, v in after.items()}, {k: len(v) for k, v in before.items()})
+        self.assertEqual({v for vs in after.values() for v in vs}, {"Design only"})
+
+    def test_a_status_line_that_fixes_nothing_under_a_token_is_exit_2(self):
+        d = self.tmp / "decisions" / "DESIGN-2026-09-06-interface-contracts.md"
+        text = d.read_text(encoding="utf-8")
+        d.write_text(text.replace("PLAN ONLY. Nothing built.", "Approved."), encoding="utf-8", newline="\n")
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o")
+        self.assertEqual(rc, 2, err)
+        self.assertIn("no record it cites fixes the evidence", err)
+        self.assertFalse((self.tmp / "o").exists())
 
     def test_unused_slot_value_does_not_appear(self):
         s = self.arch / "slots.yaml"

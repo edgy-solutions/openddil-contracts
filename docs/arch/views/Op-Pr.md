@@ -54,12 +54,12 @@ flowchart LR
 | A2.3: effectors and in-flight munitions are tracks, never assets | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md), [ADR-0049](../../../decisions/ADR-0049-in-flight-munitions-tracked-by-munition-id.md) | Accepted | Not stated |
 | A3.1: orthogonal state axes; absence is not a factor | [ADR-0026](../../../decisions/ADR-0026-operational-state-orthogonal-axis-model.md) | Accepted | Not stated |
 | A3.2: two columns | [ADR-0044](../../../decisions/ADR-0044-lifecycle-two-columns-no-deletes.md) | Proposed | Built, unit-tested |
-| A3.3: detection as disagreement between two named records; detection never enforces | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Design only |
+| A3.3: detection as disagreement between two named records; detection never enforces | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
 | A4: aggregation at each tier | [ADR-0022](../../../decisions/ADR-0022-hierarchical-aggregation-is-the-architecture.md) | Accepted | Declared |
 | A5: reads are decided at the read path | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | A6.1, A7.1, A7.2: by kind, with the assembler building from the picture | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | A6.2, A6.3: same predicate, destination as subject | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
-| A7.3: work release refused on an interlock | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Design only |
-| A8: intent-based reconciliation | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Nothing built |
+| A7.3: work release refused on an interlock | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Status line |
+| A8: intent-based reconciliation | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Status line |
 
 The chart renders a release chain when a deployment enables it, so the status line of ADR-0043 may lag the chart. These views copy the ADR's words and do not re-verify them.

@@ -44,7 +44,7 @@ The capabilities are anticipated and not committed. These constraints are what i
 |---|---|---|---|
 | R1 | [ADR-0044](../../../decisions/ADR-0044-lifecycle-two-columns-no-deletes.md) | Proposed | Pending |
 | R2 | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Not stated |
-| R3 | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
+| R3 | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
 | R4, and C1 to C7 | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
 | R5 | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | H1 to H5 | [ADR-0033](../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Pending |

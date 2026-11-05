@@ -22,4 +22,4 @@ The child-to-parent row is the plain gap. Labels cross an uplink carried on the 
 | Destination registry | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
 | Intake checks | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | Bridge enforcement | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Fenced |
-| Revocation bounded by link; brokering parent | [ADR-0045](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Design only |
+| Revocation bounded by link; brokering parent | [ADR-0045](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Status line |

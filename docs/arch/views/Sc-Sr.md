@@ -38,5 +38,5 @@ The same predicate serves both subjects. A severed tier still decides and enforc
 | Read-path enforcement (slice 1) | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | Tier-bridge enforcement (slice 3) | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Fenced |
 | One predicate with the destination as a second subject | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
-| A tier realm with its own issuer and keys, credentials at the home tier | [ADR-0045](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Design only |
+| A tier realm with its own issuer and keys, credentials at the home tier | [ADR-0045](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Status line |
 | Classification is fenced from the gate's decision | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Fenced |

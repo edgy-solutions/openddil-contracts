@@ -36,8 +36,8 @@ Generated from a bundle by [`tools/data_exchange.py`](../tools/data_exchange.py)
 |---|---|---|---|
 | Ingress classes and definition files | [ADR-0030](../../../decisions/ADR-0030-two-stage-configurable-ingress.md) | Accepted | Not stated |
 | Uplink through a severable proxy; severing it really stops data | [ADR-0021](../../../decisions/ADR-0021-edge-hq-topology-is-load-bearing.md) | Accepted | Built |
-| Contract A | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |
-| Contract B | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |
+| Contract A | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
+| Contract B | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
 | Release and intake at the hub | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | Cursor-on-target bridge | [CoT bridge design](../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Design note | Not stated |
 | Member-to-member flows in the matrix | [ADR-0033](../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Declared |

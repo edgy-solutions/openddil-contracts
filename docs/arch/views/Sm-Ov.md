@@ -14,11 +14,11 @@ Three decisions shape every other view:
 
 | Claim | Source | Decision | Evidence |
 |---|---|---|---|
-| Correlate between the tactical and sustainment planes, keeping both provenances | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Nothing built |
+| Correlate between the tactical and sustainment planes, keeping both provenances | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
 | Hierarchical aggregation is the architecture | [ADR-0022](../../../decisions/ADR-0022-hierarchical-aggregation-is-the-architecture.md) | Accepted | Declared |
 | Unbounded, recursive tier hierarchy | [ADR-0033](../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Pending |
 | One severable hop per uplink | [ADR-0021](../../../decisions/ADR-0021-edge-hq-topology-is-load-bearing.md) | Accepted | Built |
-| Nothing crosses ungated; integration claims wait for a conformance suite | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |
+| Nothing crosses ungated; integration claims wait for a conformance suite | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
 | Operator surfaces state what they do not know | [ADR-0035](../../../decisions/ADR-0035-information-honesty-operator-surfaces.md) | Standing | Not stated |
 | Verification evidence is a deliverable | [ADR-0037](../../../decisions/ADR-0037-verification-evidence-is-a-deliverable.md) | Standing | Not stated |
 

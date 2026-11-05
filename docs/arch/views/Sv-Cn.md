@@ -70,9 +70,9 @@ The design's own reading of the read side, kept here so that nothing above reads
 
 | Claim | Source | Decision | Evidence |
 |---|---|---|---|
-| Contract A from open vocabulary; the thin connector translates and does not decide | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
-| Contract B read: extraction, the catalog shape and its planes, the conformance kit | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Partial |
-| Contract B write: intents, the degraded advisory queue | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
+| Contract A from open vocabulary; the thin connector translates and does not decide | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
+| Contract B read: extraction, the catalog shape and its planes, the conformance kit | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
+| Contract B write: intents, the degraded advisory queue | [Interface contracts](../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |
 | Release and intake by kind; the C2 path as one route of the gate | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
-| Both identifiers carried and never derived from each other | [ADR-0041](../../../decisions/ADR-0041-ontology-convergence-streaming-and-warehouse.md) | Accepted | Nothing built |
+| Both identifiers carried and never derived from each other | [ADR-0041](../../../decisions/ADR-0041-ontology-convergence-streaming-and-warehouse.md) | Accepted | Status line |
 | Gate and forwarder | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |

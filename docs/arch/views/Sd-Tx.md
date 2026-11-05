@@ -36,9 +36,9 @@ Editions the citations note could not verify: the JC3IEDM edition, the date of G
 | The status rows | [ADR-0044](../../../decisions/ADR-0044-lifecycle-two-columns-no-deletes.md) | Proposed | Not stated |
 | The label rows | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md), [CoT design](../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Accepted | Not stated |
 | The maintenance rows | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
-| The failure rows | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |
-| The hazard row | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Design only |
-| The detection rows | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Design only |
+| The failure rows | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |
+| The hazard row | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Status line |
+| The detection rows | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
 | The ISO 13374 reading | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
 | Arrival alignment | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | Munition signal alignment | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md) | Accepted | Not stated |

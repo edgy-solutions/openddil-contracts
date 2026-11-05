@@ -30,10 +30,10 @@ erDiagram
 | Originator nation and releasable-to on provenance | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | Operational state axes | [ADR-0026](../../../decisions/ADR-0026-operational-state-orthogonal-axis-model.md) | Accepted | Not stated |
 | Configuration items | [ADR-0009](../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
-| An episode is the failure record | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |
+| An episode is the failure record | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |
 | Declarations and fielding records | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | Effector and munition tracks | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md), [ADR-0049](../../../decisions/ADR-0049-in-flight-munitions-tracked-by-munition-id.md) | Accepted | Not stated |
-| Intents | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Nothing built |
+| Intents | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Status line |
 | Kinds and destinations | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | One decision line per record | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
-| Warehouse and streaming ontologies converge | [ADR-0041](../../../decisions/ADR-0041-ontology-convergence-streaming-and-warehouse.md) | Accepted | Nothing built |
+| Warehouse and streaming ontologies converge | [ADR-0041](../../../decisions/ADR-0041-ontology-convergence-streaming-and-warehouse.md) | Accepted | Status line |

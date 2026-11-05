@@ -70,6 +70,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from data_exchange import InputError, presentation  # noqa: E402
 import capability_phases  # noqa: E402
 import derived  # noqa: E402
+import marks  # noqa: E402
 from capability_phases import CheckError  # noqa: E402
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
@@ -401,6 +402,7 @@ class Renderer:
         for mk, home in derived.HOMES.items():
             if mk in body and vid != home:
                 raise InputError(f"view {vid}: the marker {mk} belongs only in {home}")
+        body = marks.fill(body, (ROOT / entry["file"]).parent, ROOT.parent.parent / "decisions", vid)
         body = inline_model(body, self.sysml, self.masked)
         body = rewrite_links(body, (ROOT / entry["file"]).parent, self.out_dir)
         body = fill_slots(body, self.slot_values)

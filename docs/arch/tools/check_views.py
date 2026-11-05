@@ -21,6 +21,9 @@ exits 2. A check that quietly does less is the bug it exists to catch.
 --allow-partial REASON runs the first fourteen and says so in its ok line.
 `slots` also fails on a `none yet` slot with no line in INVENTORY.md's slot
 table, and on a line there for a slot that has a source.
+`marks` reads the status line of every record in decisions/ that a Sources row
+cites (marks.py). Where the status line fixes the Evidence, the cell must say
+`Status line` and the render fills it in, so no two views read one record two ways.
 The vocabularies for
 the Decision and Evidence columns are read from README.md, so they live once.
 The mapping from UAF views to DoDAF and NAF outputs is read from APPENDIX-A.md,
@@ -43,6 +46,8 @@ import capability_floor
 import capability_phases
 import data_exchange
 import derived
+import marks
+from marks import adr_status
 from render_profile import mask_sysml, package_depths
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
@@ -159,33 +164,6 @@ def vocabulary(readme: str, head: str) -> set[str]:
         if line.strip().replace(" ", "") == head.replace(" ", ""):
             return {r[0] for r in table_after(lines, i)[1] if r and r[0]}
     return set()
-
-
-def adr_status(text: str) -> str | None:
-    lines = text.split("\n")
-    for i, line in enumerate(lines):
-        if re.match(r"^##\s+Status\s*$", line):
-            body = []
-            for nxt in lines[i + 1:]:
-                if nxt.startswith("#"):
-                    break
-                body.append(nxt)
-            s = "\n".join(body).strip()
-            return s or None
-    for line in lines:
-        m = re.match(r"^\**Status\**\s*[:\-]?\s*\**\s*(.+)$", line)
-        if m:
-            return m.group(1).strip()
-    for i, line in enumerate(lines):
-        if line.startswith("# "):
-            para = []
-            for nxt in lines[i + 1:]:
-                if nxt.strip():
-                    para.append(nxt.strip())
-                elif para:
-                    break
-            return " ".join(para) or None
-    return None
 
 
 # --- rules -------------------------------------------------------------------
@@ -365,6 +343,7 @@ def rule_sources_table(t: Tree) -> list[str]:
 
 def rule_marks(t: Tree) -> list[str]:
     fails = []
+    decisions = t.root.parent.parent / "decisions"
     for vid, text in t.view_text.items():
         got = sources_table(text)
         if got is None or got[0] != SOURCES_HEADER:
@@ -373,15 +352,17 @@ def rule_marks(t: Tree) -> list[str]:
             if len(r) != 4:
                 continue
             claim = r[0][:50]
-            m = LINK_RE.search(r[1])
-            if not m or not Path(m.group(1)).name.startswith("ADR-"):
+            records = marks.cited_records(r[1], t.root / "views", decisions)
+            if not records:
+                if r[3] == marks.STATUS_TOKEN:
+                    fails.append(f"marks: {vid}: row '{claim}' says {marks.STATUS_TOKEN} and cites no record")
                 continue
-            adr = (t.root / "views" / m.group(1).split("#", 1)[0]).resolve()
-            where = f"marks: {vid}: row '{claim}' cites {adr.name}"
-            if not adr.is_file():
+            first = records[0]
+            where = f"marks: {vid}: row '{claim}' cites {first.name}"
+            if not first.is_file():
                 fails.append(f"{where}, which does not exist")
                 continue
-            status = adr_status(adr.read_text(encoding="utf-8"))
+            status = adr_status(first.read_text(encoding="utf-8"))
             if not status:
                 fails.append(f"{where}, which states no status")
                 continue
@@ -390,9 +371,18 @@ def rule_marks(t: Tree) -> list[str]:
                 fails.append(f"{where}: row says Proposed, the record's status does not begin with proposed")
             if lead.startswith("proposed") and r[2] != "Proposed":
                 fails.append(f"{where}: the record's status begins with proposed, row says {r[2]}")
-            low = status.lower()
-            if ("nothing built" in low or "design only" in low) and r[3] not in ("Design only", "Nothing built"):
-                fails.append(f"{where}: the record says nothing built or design only, row Evidence says {r[3]}")
+            try:
+                value, each = marks.row_evidence(r[1], t.root / "views", decisions)
+            except marks.InputError as e:
+                fails.append(f"marks: {vid}: row '{claim}' {e}")
+                continue
+            fixing = ", ".join(n for n, v in each if v)
+            if value and r[3] != marks.STATUS_TOKEN:
+                fails.append(f"marks: {vid}: row '{claim}': the status line of {fixing} fixes the Evidence "
+                             f"as {value}, so the cell must say {marks.STATUS_TOKEN}, not {r[3]}")
+            if not value and r[3] == marks.STATUS_TOKEN:
+                fails.append(f"marks: {vid}: row '{claim}' says {marks.STATUS_TOKEN} and no record it cites "
+                             f"fixes the evidence")
     return fails
 
 
