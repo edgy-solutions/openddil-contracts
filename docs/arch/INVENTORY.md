@@ -105,7 +105,7 @@ Counts are from chart 0.1.161.
 
 ## Slots
 
-[`slots.yaml`](slots.yaml) lists every slot. Thirteen have no declared artefact and need a person to write them. Those are the facts a framework cannot know, and they are also what a deployment's architecture work would start from. Each line below names the declaration that would fill one of them, and the artefact it would live in. None of these exists yet.
+[`slots.yaml`](slots.yaml) lists every slot. Thirteen have no declared artefact and need a person to write them. Those are the facts a framework cannot know, and they are also what a deployment's architecture work would start from. Each line below names the declaration that would fill one of them, and the artefact it would live in. None of these exists yet. The export prints this table as its page "What your deployment declares to fill these views", with what each slot fills and the views that show it, so a change here changes that page.
 
 | Slot | Declaration that would fill it | Artefact |
 |---|---|---|

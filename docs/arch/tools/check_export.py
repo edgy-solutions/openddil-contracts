@@ -19,7 +19,8 @@ four parts and the pages agree), network (a Content-Security-Policy, and no
 src, import, link, frame, object, embed, remote url() or href that does not
 start with #), size (under 16,000,000 bytes), links (every # href has an id),
 diagrams (no Mermaid source left; one SVG per Mermaid fence in the views),
-exceptions (at least one details.exceptions).
+exceptions (at least one details.exceptions), declarations (one declarations
+page, listing the slots of INVENTORY.md's slot table, in its order).
 
 Exit codes: 0 ok, 1 a check failed, 2 bad input. Stdlib and PyYAML only.
 """
@@ -163,6 +164,20 @@ def check_exceptions(raw: str) -> list[str]:
     return [] if '<details class="exceptions"' in raw else ["exceptions: no details.exceptions in the export"]
 
 
+def check_declarations(raw: str, tree: check_views.Tree) -> list[str]:
+    pages = [body for pid, body in PAGE_RE.findall(raw) if pid == "declarations"]
+    if len(pages) != 1:
+        return [f"declarations: the export has {len(pages)} declarations pages, expected one"]
+    lines = check_views.outside_fences(tree.text(tree.root / "INVENTORY.md"))
+    at = [i for i, ln in enumerate(lines) if ln.strip() == check_views.SLOT_INVENTORY_HEADER]
+    want = [r[0].strip("` ") for r in check_views.table_after(lines, at[0])[1] if r] if len(at) == 1 else []
+    got = [plain(c) for c in re.findall(r"<tr>\s*<td[^>]*>(.*?)</td>", pages[0], re.S)]
+    if got != want:
+        return [f"declarations: the page lists {len(got)} slots, INVENTORY.md's slot table {len(want)}, "
+                f"or in another order"]
+    return []
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Check the HTML export of the architecture views.")
     ap.add_argument("--export", required=True)
@@ -185,7 +200,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_INPUT
     fails = (check_views_equal(raw, tree) + check_barred(raw, barred) + check_provenance(raw)
              + check_network(raw) + check_size(len(data)) + check_links(raw)
-             + check_diagrams(raw, tree) + check_exceptions(raw))
+             + check_diagrams(raw, tree) + check_exceptions(raw) + check_declarations(raw, tree))
     for f in fails:
         print(f"FAIL: {f}", file=sys.stderr)
     if fails:
