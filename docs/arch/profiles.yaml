@@ -23,6 +23,17 @@ data_exchange:
 
 export_titles:
   dodaf202:
+    AV-2: Integrated Dictionary
+    CV-1: Vision
+    CV-4: Capability Dependencies
+    OV-6a: Operational Rules Model
+    OV-6c: Event-Trace Description
+    SV-10a: Systems Rules Model
+    SV-10b: Systems State Transition Description
+    SV-10c: Systems Event-Trace Description
+    SvcV-3a: Systems-Services Matrix
+    SvcV-3b: Services-Services Matrix
+    SvcV-6: Services Resource Flow Matrix
     AV-1: Overview and Summary Information
     CV-2: Capability Taxonomy
     CV-3: Capability Phasing
@@ -43,6 +54,16 @@ export_titles:
     SV-6: Systems Resource Flow Matrix
     StdV-1: Standards Profile
   naf4:
+    A1: Meta-Data Definitions
+    C2: Enterprise Vision
+    C3: Capability Dependencies
+    L6: Logical Sequence
+    L8: Logical Constraints
+    P1: Resource Types
+    P5: Resource States
+    P6: Resource Sequence
+    P8: Resource Constraints
+    S3: Service Interfaces
     A8: Standards
     C1: Capability Taxonomy
     Cr: Capability Roadmap
@@ -67,10 +88,22 @@ views:
     file: views/Sm-Ov.md
     exports: {dodaf202: [AV-1]}
     no_target: {naf4: "Table 2:3 gives Summary & Overview no NAF 4.0 view."}
+  Am-If:
+    name: Information-Dictionary
+    file: views/Am-If.md
+    exports: {dodaf202: [AV-2], naf4: [A1]}
   St-Tx:
     name: Strategic-Taxonomy
     file: views/St-Tx.md
     exports: {dodaf202: [CV-2], naf4: [C1]}
+  St-Pr:
+    name: Strategic-Processes
+    file: views/St-Pr.md
+    exports: {dodaf202: [CV-1], naf4: [C2]}
+  St-Cn:
+    name: Strategic-Connectivity
+    file: views/St-Cn.md
+    exports: {dodaf202: [CV-4], naf4: [C3]}
   St-Rm-P:
     name: Strategic-Roadmap-Phasing
     file: views/St-Rm-P.md
@@ -95,10 +128,26 @@ views:
     name: Operational-States
     file: views/Op-St.md
     exports: {dodaf202: [OV-6b], naf4: [L5]}
+  Op-Sq:
+    name: Operational-Sequences
+    file: views/Op-Sq.md
+    exports: {dodaf202: [OV-6c], naf4: [L6]}
   Op-If:
     name: Operational-Information
     file: views/Op-If.md
     exports: {dodaf202: [DIV-2], naf4: [L7]}
+  Op-Ct:
+    name: Operational-Constraints
+    file: views/Op-Ct.md
+    exports: {dodaf202: [OV-6a], naf4: [L8]}
+  Sv-Cn:
+    name: Services-Connectivity
+    file: views/Sv-Cn.md
+    exports: {dodaf202: [SvcV-3a, SvcV-3b, SvcV-6], naf4: [S3]}
+  Rs-Tx:
+    name: Resources-Taxonomy
+    file: views/Rs-Tx.md
+    exports: {dodaf202: [SV-1, SV-2], naf4: [P1]}
   Rs-Sr:
     name: Resources-Structure
     file: views/Rs-Sr.md
@@ -111,10 +160,22 @@ views:
     name: Resources-Processes
     file: views/Rs-Pr.md
     exports: {dodaf202: [SV-4], naf4: [P4]}
+  Rs-St:
+    name: Resources-States
+    file: views/Rs-St.md
+    exports: {dodaf202: [SV-10b], naf4: [P5]}
+  Rs-Sq:
+    name: Resources-Sequences
+    file: views/Rs-Sq.md
+    exports: {dodaf202: [SV-10c], naf4: [P6]}
   Rs-If:
     name: Resources-Information
     file: views/Rs-If.md
     exports: {dodaf202: [DIV-3], naf4: [P7]}
+  Rs-Ct:
+    name: Resources-Constraints
+    file: views/Rs-Ct.md
+    exports: {dodaf202: [SV-10a], naf4: [P8]}
   Rs-Tr:
     name: Resources-Traceability
     file: views/Rs-Tr.md
