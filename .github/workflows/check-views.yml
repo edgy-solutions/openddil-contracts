@@ -1,7 +1,7 @@
 name: check-views
 
 # Runs the architecture view checks (docs/arch/tools/check_views.py): all
-# thirteen view rules, plus `quotes` (evidence quotes against the public sample
+# fourteen view rules, plus `quotes` (evidence quotes against the public sample
 # list) and `floor` (the chart's render against the capability record). Then a
 # canary run that breaks a copy of the record and proves both can fail.
 #
@@ -12,7 +12,8 @@ name: check-views
 # and attaches it as the architecture-export artifact. The export is not
 # committed anywhere.
 #
-# The floor reads a render of the chart, so the chart changing is a reason to
+# Am-If's table is built from ontology/, so an ontology change is a reason to
+# run too. The floor reads a render of the chart, so the chart changing is a reason to
 # run. openddil-helm sends chart-version-bumped when it does. The daily
 # schedule is a floor under that dispatch: a dropped or missed dispatch
 # still gets caught within a day.
@@ -25,11 +26,13 @@ on:
     paths:
       - 'docs/arch/**'
       - 'decisions/**'
+      - 'ontology/**'
       - '.github/workflows/check-views.yml'
   pull_request:
     paths:
       - 'docs/arch/**'
       - 'decisions/**'
+      - 'ontology/**'
       - '.github/workflows/check-views.yml'
   repository_dispatch:
     types: [chart-version-bumped]

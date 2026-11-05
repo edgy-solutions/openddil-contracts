@@ -13,11 +13,14 @@ Usage:
     python docs/arch/tools/check_views.py [--root docs/arch] --allow-partial REASON
 
 Rules: exports, appendix-a, view-files, slots, links, sources-table,
-marks, model, capabilities, trace, outputs, generated, phases, quotes, floor.
+marks, model, capabilities, trace, outputs, generated, phases, derived,
+quotes, floor.
 `quotes` and `floor` need the chart, its values, the release name, the
 readiness doc and the barred list, so a call that omits any of the five
 exits 2. A check that quietly does less is the bug it exists to catch.
---allow-partial REASON runs the first thirteen and says so in its ok line.
+--allow-partial REASON runs the first fourteen and says so in its ok line.
+`slots` also fails on a `none yet` slot with no line in INVENTORY.md's slot
+table, and on a line there for a slot that has a source.
 The vocabularies for
 the Decision and Evidence columns are read from README.md, so they live once.
 The mapping from UAF views to DoDAF and NAF outputs is read from APPENDIX-A.md,
@@ -39,14 +42,16 @@ import yaml
 import capability_floor
 import capability_phases
 import data_exchange
+import derived
 from render_profile import mask_sysml, package_depths
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
 RULES = ["exports", "appendix-a", "view-files", "slots", "links", "sources-table",
-         "marks", "model", "capabilities", "trace", "outputs", "generated", "phases", "quotes", "floor"]
+         "marks", "model", "capabilities", "trace", "outputs", "generated", "phases", "derived", "quotes", "floor"]
 APPENDIX_HEADER = "| View | Name | DoDAF 2.02 | NAF 4.0 | DNDAF |"
 APPENDIX_COLUMNS = {"dodaf202": 2, "naf4": 3}
 SOURCES_HEADER = "| Claim | Source | Decision | Evidence |"
+SLOT_INVENTORY_HEADER = "| Slot | Declaration that would fill it | Artefact |"
 GEN_MARKER = "<!-- generated: data-exchange -->"
 PHASES_MARKER = "<!-- generated: capability-phases -->"
 PHASES_HOME = "St-Rm-P"
@@ -294,6 +299,20 @@ def rule_slots(t: Tree) -> list[str]:
         for key in ("fills", "source"):
             if not entry.get(key):
                 fails.append(f"slots: {name} lacks '{key}' in slots.yaml")
+    inventory = t.text(t.root / "INVENTORY.md").split("\n")
+    at = [i for i, ln in enumerate(inventory) if ln.strip() == SLOT_INVENTORY_HEADER]
+    if len(at) != 1:
+        return fails + [f"slots: INVENTORY.md has {len(at)} slot tables, expected one"]
+    _, rows = table_after(inventory, at[0])
+    lined = {r[0].strip("` ") for r in rows if r}
+    for name in sorted(registry):
+        none_yet = str((registry[name] or {}).get("source") or "").startswith("none yet")
+        if none_yet and name not in lined:
+            fails.append(f"slots: {name} has no source and no line in INVENTORY.md saying what would fill it")
+        if not none_yet and name in lined:
+            fails.append(f"slots: {name} has a source in slots.yaml and still a line in INVENTORY.md's slot table")
+    for name in sorted(lined - set(registry)):
+        fails.append(f"slots: INVENTORY.md's slot table names {name}, which slots.yaml does not hold")
     return fails
 
 
@@ -518,6 +537,23 @@ def rule_phases(t: Tree) -> list[str]:
     return fails + [f"phases: {f}" for f in capability_phases.check_record(record, capabilities, decisions)]
 
 
+def rule_derived(t: Tree) -> list[str]:
+    """Each derived.py marker is in its own view once, and its table builds."""
+    fails = []
+    for mk, home in derived.HOMES.items():
+        where = {vid: text.count(mk) for vid, text in t.view_text.items() if mk in text}
+        if sum(where.values()) != 1 or home not in where:
+            fails.append(f"derived: {mk} appears {sum(where.values())} times, in "
+                         f"{', '.join(sorted(where)) or 'no view'}; expected once, in {home}")
+        try:
+            derived.build(mk, t.root, t.root / "capability-record.yaml", t.sysml, t.masked)
+        except capability_phases.CheckError as e:
+            fails += [f for f in str(e).splitlines() if f]
+        except data_exchange.InputError as e:
+            raise InputError(str(e))
+    return fails
+
+
 def rule_quotes(t: Tree, a: argparse.Namespace) -> list[str]:
     """The evidence the table prints, and the record's own text, carry no barred value."""
     try:
@@ -555,7 +591,8 @@ def rule_floor(t: Tree, a: argparse.Namespace) -> list[str]:
 
 
 CHECKS = [rule_exports, rule_appendix, rule_view_files, rule_slots, rule_links, rule_sources_table,
-          rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated, rule_phases]
+          rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated, rule_phases,
+          rule_derived]
 
 
 PARTIAL_FLAGS = [("--chart", "chart"), ("--values", "values"), ("--release", "release"),

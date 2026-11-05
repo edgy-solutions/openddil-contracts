@@ -29,10 +29,11 @@ def run(root, *extra):
 
 
 def copy_tree(dest: Path) -> Path:
-    """docs/arch and decisions under dest, same relative distance as in the repo."""
+    """docs/arch, decisions and ontology under dest, same relative distance as in the repo."""
     ignore = shutil.ignore_patterns("__pycache__", "out", "node_modules")
     shutil.copytree(ARCH, dest / "docs" / "arch", ignore=ignore)
     shutil.copytree(REPO / "decisions", dest / "decisions")
+    shutil.copytree(REPO / "ontology", dest / "ontology")
     return dest / "docs" / "arch"
 
 
@@ -47,7 +48,7 @@ class RealTree(unittest.TestCase):
     def test_real_tree_passes(self):
         rc, out, err = run(ARCH)
         self.assertEqual(rc, 0, err)
-        self.assertTrue(out.startswith("ok: 13 rules"), out)
+        self.assertTrue(out.startswith("ok: 14 rules"), out)
         self.assertIn("not run: quotes, floor (test)", out)
 
     def test_bare_invocation_is_bad_input_and_names_the_flags(self):
@@ -281,6 +282,34 @@ class Perturbed(unittest.TestCase):
     def test_13_phases_marker_missing(self):
         edit(self.root, "views/St-Rm-P.md", "<!-- generated: capability-phases -->", "")
         self.expect("phases", "0 times")
+
+    def test_14_derived_marker_missing(self):
+        edit(self.root, "views/Rs-Tx.md", "<!-- generated: resource-taxonomy -->", "")
+        self.expect("derived", "resource-taxonomy", "0 times", "expected once, in Rs-Tx")
+
+    def test_14_derived_marker_outside_its_view(self):
+        edit(self.root, "views/St-Cn.md", "<!-- generated: capability-dependencies -->", "")
+        p = self.root / "views" / "Op-Sq.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\n<!-- generated: capability-dependencies -->\n",
+                     encoding="utf-8", newline="\n")
+        self.expect("derived", "1 times, in Op-Sq", "expected once, in St-Cn")
+
+    def test_14_derived_table_cannot_build(self):
+        (self.root.parent.parent / "ontology" / "new_terms.yaml").write_text("terms: []\n", encoding="utf-8")
+        self.expect("derived", "ontology/new_terms.yaml has no dictionary row")
+
+    def test_4_slots_inventory_line_removed(self):
+        edit(self.root, "INVENTORY.md", "| `increment-dates` |", "| `not-a-slot-line` |")
+        self.expect("slots", "increment-dates has no source and no line",
+                    "names not-a-slot-line, which slots.yaml does not hold")
+
+    def test_4_slots_inventory_line_for_a_sourced_slot(self):
+        edit(self.root, "INVENTORY.md", "| `increment-dates` |", "| `tier-tree` | a | b |\n| `increment-dates` |")
+        self.expect("slots", "tier-tree has a source in slots.yaml and still a line")
+
+    def test_4_slots_inventory_table_missing(self):
+        edit(self.root, "INVENTORY.md", "| Slot | Declaration that would fill it | Artefact |", "| Slot | Fill | Artefact |")
+        self.expect("slots", "0 slot tables")
 
 
 if __name__ == "__main__":

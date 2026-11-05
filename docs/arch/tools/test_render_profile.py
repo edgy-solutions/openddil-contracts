@@ -264,6 +264,7 @@ class TempTree(unittest.TestCase):
         self.arch = self.tmp / "docs" / "arch"
         shutil.copytree(ARCH, self.arch, ignore=shutil.ignore_patterns("__pycache__", "out", "node_modules"))
         shutil.copytree(REPO / "decisions", self.tmp / "decisions")
+        shutil.copytree(REPO / "ontology", self.tmp / "ontology")
         self.tool = self.arch / "tools" / "render_profile.py"
 
     def strip_a_capability(self) -> Path:
