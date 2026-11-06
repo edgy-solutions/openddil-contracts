@@ -217,8 +217,8 @@ after a failed lookup. Both sit against this record's own summary of ADR-0029 §
   undeclared and may be declared, as an asset labelled only by a default may be today.
 - The 2026-11-04 amendment stands. A last known answer from a site declaration is a declared answer. "No stamp and
   no default" now reads "no stamp": the default is gone.
-- The file's `assets` row keeps its place. Whether it needs a named owner and date, as a site declaration does, is
-  not ruled here.
+- The file's `assets` row keeps its place, and carries an owner and a date, as a site declaration does. Without
+  them it is a default (ADR-0055 §1a).
 
 **Order: load before amend.** On each deployment:
 1. Write a site declaration for every default in use, stating the same answer.

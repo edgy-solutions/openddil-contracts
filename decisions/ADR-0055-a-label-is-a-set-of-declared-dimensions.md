@@ -171,6 +171,7 @@ A deployment declares each dimension it labels by. A declaration gives a name, o
 
 **Precedence: a per-asset declaration, then a site declaration, then nothing.**
 - Among per-asset sources, ADR-0050 §2.6's order holds: the file's `assets` row wins for an id already in the fleet.
+- **A per-asset row in the deployment file carries an owner and a date, or it is a default.** It is the strongest source in the order, so it carries the same two fields as a site declaration. Without them it is a default with a narrower scope, and it labels nothing.
 - Two site declarations at one tier that both cover a record and disagree give nothing for that record, and a named exception to both owners. No first-match or narrowest-scope rule picks between them.
 - Two that agree give the answer and cite both.
 
@@ -340,7 +341,7 @@ Each of these is a test to write when the record is accepted. None exists.
 - Nothing is measured. The row count of a split rollup grows with its classes and is measured on no fleet beyond the three-class case. The cost of recomputing admitted keys, and of a viewer's read filter changing when a new key appears, is unknown.
 - It does not settle aggregation sensitivity (ADR-0029:539-570). It only makes raising a label a decision with an owner.
 - It does not define a cryptographic binding.
-- The site declaration is named, not designed. It has no schema, and its intake is not specified beyond "through the declaration intake".
+- The site declaration is named, not designed. It has no schema, and its intake is not specified beyond "through the declaration intake". Its design is the first increment after acceptance: its schema, its intake path through ADR-0050's door, and the load-before-amend migration (§4 step 0) on the lab.
 - Whether today's stored values fit the vocabulary is unread. The read needs cluster access.
 - The STANAG concept names were checked against vendor documentation, not the standards' text.
 - It does not accredit anything (§7).
