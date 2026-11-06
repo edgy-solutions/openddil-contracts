@@ -5,6 +5,7 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
+- **It carries one ruling for Chris's signature (§1a).** Until it is signed, §1a is the recommendation, not the decision. The ADR-0050 amendment it implies is drafted in ADR-0050, unruled.
 
 ## Findings first
 
@@ -83,7 +84,7 @@ The other three stamp a nation the source did not give. They are six default row
 - FOLLOW-UPS.md:30 records that rows 1 and 3, on a deployment with declared assets, give the mislabel already seen once.
 - **ADR-0050 §2.6 permits a deployment default.** Its step 3 is one (ADR-0050:92). The 2026-11-04 amendment refuses a stamp or a default only when the lookup failed with no answer (ADR-0050:180).
 - ADR-0050 also summarises ADR-0029 §3 as "labels propagate, never default" (ADR-0050:5, :210). Its own step 3 contradicts that.
-- §1 below makes an undeclared dimension fail closed. It does not yet say whether a deployment default counts as a declaration.
+- §1a below recommends ruling that a deployment default is not a declaration. It is for Chris's signature.
 
 The projector copies the label as it receives it. With no nation it stores `[]`, not NULL (`openddil-projector/src/handlers/base.py:289-297`), and an aggregate stores no nation and a list (`:356-357`).
 
@@ -105,7 +106,7 @@ The projector copies the label as it receives it. With no nation it stores `[]`,
   - a derived column takes the maximum of its sources (`:35-36`);
   - an unlabelled source is most restrictive;
   - downgrades are recorded with level, reason and steward (`:48-49`).
-- But it then makes one downgrade automatic: "One downgrade is automatic", for an aggregation that drops identifying columns (`:50-51`). §3 below refuses that.
+- But it then makes one downgrade automatic: "One downgrade is automatic", for an aggregation that drops identifying columns (`:50-51`). §3 below refuses that, and §6 names it as an open alignment item.
 - Its levels are one ordered registry (`:92`), so it has only the hierarchical type.
 
 **6. The value format diverges.**
@@ -115,7 +116,7 @@ The projector copies the label as it receives it. With no nation it stores `[]`,
 - The SDK validator and iagent's trigger refuse a blank originator. Nothing checks the format of `releasable_to`.
 
 **7. What the inventory does not cover.**
-- The ingest's stamped nation (`stamped_nation`, openddil-sensor-ingest) is under another name, so the grep does not count it. The DIS mapping reads it into `originator_nation` (`openddil-demo/dynamic-mappings/sim-dis-mapping.yaml:80`).
+- The ingest's stamped nation (`stamped_nation`, openddil-sensor-ingest) is under another name, so the grep does not count it. The DIS mapping reads it into `originator_nation` (`openddil-demo/dynamic-mappings/sim-dis-mapping.yaml:80`). It comes from per-entity overrides and from rules matched on an entity's geofence, marking or DIS country code (`openddil-sensor-ingest/assign.py:102-145`, `:331-338`). §1a classifies it.
 - The policy engine's rules are not in the runtime repos.
 - A hit's role is a reading of its file, not a run.
 
@@ -138,18 +139,76 @@ A deployment declares each dimension it labels by. A declaration gives a name, o
 - A record with no value for a declared dimension is served to nobody. This is ADR-0029 §7's deny-unlabeled, generalised.
 - A record carrying a dimension the deployment does not declare is served to nobody, and the stamp that wrote it is a defect.
 
+**Values are validated at the stamp.**
+- Each dimension declares its vocabulary. For nation, that is ISO 3166-1 alpha-3, by the dimension's declaration, not by code.
+- A value outside the declared vocabulary is refused at the stamp, the same as an undeclared dimension.
+- The record is withheld, not dropped. It is kept and served to nobody, so it can be corrected. ADR-0050 withholds the same way.
+- The reason is Findings 6: three readers accept three formats for one field today.
+
 **The nation dimension keeps its author.** A permissive dimension may declare one author value. For nation, that value is `originator_nation`, and the audience is ADR-0029's effective audience, `{originator} ∪ releasable_to` (ADR-0029:1100-1106). The author value grants access only on records whose derivation preserved single authorship (ADR-0029:1086-1088).
+
+### 1a. A default is not a declaration (RULING FOR CHRIS'S SIGNATURE)
+
+**Recommended ruling.** A default is a label nobody stated about this record. It is not a declaration, and it labels nothing.
+
+**What it covers.**
+- Every row of Findings 3's default table.
+- The ingest stamp, which is three things. None of them carries an owner or a date today:
+  - per-entity overrides, which are per-asset statements held in configuration;
+  - rules matched on an entity's geofence, marking or DIS country code, which are standing statements about a class of entities;
+  - for a country rule, a mapping from the source's code to the nation vocabulary.
+- Each becomes a declaration of its kind, or it stops stamping.
+
+**A site declaration is a declaration.**
+- Where a deployment knows the answer for a class of records ("everything at this site is ATL unless declared otherwise"), it writes a **site declaration**: the scope, the dimension values, the owner and the date.
+- The scope is a site, or a rule over observed attributes such as a geofence, a marking or a country code.
+- It is stored as a record through the declaration intake (ADR-0050 §2).
+- Every stamp it gives cites its id.
+- A country-code mapping is an equivalence between schemes, declared per deployment with an owner (§6).
+- A site's own records, such as its spares, are covered by a site declaration whose scope is that site.
+
+**The stamp has two outcomes:** a declared answer, citing the declaration it came from, or nothing. Nothing means unlabelled, so withheld. A last known answer served through a store outage is a declared answer (ADR-0050, amendment of 2026-11-04).
+
+**Precedence: a per-asset declaration, then a site declaration, then nothing.**
+- Among per-asset sources, ADR-0050 §2.6's order holds: the file's `assets` row wins for an id already in the fleet.
+- Two site declarations at one tier that both cover a record and disagree give nothing for that record, and a named exception to both owners. No first-match or narrowest-scope rule picks between them.
+- Two that agree give the answer and cite both.
+
+**Two tiers, two answers.** Each tier stamps from the declarations it holds, with no coordination, so stamping works while severed. So two tiers can hold different site declarations that cover one asset: an asset that moved between sites, or two owners who disagree.
+- Each record keeps the label its stamp gave, and the declaration it cites. Neither is rewritten.
+- The tier that receives both, their common parent, detects the conflict: the same asset and dimension, under two different declarations with different values. It raises a named exception to both owners, as ADR-0042 does for cross-child conflicts (ADR-0042:220).
+- From detection on, that parent serves the asset's records under the high-water of the two answers (§3b). For nation, that is the intersection of the two audiences. If it is empty, nobody sees them. This raise is a standing rule of this record.
+- Only a per-asset declaration resolves the conflict, because it outranks both. No recency rule and no tier rank picks a winner.
+
+**What it changes.**
+- ADR-0050 §2.6 step 3. The amendment is drafted in ADR-0050, dated 2026-11-06 and unruled.
+- Each default row in Findings 3, and the ingest stamp, becomes a declared source or stops stamping.
+- ADR-0029 §3's "never default", as ADR-0050:5 summarises it, becomes true as written.
+- The order is load before amend (§4, step 0).
 
 ### 2. Labels compile to a `label_key` at stamping
 
 The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it to a `label_key`:
 - The key is a digest of the label's canonical form: the policy identifier, then each declared dimension in a declared order, with its values sorted.
 - The same label gives the same key at every tier, with no coordination. Two tiers that stamp independently while severed agree on the key.
-- The label body is stored once per key, in a label table at the tier, and travels with the first record that carries it.
+- **The label body rides on every record, always, beside its key.**
+  - A sender cannot know what a receiver holds across a sever, or after the receiver's store is wiped, so "the first record" is not something a sender can rely on.
+  - A later record that arrives first carries everything it needs, so a reorder costs nothing.
+- Each tier keeps a label table, one row per key. It is a cache: losing it costs a recompute, never data.
+- A receiver recomputes the key from the body. A key that does not match its body is refused at the stamp, like an undeclared dimension.
 
 **The PDP computes admitted keys per viewer.** For each viewer, the tier's decision point evaluates each distinct label against the viewer's asserted entitlements (ADR-0029 §5). It returns the set of keys the viewer is admitted to. Distinct labels are few next to records, so the decision runs per label, not per row. The set is recomputed when a policy bundle, a viewer's entitlements, or the set of known keys changes.
 
 **The PEP filters on the key.** The read path's filter becomes one predicate, `label_key IN (:admitted)`, in place of ADR-0029's disjunction. A key the PDP has not yet evaluated is admitted to nobody, so a record with a new label is invisible until it has been decided, never visible before.
+
+**Shapes are per admitted set, not per viewer.**
+- **One canonical filter.** The PEP writes the filter in one form: the admitted keys sorted, with the same columns and the same flags. Two viewers with the same admitted set produce byte-identical shape definitions and share one shape. Any difference in the definition mints a new shape, as this stack has measured.
+- **Shapes scale with entitlement profiles, not people.** The count is distinct admitted sets, a handful of profiles, times the bounded reads. Today a bounded read is one shape per asset.
+- **A person's change mints nothing new.** A change to one person's entitlements moves them to the shape of the set they now hold. If another viewer already holds that set, no shape is minted.
+- **The cost moves; it does not go away.**
+  - A new key admitted to a set changes that set's filter, so every shape of every set admitted to the key is replaced.
+  - Each old shape stays, unread, until it is evicted.
+  - So a key's arrival costs (sets admitted to it × bounded reads) new shapes, plus the old shapes' bytes until eviction.
 
 **The key carries what the wire cannot.** ADR-0029's addendum records that proto3 cannot tell an empty `releasable_to` from an absent one (ADR-0029:1120-1136). A canonical form encodes "declared and empty" and "absent" differently, so the key keeps a distinction the two repeated fields lose.
 
@@ -196,6 +255,13 @@ A record computed from labelled inputs and emitted as one record, such as a fusi
 
 ### 4. Migration: nation is the first declared dimension
 
+0. **Load the site declarations, and read the values, before anything changes.**
+   - On every deployment that stamps by a default today (any row of Findings 3, or an ingest nation rule or override):
+     1. Write the site declarations that state the same answers, and load them.
+     2. Confirm that every record a default labelled now cites a declaration with the same value.
+     3. Only then amend ADR-0050 step 3 and remove the defaults.
+   - In the other order, every record labelled only by a default goes unlabelled at the amendment, and acceptance fails by exactly those rows.
+   - Before the stamp validates vocabulary, read the distinct values in every labelled table on each deployment. A value outside the vocabulary is corrected by declaration before the run. That read needs cluster access and is owed by someone who has it.
 1. Declare `nation` as a permissive dimension, with `originator_nation` as its author value.
 2. Stamp the label and the `label_key` where `originator_nation` and `releasable_to` are stamped today.
 3. Keep `originator_nation` and `releasable_to` as **projections** of the label. They are written from the label at the same stamp, never set on their own. Every reader of the old columns keeps working unchanged.
@@ -204,7 +270,8 @@ A record computed from labelled inputs and emitted as one record, such as a fusi
 **Acceptance is a run that matches today, to the row.** The run uses the lab fixture fleet and its viewers. Before and after the move, it records:
 - for every viewer, the ids of the rows each screen serves;
 - for every destination, the gate's decisions;
-- for every labelled table, its row counts, labelled and unlabelled.
+- for every labelled table, its row counts, labelled and unlabelled;
+- the shape census. For every admitted set, its shapes and their bytes. At one planted key arrival, the shapes replaced and the old shapes' bytes, against a prediction written before the run.
 
 Any difference fails the migration. A difference is not tuned away.
 
@@ -239,6 +306,13 @@ ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-
 - No code maps one scheme to another by name, by level order or by position.
 - A record under a policy the deployment does not declare is served to nobody.
 
+**Alignment with iagent ADR-0064. Named here, not settled here.**
+- **The conflict.** ADR-0064 makes one downgrade automatic, for an aggregation that removes identifying columns (iagent ADR-0064:50-51). §3 refuses any automatic downgrade.
+- **Our position.** A standing downgrade is allowed only as a declared rule that a named owner has signed. It is applied as that owner's decision, and recorded at each application. A de-identifying aggregation can be such a rule. It cannot be the framework's default.
+- **Why it must be aligned.** If one side downgrades automatically and the other refuses, a record leaves one side at one label and the other side re-serves it at a lower one. A shared label structure exists to prevent exactly that.
+- **The structure itself.** ADR-0064's levels are one ordered registry (iagent ADR-0064:92), so it has only the hierarchical type. For the label to be one structure on both sides, the four types have to come across.
+- **The ask.** The brief to iagent's architect asks them to align ADR-0064 or argue the case. Two questions are theirs to answer: which dimensions iagent needs first, and whether its registry can take the four types.
+
 ### 7. The accreditation boundary
 
 **Carrying a marking correctly is not authorisation to hold the data.** This framework stamps declared labels, carries them, and enforces them. Whether a tier, a store or a person may hold data of a given marking at all is an accreditation decision. That decision is made outside the system and is not recorded by it. Declaring a policy does not accredit anything to hold data under it. The framework refuses what is undeclared. It never treats declared as permitted.
@@ -254,12 +328,20 @@ Each of these is a test to write when the record is accepted. None exists.
 6. **Downgrade refusal.** A downgrade without an owner or a reason is refused.
 7. **The red case.** The same-nation refusal in §5.
 8. **Acceptance.** The run in §4 matches to the row.
+9. **Vocabulary.** A value outside a dimension's vocabulary is refused at the stamp, and its record is withheld, not dropped.
+10. **Reorder.** A record whose key the tier has never seen arrives first. It is served as soon as its key is decided, without waiting on any other record.
+11. **Key and body.** A key that does not match its body is refused.
+12. **Shape sharing.** Two viewers with the same admitted set share one shape. An entitlement change into an existing set mints no shape.
+13. **No default.** With no per-asset declaration and no site declaration, the stamp writes nothing.
+14. **Two tiers.** Two site declarations giving different values for one asset raise the exception at the parent. The parent serves the intersection.
 
 ## What this does not establish
 
 - Nothing is measured. The row count of a split rollup grows with its classes and is measured on no fleet beyond the three-class case. The cost of recomputing admitted keys, and of a viewer's read filter changing when a new key appears, is unknown.
 - It does not settle aggregation sensitivity (ADR-0029:539-570). It only makes raising a label a decision with an owner.
 - It does not define a cryptographic binding.
+- The site declaration is named, not designed. It has no schema, and its intake is not specified beyond "through the declaration intake".
+- Whether today's stored values fit the vocabulary is unread. The read needs cluster access.
 - The STANAG concept names were checked against vendor documentation, not the standards' text.
 - It does not accredit anything (§7).
 
@@ -273,7 +355,8 @@ Each of these is a test to write when the record is accepted. None exists.
 
 ### Negative
 - A record with a new label is invisible until its key is decided. The delay is unmeasured.
-- A read's filter changes whenever a viewer's admitted set changes, so a read path that holds subscriptions by filter pays for each change.
+- A new key replaces the shapes of every admitted set it joins, and the old shapes hold their bytes until they are evicted. The cost is unmeasured.
+- Under §1a, a deployment that relies on defaults today must write and load site declarations before the change. Until it does, it cannot take the amendment.
 - During migration, every label is held twice: as the label and as the two projected columns.
 
 ### Neutral
@@ -282,4 +365,6 @@ Each of these is a test to write when the record is accepted. None exists.
 ## Related
 - [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md): releasability, deny-unlabeled, the reserved `policy_label`, effective audience.
 - [AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md): label composition as a composability question.
-- iagent ADR-0064, *Classification propagates through derivation* (proposed 2026-11-05): high-water by column (see Findings).
+- [ADR-0050](ADR-0050-asset-arrivals-declare-and-expect.md): the declaration record and §2.6's lookup order. The amendment of 2026-11-06 is drafted, unruled (§1a).
+- [ADR-0042](ADR-0042-intent-custody-retention-and-multi-tier-reconciliation.md): cross-child conflicts as named exceptions at the authority (ADR-0042:220).
+- iagent ADR-0064, *Classification propagates through derivation* (proposed 2026-11-05): high-water by column, and one automatic downgrade. Open alignment item, §6.
