@@ -2,7 +2,7 @@
 
 **Status:** design only, nothing built, nothing run. It is the first increment of ADR-0055 §1a, signed by Chris
 2026-11-06; the rest of ADR-0055 is still proposed. The migration script `scripts/migrate_site_declarations.py` is written and tested offline only; it has
-never touched a cluster. Local branch, not merged.
+never touched a cluster. Local branch, not merged. O5 is ruled (2026-11-06); O1 to O4 are open.
 **Builds on:** ADR-0055 §1a (a default is not a declaration; signed 2026-11-06), §3b (high-water), §4 step 0 (load before amend), §6
 (schemes as declared policies); ADR-0050 §2 (the declaration record and its door) and its amendment of
 2026-11-06, ruled the same date; ADR-0042 (named exceptions at the parent).
@@ -348,8 +348,9 @@ Bulk writes reach Electric shapes 10 to 100 s after the commit, so the census re
 - **O3. The role.** Proposed `supervisor` only, because one declaration labels a class of records.
 - **O4. The sidecar's broker.** Proposed: the owning tier's broker, so a severed edge under a tier keeps stamping from
   what its tier holds. The alternative is a mounted file, which is a chart edit and no longer a record.
-- **O5. The record class.** §1a names a scope as a site or a rule. This design adds `records` to the scope (§1.1),
-  because without it the load is not value-neutral. It narrows what one declaration says; it does not add a source.
+- **O5. The record class. RULED by Chris, 2026-11-06: yes.** §1a names a scope as a site or a rule. This design adds
+  `records` to the scope (§1.1). Without it the sim's per-edge default would leak into the DIS entities at that edge,
+  which is the kind of mislabel §1a exists to stop. It narrows what one declaration says; it does not add a source.
 
 ## Related
 
