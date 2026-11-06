@@ -68,12 +68,22 @@ Three are declared positions or configuration:
 2. **The role class applies no clause** (`pep.py:4135-4143`). This is declared for tables that carry no asset data, and "Widening it to anything asset-bearing would be a bypass wearing this class's name" (`:966-973`).
 3. **Oversight roles read subject-scoped tables unfiltered** (`pep.py:4146-4147`). The default role is `auditor` (`:996-997`).
 
-Three stamp a default nation the source did not give:
-- logistics-sim (`src/logistics_sim/releasability.py:209-226`);
-- the DIS mapping and effector configs in openddil-demo (`dynamic-mappings/sim-dis-mapping.yaml:75-80`, `:261-266`; `dis-effector.yaml:93-98`), whose shipped default is null;
-- logistics-sim's site spares (`publisher.py:514-515`).
+The other three stamp a nation the source did not give. They are six default rows in three places:
 
-Only the three stamps put a nation on a record that its source did not carry.
+| # | Path | What is stamped | When | Against ADR-0050 §2.6 |
+|---|---|---|---|---|
+| 1 | `openddil-logistics-sim/src/logistics_sim/releasability.py:204-208` | The per-edge default (`releasability_edge_defaults`) | No arrival declaration and no file row | Step 3, "a deployment default, e.g. per edge" (ADR-0050:92) |
+| 2 | `releasability.py:210-212` | The document's `default_originator_nation` | After row 1 | Step 3 |
+| 3 | `releasability.py:214-224` | The deployment's `site_nation`. It logs "as a default, not a declaration" | After row 2 | **Not in §2.6.** It is a fourth fallback |
+| 4 | `openddil-logistics-sim/src/logistics_sim/publisher.py:513-516` | The site's nation on every site-spares record | Every sweep, unconditionally | Not covered. A spares record is not an asset, and no declaration source exists for a site |
+| 5 | `openddil-demo/dynamic-mappings/sim-dis-mapping.yaml:75-82`, and the same at `:261-268` | The ingest stamp, then the document default | No declaration and no file row, and the lookup did not fail | Follows step 3 and the 2026-11-04 amendment. A failed lookup stamps nothing (`:82`, `:268`; ADR-0050:180) |
+| 6 | `openddil-demo/dynamic-mappings/dis-effector.yaml:93-106` | The launcher's file row, then the ingest stamp, then the document default | Always. There is no declaration lookup and no failed-lookup guard | **Does not follow §2.6's order.** Already OPEN as a Fire defect (FOLLOW-UPS.md:109-118) |
+
+- The shipped document default is null, so rows 2, 5 and 6 stamp nothing unless a deployment sets one. Rows 1 and 3 are also deployment settings.
+- FOLLOW-UPS.md:30 records that rows 1 and 3, on a deployment with declared assets, give the mislabel already seen once.
+- **ADR-0050 §2.6 permits a deployment default.** Its step 3 is one (ADR-0050:92). The 2026-11-04 amendment refuses a stamp or a default only when the lookup failed with no answer (ADR-0050:180).
+- ADR-0050 also summarises ADR-0029 §3 as "labels propagate, never default" (ADR-0050:5, :210). Its own step 3 contradicts that.
+- §1 below makes an undeclared dimension fail closed. It does not yet say whether a deployment default counts as a declaration.
 
 The projector copies the label as it receives it. With no nation it stores `[]`, not NULL (`openddil-projector/src/handlers/base.py:289-297`), and an aggregate stores no nation and a list (`:356-357`).
 
@@ -87,7 +97,7 @@ The projector copies the label as it receives it. With no nation it stores `[]`,
   - Its docstring reads: "fourteen contributors in three classes … whose intersection is EMPTY … each class becomes an ORDINARY LABELLED ROW whose releasable_to IS its class."
   - ADR-0029 decides "the intersection of effective audiences" (ADR-0029:1102).
   - The regional tier design called intersection "the candidate rule" (DESIGN-2026-09-05-regional-tier-node.md:267).
-  - No decision record decides the partition. §3 below names it.
+  - No decision record decides the partition. §3 below adopts it as the decision for composable rollups.
 
 **5. Contradictions in the record.**
 - ADR-0029:302 says the fields are "not yet in" the proto. ADR-0029:631 marks that step DONE, and the proto has them.
@@ -143,9 +153,31 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
 
 **The key carries what the wire cannot.** ADR-0029's addendum records that proto3 cannot tell an empty `releasable_to` from an absent one (ADR-0029:1120-1136). A canonical form encodes "declared and empty" and "absent" differently, so the key keeps a distinction the two repeated fields lose.
 
-### 3. A derived record takes the high-water label
+### 3. Derived records: a split by audience for composable rollups, high-water for single derived records
 
-A record computed from labelled inputs takes, dimension by dimension, the most restrictive combination of its inputs' values:
+There are two rules, chosen by what is derived.
+
+#### 3a. A composable rollup splits by audience
+
+A **composable rollup** is an aggregate over many contributors whose parts a reader may combine, such as a count, a sum or a tally by status.
+- It first splits its contributors into classes.
+- A class holds the contributors that share one label, as each would carry it in the aggregate. For nation, that is the effective audience: in an aggregate the author value no longer grants access alone (ADR-0029:1086-1088). For every other dimension, it is the value set.
+- The rollup computes one row per class, **from only that class's contributors**.
+- Each row carries its class's label, so its key is that label's `label_key`.
+
+**Why this rule, and not high-water.**
+- A high-water rollup over contributors with disjoint audiences takes an empty intersection, so nobody can read it. These are ADR-0029's collapse cases (ADR-0029:1116-1118).
+- The built rollup's own case shows it: fourteen contributors in three classes, {ATL} ×7, {BDR} ×6 and {ATL, BDR} ×1, whose intersection is empty (`openddil-tactical-agents/regional/aggregator_app.py:633-656`).
+- The split gives every viewer a rollup of exactly what they may see. Combining the rows a viewer is admitted to gives that viewer's whole rollup. No row holds a contributor its viewers may not see.
+- Each row is also high-water within its class, because every contributor in a class has one label.
+
+**Status.** This is the rule the regional rollup already builds, and no record decided it before this one (Findings 4). It generalises from the nation audience to the full label.
+
+**Limit.** An aggregate that cannot be combined across classes is not a composable rollup. A median, a single fleet status or a ranking each come out as one record, so §3b applies.
+
+#### 3b. A single derived record takes the high-water label
+
+A record computed from labelled inputs and emitted as one record, such as a fusion result, takes the most restrictive combination of its inputs' values, dimension by dimension:
 
 | Type | High-water of the inputs |
 |---|---|
@@ -155,14 +187,12 @@ A record computed from labelled inputs takes, dimension by dimension, the most r
 | Exclusionary | The union |
 
 - An input with no label makes the derived record unlabelled, so nobody sees it. These are ADR-0029's collapse cases (ADR-0029:1116-1118).
-- **Partition, then label, is allowed and is high-water.**
-  - A rollup may first split its inputs into classes that share one effective audience, and emit one derived row per class.
-  - Within a class every input has the same audience, so the intersection is that audience, and each row is high-water.
-  - This is what the regional rollup builds (Findings 4). This record names it as the rule that was built and not recorded.
-  - A rollup that emits one row across classes still takes the intersection.
-- The high-water mark is a floor, not the answer. An aggregate can be more sensitive than every input (ADR-0029:546-552). Raising a derived record above the high-water mark is a policy decision, like lowering one.
 
-**Sanitised release is a policy decision with an owner.** Any label on a derived record below its high-water mark is a downgrade. A downgrade is a record of four things: the label it gives, the reason, the inputs it covers, and the owner who decided it. The owner is a person or role named in the declaration of each dimension the downgrade lowers. A downgrade with no owner or no reason is refused. The framework performs no automatic downgrade. A standing downgrade rule is allowed only as a declared rule that a named owner has signed. It is applied as that owner's decision, and every application records it.
+#### Both rules
+
+- The label each rule gives is a floor, not the answer. An aggregate can be more sensitive than every input (ADR-0029:546-552). Raising a derived record above it is a policy decision, like lowering one.
+
+**Sanitised release is a policy decision with an owner.** Any label on a derived record below the label its rule gives is a downgrade. A downgrade is a record of four things: the label it gives, the reason, the inputs it covers, and the owner who decided it. The owner is a person or role named in the declaration of each dimension the downgrade lowers. A downgrade with no owner or no reason is refused. The framework performs no automatic downgrade. A standing downgrade rule is allowed only as a declared rule that a named owner has signed. It is applied as that owner's decision, and every application records it.
 
 ### 4. Migration: nation is the first declared dimension
 
@@ -219,14 +249,15 @@ Each of these is a test to write when the record is accepted. None exists.
 1. **Truth tables.** Each type admits and refuses per the table in §1, including the empty-set row.
 2. **Fail closed.** A record missing a declared dimension, and a record carrying an undeclared one, are each served to nobody.
 3. **Key determinism.** The same label stamped by two tiers gives the same key. Labels that differ in any value, or in declared-empty versus absent, give different keys.
-4. **High-water.** Each type composes per §3. One unlabelled input leaves the result unlabelled.
-5. **Downgrade refusal.** A downgrade without an owner or a reason is refused.
-6. **The red case.** The same-nation refusal in §5.
-7. **Acceptance.** The run in §4 matches to the row.
+4. **High-water.** Each type composes per §3b. One unlabelled input leaves the result unlabelled.
+5. **The split.** The three-class case in §3a gives three rows, each readable only by its class. For each viewer, the sum of the rows they are admitted to equals the rollup computed from only the contributors they may see.
+6. **Downgrade refusal.** A downgrade without an owner or a reason is refused.
+7. **The red case.** The same-nation refusal in §5.
+8. **Acceptance.** The run in §4 matches to the row.
 
 ## What this does not establish
 
-- Nothing is measured. The cost of recomputing admitted keys, and of a viewer's read filter changing when a new key appears, is unknown.
+- Nothing is measured. The row count of a split rollup grows with its classes and is measured on no fleet beyond the three-class case. The cost of recomputing admitted keys, and of a viewer's read filter changing when a new key appears, is unknown.
 - It does not settle aggregation sensitivity (ADR-0029:539-570). It only makes raising a label a decision with an owner.
 - It does not define a cryptographic binding.
 - The STANAG concept names were checked against vendor documentation, not the standards' text.
@@ -237,6 +268,7 @@ Each of these is a test to write when the record is accepted. None exists.
 ### Positive
 - A new dimension is a declaration and a policy rule, not a column and a predicate change.
 - One read predicate, whatever the number of dimensions.
+- No rollup over mixed audiences becomes unreadable. Each viewer gets the rollup of what they may see.
 - The empty-versus-absent distinction survives the wire.
 
 ### Negative
