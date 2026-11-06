@@ -12,8 +12,10 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import types
 import unittest
 from pathlib import Path
+from unittest import mock
 
 import yaml
 
@@ -232,6 +234,37 @@ class Content(Base):
         self.assertIn("consumer-without-writer", out)
         self.assertNotIn("lonely-group-name-raw (", out)
 
+    def raw_ingest_docs(self, reader_topics=None):
+        ds = docs()
+        w = find(ds, "Deployment", "openddil-sensor-edge-bdr")
+        w["metadata"]["annotations"]["openddil.io/produces-topics"] += " edge-bdr/ingress-dis-raw"
+        if reader_topics:
+            r = find(ds, "Deployment", "openddil-lonely-edge-bdr")
+            r["spec"]["template"]["spec"]["containers"][0]["env"] = [
+                {"name": "X_INPUT_TOPICS", "value": reader_topics}]
+        return ds
+
+    def test_a_raw_ingest_topic_with_no_reader_passes(self):
+        rc, out, err = run("--rendered", self.write("raw.yaml", self.raw_ingest_docs()), "--check")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("| ingress-dis-raw | sensor-edge-bdr | annotation | none declared |", out)
+
+    def test_a_raw_ingest_topic_read_by_anything_but_the_mapper_fails(self):
+        rc, out, err = run("--rendered", self.write("raw.yaml", self.raw_ingest_docs("ingress-dis-raw")), "--check")
+        self.assertEqual(rc, 1, err)
+        self.assertIn("FAIL: raw ingest topic edge-bdr/ingress-dis-raw is read by lonely-edge-bdr; "
+                      "only the mapper may read it", err)
+
+    def test_a_reader_named_as_the_mapper_passes(self):
+        sys.path.insert(0, str(HERE))
+        self.addCleanup(sys.path.remove, str(HERE))
+        import data_exchange
+        doc = run("--rendered", self.write("raw.yaml", self.raw_ingest_docs("ingress-dis-raw")))[1]
+        model = types.SimpleNamespace(tiers=[], kind_universe=[], kinds={}, routes=[])
+        self.assertTrue([f for f in data_exchange.check_document(doc, model, "x") if "raw ingest" in f])
+        with mock.patch.object(data_exchange, "RAW_INGEST_READERS", frozenset({"lonely-edge-bdr"})):
+            self.assertEqual([f for f in data_exchange.check_document(doc, model, "x") if "raw ingest" in f], [])
+
     def test_writer_without_consumer(self):
         ds = docs()
         w = find(ds, "Deployment", "openddil-sensor-edge-atl")
@@ -390,6 +423,9 @@ class Integration(unittest.TestCase):
         self.assertEqual(rc, 0, err)
         for t in ("edge-north", "edge-south", "region-north", "region-south", "hq"):
             self.assertIn(f"| {t} |", out)
+        raw = [ln for ln in out.splitlines() if "| ingress-dis-raw |" in ln]
+        self.assertTrue(raw)
+        self.assertTrue(all("| none declared |" in ln for ln in raw), raw)
 
     def test_public_bundle_with_egress_twin(self):
         rc, out, err = run("--chart", CHART, "--release", "openddil", "--values", BUNDLE,

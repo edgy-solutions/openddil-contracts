@@ -20,7 +20,8 @@ column position, so profile renames do not matter): at least one tier and
 one exchange row; every tier of the universe appears in the Tier or Broker
 column; every kind of the universe appears in the Kind column; every route
 destination appears in a row; kinds exist or --allow-no-kinds says why not
-(and not both); no kind is named without a schema.
+(and not both); no kind is named without a schema; a raw ingest topic
+(`ingress-<format>-raw`) has no declared reader but the mapper.
 
 Exit codes: 0 ok, 1 check failed, 2 bad input (helm failed, no documents,
 zero tiers). Secrets are dropped at parse time. Egress fields other than the
@@ -45,6 +46,11 @@ PRODUCES = "openddil.io/produces-topics"
 GROUPS = "openddil.io/consumer-groups"
 NONE_DECLARED = "none declared"
 NOT_DECLARED = "not declared"
+# ADR-0030's seam between decode and semantics: raw JSON before identity, platform_variant and labels.
+# ADR-0047 makes the mapper the only code that knows an identity scheme, so the mapper is its only reader.
+# No workload declares itself the mapper yet, so no reader is allowed. When one does, name it here.
+RAW_INGEST_RE = re.compile(r"^ingress-[a-z0-9]+(?:-[a-z0-9]+)*-raw$")
+RAW_INGEST_READERS: frozenset[str] = frozenset()
 STAMP_NOT_MEASURED = ("Declared, not measured: this table reads a render; "
                       "nothing here was observed running.")
 PROFILES_PATH = Path(__file__).resolve().parent.parent / "profiles.yaml"
@@ -609,6 +615,12 @@ def check_document(text: str, m: Model, allow_no_kinds: str | None) -> list[str]
     for r in m.routes:
         if r["destination"] and str(r["destination"]) not in seen_dests:
             fails.append(f"route {r['name']}: no row carries destination {r['destination']}")
+    for r in ex:
+        if len(r) > 5 and RAW_INGEST_RE.match(r[2]) and r[5] != NONE_DECLARED:
+            others = [c.strip() for c in r[5].split(",") if c.strip() not in RAW_INGEST_READERS]
+            if others:
+                fails.append(f"raw ingest topic {r[1]}/{r[2]} is read by {', '.join(others)}; "
+                             "only the mapper may read it")
     if not m.kind_universe and not allow_no_kinds:
         fails.append("no kinds declared and --allow-no-kinds not given")
     if m.kind_universe and allow_no_kinds:
