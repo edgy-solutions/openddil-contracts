@@ -86,7 +86,10 @@ The other three stamp a nation the source did not give. They are six default row
 - ADR-0050 also summarises ADR-0029 §3 as "labels propagate, never default" (ADR-0050:5, :210). Its own step 3 contradicts that.
 - §1a below recommends ruling that a deployment default is not a declaration. It is for Chris's signature.
 
-The projector copies the label as it receives it. With no nation it stores `[]`, not NULL (`openddil-projector/src/handlers/base.py:289-297`), and an aggregate stores no nation and a list (`:356-357`).
+The projector copies the label as it receives it (`openddil-projector/src/handlers/base.py:289-297`):
+- With no nation it writes neither column, so both are NULL.
+- With a nation and no further release, it stores `releasable_to = []`, so the row is labelled on both columns.
+- An aggregate stores no nation and a list (`:356-357`).
 
 **4. No derived record computes a high-water label.**
 - **Copy one input's label:**
@@ -212,6 +215,8 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
   - So a key's arrival costs (sets admitted to it × bounded reads) new shapes, plus the old shapes' bytes until eviction.
 
 **The key carries what the wire cannot.** ADR-0029's addendum records that proto3 cannot tell an empty `releasable_to` from an absent one (ADR-0029:1120-1136). A canonical form encodes "declared and empty" and "absent" differently, so the key keeps a distinction the two repeated fields lose.
+- **The distinction applies only to `releasable_to` on a record that has an originator.** There, `{ATL}/{}` and `{ATL}/absent` give two keys.
+- **A record with no originator is unlabelled, whatever `releasable_to` holds.** NULL/NULL and NULL/`{}` compile to no key at all, not to two keys, and the record is served to nobody (§1).
 
 ### 3. Derived records: a split by audience for composable rollups, high-water for single derived records
 
@@ -223,6 +228,10 @@ A **composable rollup** is an aggregate over many contributors whose parts a rea
 - It first splits its contributors into classes.
 - A class holds the contributors that share one label, as each would carry it in the aggregate. For nation, that is the effective audience: in an aggregate the author value no longer grants access alone (ADR-0029:1086-1088). For every other dimension, it is the value set.
 - The rollup computes one row per class, **from only that class's contributors**.
+- **A contributor with no label forms no class.**
+  - It is excluded from every row.
+  - It is counted in a withheld-contributor tally that the rollup's owner can see.
+  - So the rollup never hides that it is missing a contributor.
 - Each row carries its class's label, so its key is that label's `label_key`.
 
 **Why this rule, and not high-water.**
@@ -262,7 +271,8 @@ A record computed from labelled inputs and emitted as one record, such as a fusi
      2. Confirm that every record a default labelled now cites a declaration with the same value.
      3. Only then amend ADR-0050 step 3 and remove the defaults.
    - In the other order, every record labelled only by a default goes unlabelled at the amendment, and acceptance fails by exactly those rows.
-   - Before the stamp validates vocabulary, read the distinct values in every labelled table on each deployment. A value outside the vocabulary is corrected by declaration before the run. That read needs cluster access and is owed by someone who has it.
+   - Before the stamp validates vocabulary, read the distinct values in every labelled table on each deployment. A value outside the vocabulary is corrected by declaration before the run.
+   - **Measured starting point (both lab deployments, read at 04:10Z):** nation values are `ATL` and `BDR`. All are three letters, with no variants. No correction is owed there.
 1. Declare `nation` as a permissive dimension, with `originator_nation` as its author value.
 2. Stamp the label and the `label_key` where `originator_nation` and `releasable_to` are stamped today.
 3. Keep `originator_nation` and `releasable_to` as **projections** of the label. They are written from the label at the same stamp, never set on their own. Every reader of the old columns keeps working unchanged.
@@ -323,9 +333,9 @@ ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-
 Each of these is a test to write when the record is accepted. None exists.
 1. **Truth tables.** Each type admits and refuses per the table in §1, including the empty-set row.
 2. **Fail closed.** A record missing a declared dimension, and a record carrying an undeclared one, are each served to nobody.
-3. **Key determinism.** The same label stamped by two tiers gives the same key. Labels that differ in any value, or in declared-empty versus absent, give different keys.
+3. **Key determinism.** The same label stamped by two tiers gives the same key. Labels that differ in any value, or in declared-empty versus absent `releasable_to` on a record with an originator, give different keys. A record with no originator, under NULL/NULL or NULL/`{}`, gives no key, and is served to nobody.
 4. **High-water.** Each type composes per §3b. One unlabelled input leaves the result unlabelled.
-5. **The split.** The three-class case in §3a gives three rows, each readable only by its class. For each viewer, the sum of the rows they are admitted to equals the rollup computed from only the contributors they may see.
+5. **The split.** The three-class case in §3a gives three rows, each readable only by its class. For each viewer, the sum of the rows they are admitted to equals the rollup computed from only the contributors they may see. With one unlabelled contributor added, the rows are unchanged and the withheld-contributor tally reads 1.
 6. **Downgrade refusal.** A downgrade without an owner or a reason is refused.
 7. **The red case.** The same-nation refusal in §5.
 8. **Acceptance.** The run in §4 matches to the row.
@@ -342,7 +352,7 @@ Each of these is a test to write when the record is accepted. None exists.
 - It does not settle aggregation sensitivity (ADR-0029:539-570). It only makes raising a label a decision with an owner.
 - It does not define a cryptographic binding.
 - The site declaration is named, not designed. It has no schema, and its intake is not specified beyond "through the declaration intake". Its design is the first increment after acceptance: its schema, its intake path through ADR-0050's door, and the load-before-amend migration (§4 step 0) on the lab.
-- Whether today's stored values fit the vocabulary is unread. The read needs cluster access.
+- The vocabulary reading covers the lab deployments only (§4 step 0). Any other deployment is unread.
 - The STANAG concept names were checked against vendor documentation, not the standards' text.
 - It does not accredit anything (§7).
 
@@ -352,7 +362,7 @@ Each of these is a test to write when the record is accepted. None exists.
 - A new dimension is a declaration and a policy rule, not a column and a predicate change.
 - One read predicate, whatever the number of dimensions.
 - No rollup over mixed audiences becomes unreadable. Each viewer gets the rollup of what they may see.
-- The empty-versus-absent distinction survives the wire.
+- The empty-versus-absent distinction for `releasable_to` survives the wire.
 
 ### Negative
 - A record with a new label is invisible until its key is decided. The delay is unmeasured.
