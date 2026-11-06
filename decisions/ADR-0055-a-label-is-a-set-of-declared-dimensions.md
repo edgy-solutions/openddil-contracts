@@ -5,7 +5,7 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
-- **It carries one ruling for Chris's signature (§1a).** Until it is signed, §1a is the recommendation, not the decision. The ADR-0050 amendment it implies is drafted in ADR-0050, unruled.
+- **§1a is signed by Chris, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
 
 ## Findings first
 
@@ -84,7 +84,7 @@ The other three stamp a nation the source did not give. They are six default row
 - FOLLOW-UPS.md:30 records that rows 1 and 3, on a deployment with declared assets, give the mislabel already seen once.
 - **ADR-0050 §2.6 permits a deployment default.** Its step 3 is one (ADR-0050:92). The 2026-11-04 amendment refuses a stamp or a default only when the lookup failed with no answer (ADR-0050:180).
 - ADR-0050 also summarises ADR-0029 §3 as "labels propagate, never default" (ADR-0050:5, :210). Its own step 3 contradicts that.
-- §1a below recommends ruling that a deployment default is not a declaration. It is for Chris's signature.
+- §1a below rules that a deployment default is not a declaration. Chris signed it on 2026-11-06.
 
 The projector copies the label as it receives it (`openddil-projector/src/handlers/base.py:289-297`):
 - With no nation it writes neither column, so both are NULL.
@@ -150,9 +150,9 @@ A deployment declares each dimension it labels by. A declaration gives a name, o
 
 **The nation dimension keeps its author.** A permissive dimension may declare one author value. For nation, that value is `originator_nation`, and the audience is ADR-0029's effective audience, `{originator} ∪ releasable_to` (ADR-0029:1100-1106). The author value grants access only on records whose derivation preserved single authorship (ADR-0029:1086-1088).
 
-### 1a. A default is not a declaration (RULING FOR CHRIS'S SIGNATURE)
+### 1a. A default is not a declaration (SIGNED BY CHRIS, 2026-11-06)
 
-**Recommended ruling.** A default is a label nobody stated about this record. It is not a declaration, and it labels nothing.
+**Ruling.** A default is a label nobody stated about this record. It is not a declaration, and it labels nothing.
 
 **What it covers.**
 - Every row of Findings 3's default table.
@@ -185,7 +185,7 @@ A deployment declares each dimension it labels by. A declaration gives a name, o
 - Only a per-asset declaration resolves the conflict, because it outranks both. No recency rule and no tier rank picks a winner.
 
 **What it changes.**
-- ADR-0050 §2.6 step 3. The amendment is drafted in ADR-0050, dated 2026-11-06 and unruled.
+- ADR-0050 §2.6 step 3. The amendment is in ADR-0050, dated 2026-11-06, ruled the same date.
 - Each default row in Findings 3, and the ingest stamp, becomes a declared source or stops stamping.
 - ADR-0029 §3's "never default", as ADR-0050:5 summarises it, becomes true as written.
 - The order is load before amend (§4, step 0).
@@ -376,6 +376,6 @@ Each of these is a test to write when the record is accepted. None exists.
 ## Related
 - [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md): releasability, deny-unlabeled, the reserved `policy_label`, effective audience.
 - [AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md): label composition as a composability question.
-- [ADR-0050](ADR-0050-asset-arrivals-declare-and-expect.md): the declaration record and §2.6's lookup order. The amendment of 2026-11-06 is drafted, unruled (§1a).
+- [ADR-0050](ADR-0050-asset-arrivals-declare-and-expect.md): the declaration record and §2.6's lookup order. The amendment of 2026-11-06 is ruled the same date (§1a).
 - [ADR-0042](ADR-0042-intent-custody-retention-and-multi-tier-reconciliation.md): cross-child conflicts as named exceptions at the authority (ADR-0042:220).
 - iagent ADR-0064, *Classification propagates through derivation* (proposed 2026-11-05): high-water by column, and one automatic downgrade. Open alignment item, §6.

@@ -10,9 +10,9 @@ mapper's concern) and ADR-0044 (lifecycle columns unchanged). Adds a fielding re
 **Amended 2026-11-04:** a store outage serves the last known answer per asset. See
 [the amendment](#amendment-2026-11-04-a-store-outage-serves-the-last-known-answer).
 
-**Amendment drafted 2026-11-06, unruled:** a default is not a declaration, so step 3 of item 2.6 is replaced by a cited
-site declaration. It waits on the ruling in ADR-0055 §1a. See
-[the draft](#amendment-2026-11-06-draft-a-default-is-not-a-declaration).
+**Amendment ruled 2026-11-06:** a default is not a declaration, so step 3 of item 2.6 is replaced by a cited
+site declaration, following ADR-0055 §1a, signed the same date. It takes effect on each deployment only in
+load-before-amend order. See [the amendment](#amendment-2026-11-06-ruled-a-default-is-not-a-declaration).
 
 ## Context
 
@@ -94,7 +94,7 @@ edge is cut.
      1. the owning store's `asset_declaration`, through a short-TTL cached query;
      2. else the file's `assets` row;
      3. else the file's `default_originator_nation` (a deployment default, e.g. per edge);
-        *(draft of 2026-11-06, unruled: replaced by a cited site declaration. See the amendment.)*
+        *(ruled 2026-11-06: replaced by a cited site declaration, load before amend. See the amendment.)*
      4. else unlabelled.
    - The file's rows win over a declaration for the same id, so a declaration for an id the file already labels
      is refused (already in fleet). Only `assets` rows count; the default never does.
@@ -196,9 +196,9 @@ was seen twice before `openddil-demo` 2309dc5, which makes it impossible.
 **Not proven:** a real declaration under a real outage. The outage branch was read with a row inserted directly and on
 the real binary. A real declaration was read with the store up.
 
-## Amendment 2026-11-06 (draft): a default is not a declaration
+## Amendment 2026-11-06 (ruled): a default is not a declaration
 
-**Draft, for Chris's ruling.** It takes effect only when ADR-0055 §1a is signed, and only in the order below.
+**Ruled by Chris, 2026-11-06, with ADR-0055 §1a signed the same date.** It takes effect on each deployment only in the order below.
 
 **Why.** Item 2.6 step 3 lets a deployment default label a record. The 2026-11-04 amendment refuses a default only
 after a failed lookup. Both sit against this record's own summary of ADR-0029 §3, "labels propagate, never default"
@@ -265,4 +265,4 @@ in ADR-0055 Findings 3.
 
 - 2026-10-15: §2 item 6 amended to declaration, then row, then default, then unlabelled. A default must never beat a person's declaration.
 - 2026-10-15: §2 item 4: cm-service reads the declaration on first-seen registration, so a declared baseline survives a state wipe. Reset: declarations are kept unless `clearExerciseDeclarations` is set.
-- 2026-11-06 (draft, unruled): §2 item 6 step 3, the deployment default, replaced by a cited site declaration; load before amend. See the amendment.
+- 2026-11-06 (ruled): §2 item 6 step 3, the deployment default, replaced by a cited site declaration; load before amend. See the amendment.
