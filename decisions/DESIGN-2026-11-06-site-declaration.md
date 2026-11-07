@@ -2,7 +2,7 @@
 
 **Status:** design only, nothing built, nothing run. It is the first increment of ADR-0055 §1a, signed by Chris
 2026-11-06; the rest of ADR-0055 is still proposed. The migration script `scripts/migrate_site_declarations.py` is written and tested offline only; it has
-never touched a cluster. Local branch, not merged. O5 is ruled (2026-11-06); O1 to O4 are open.
+never touched a cluster. Local branch, not merged. O1 to O5 are ruled by Chris (2026-11-06).
 **Builds on:** ADR-0055 §1a (a default is not a declaration; signed 2026-11-06), §3b (high-water), §4 step 0 (load before amend), §6
 (schemes as declared policies); ADR-0050 §2 (the declaration record and its door) and its amendment of
 2026-11-06, ruled the same date; ADR-0042 (named exceptions at the parent).
@@ -68,6 +68,7 @@ consumer of `asset-declarations` keys by `asset_id`, and a site declaration has 
 | `labels` | the dimension values. For the first dimension: `{"originator_nation": "ATL", "releasable_to": []}`. Absent for `exemption` |
 | `declared_by` | the owner: the PEP's session subject, never the body |
 | `declared_at` | set by the PEP |
+| `declared_role` | the role the PDP decided on for `declared_by`, set by the PEP from the decision, never the body (O3) |
 | `reason` | free text, required, at most 512 bytes. The owner says why they know |
 | `status` | `active` or `withdrawn` |
 | `supersedes` | optional: the id this one replaces. The replaced id gets its own `withdrawn` record in the same request |
@@ -96,6 +97,7 @@ CREATE TABLE site_declaration (
   releasable_to      text[],
   declared_by        text NOT NULL,
   declared_at        timestamptz NOT NULL,
+  declared_role      text NOT NULL,
   reason             text NOT NULL,
   status             text NOT NULL CHECK (status IN ('active','withdrawn')),
   supersedes         text,
@@ -150,14 +152,14 @@ CREATE INDEX site_declaration_scope ON site_declaration (scope_kind, scope_id) W
   write them (§7.2).
 - **An exemption labels nothing.** It removes one asset from every `rule` at its scope. A `site` declaration still
   covers it. The ingest override `exempt` meant "not by this mechanism", and the sidecar's rules were the mechanism.
-- Precedence among them is in §5.3. The exemption's place there is an open item for Chris (O1).
+- Precedence among them is in §5.3. The exemption's rank there is ruled (O1, 2026-11-06).
 
 ## 4. The door: through ADR-0050's intake
 
 - **Route:** `POST /declarations/site` and `GET /declarations/site` on the PEP of the owning tier.
   - The same pre-PDP checks as `/arrivals/declare`: not configured is 404, JSON only (415), a cross-site origin 403,
     a body over 8 KiB 413, unknown keys refused, and server-set fields never read from the body.
-  - The PDP checks the role (`OPENDDIL_SITE_DECLARE_ROLES`, proposed default `supervisor`, O3) and that every nation
+  - The PDP checks the role (`OPENDDIL_SITE_DECLARE_ROLES`, default `supervisor`, ruled O3) and that every nation
     in `labels` is within the subject's `allowed_nations`.
   - Vocabulary: each value is checked against the dimension's declared vocabulary (ADR-0055 §1). Outside it is 422.
   - A `rule` match is parsed with the sidecar's own parser before it is accepted, so a match the sidecar would reject
@@ -238,7 +240,7 @@ rules, then a site declaration, then nothing.
 - ADR-0055 §1a: from detection on, the parent serves the asset's records under the high-water of the two answers.
   For nation, the intersection of the audiences.
 - **Interim, until `label_key` exists:** the parent cannot serve an intersection on the current columns, so it
-  withholds the conflicted asset's records. That is stricter than the ruling. It is flagged as O2.
+  withholds the conflicted asset's records. That is stricter than the ruling, and it is ruled (O2, 2026-11-06).
 
 ## 7. Load before amend, on the lab
 
@@ -338,16 +340,22 @@ Bulk writes reach Electric shapes 10 to 100 s after the commit, so the census re
   the read it would use.
 - It does not cover any deployment other than the lab.
 
-## Open items for Chris
+## Rulings (were open items)
 
-- **O1. The exemption's rank.** Proposed: a per-asset declaration, then a file row, then an exemption against rules,
-  then a site declaration. The alternative is to drop the kind and have every `exempt` override become a per-asset
-  declaration by a person.
-- **O2. The interim withhold at the parent.** Until `label_key` serves an intersection, a two-tier conflict withholds
-  the asset at the parent. That is stricter than §1a.
-- **O3. The role.** Proposed `supervisor` only, because one declaration labels a class of records.
-- **O4. The sidecar's broker.** Proposed: the owning tier's broker, so a severed edge under a tier keeps stamping from
-  what its tier holds. The alternative is a mounted file, which is a chart edit and no longer a record.
+- **O1. The exemption kind and its rank. RULED by Chris, 2026-11-06: keep the kind, with an owner, at the rank
+  proposed.** An exemption declares that a class of records carries no label by decision, such as a non-asset source
+  or a test entity. Dropping the kind would force per-asset declarations for things that are not assets. The rank is
+  a per-asset declaration, then a file row, then an exemption against rules, then a site declaration (§5.3).
+- **O2. The interim withhold at the parent. RULED by Chris, 2026-11-06: yes.** Stricter than §1a is the right
+  direction for an interim. Until `label_key` can serve the intersection, a two-tier conflict shows as a named
+  exception with nothing served, not as something served wrongly (§6.2).
+- **O3. The role. RULED by Chris, 2026-11-06: supervisor only.** One declaration labels a class of records, which is
+  a wider act than declaring one arrival. The arrivals roles are for the one-asset case and stay there. The role name
+  is written into the declaration record (`declared_role`, §1.1). Whether a declaration was made under the
+  right role is then read from the record corpus, never from what the UI allowed.
+- **O4. The sidecar's broker. RULED by Chris, 2026-11-06: the owning tier's broker.** A mounted file would be chart
+  configuration that only looks like a record, and it would need a roll to change. A record on the tier's broker is
+  declared through the door, is versioned, and is still there when the edge is severed.
 - **O5. The record class. RULED by Chris, 2026-11-06: yes.** §1a names a scope as a site or a rule. This design adds
   `records` to the scope (§1.1). Without it the sim's per-edge default would leak into the DIS entities at that edge,
   which is the kind of mislabel §1a exists to stop. It narrows what one declaration says; it does not add a source.
