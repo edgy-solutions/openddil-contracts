@@ -166,7 +166,8 @@ dimension is `data_rights_holder`, which is also iagent's form.
 - **On an inbound record, that refusal is loud (ruled by Chris, 2026-11-07).**
   - It is refused at intake with the reason `dimension_undeclared`, and the dimension is named and counted. It is
     never a silent withhold.
-  - The record is kept and served to nobody, as a vocabulary refusal is.
+  - **The record is kept, served to nobody, and counted (ruled by Chris, 2026-11-07).** It is handled like an
+    out-of-vocabulary value: withheld so it can be corrected, never dropped.
   - A deployment that wants to receive the dimension declares it.
   - `program` is never declared at an edge (§5).
 
