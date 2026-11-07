@@ -10,7 +10,7 @@ the row); ADR-0029 (the two columns, the reserved `policy_label`, the current pr
 
 - Every table that carries `originator_nation` and `releasable_to` also carries `label_key` and `label`, the label
   body. Both are computed from the two columns, in the store, at every write.
-- Nation is the only dimension. The two columns stay authoritative in this slice. The label is derived from them,
+- Nation is the only dimension, named `nation` (snake_case, ADR-0055 §1, ruled 2026-11-07). The two columns stay authoritative in this slice. The label is derived from them,
   the reverse of ADR-0055 §4 step 3, which comes later.
 - The PEP gains a filter switch, `OPENDDIL_LABEL_KEY_FILTER`, **off by default**. Off, the PEP behaves exactly as
   today. On, the PEP filters `label_key IN (:admitted)` in place of the two-column predicate.
@@ -41,8 +41,10 @@ PDP computing keys, moving the egress gate onto the key, and any vocabulary beyo
 5. **One case is not value-neutral, by ADR-0055 §2's ruling.** A row with `originator_nation` NULL and a non-empty
    `releasable_to` is served today by the second clause. Under the key it is unlabelled, so it compiles to no key and
    is served to nobody. `releasability_from` never writes that shape (no originator gives both columns omitted), but
-   the writers in Finding 2 that set the columns themselves might. The acceptance script counts this class before
-   the switch and names it. It is the only difference the slice is allowed.
+   the writers in Finding 2 that set the columns themselves might. **Ruled by Chris, 2026-11-07:** serving these
+   rows today is the defect, so the slice withholds them. The acceptance script lists them as a declared exception
+   with the reason `no_originator`, and the row-match is "to the row, except these N, listed". Each listed row is
+   owed a declaration (ADR-0055 §4). It is not a permanent exception. It is the only difference the slice is allowed.
 6. **Booleans in `pep.py` are parsed inline**, for example `:489-490` (`.strip().lower() == "true"`). The switch
    follows that form. There is no helper to reuse.
 
@@ -199,12 +201,17 @@ after` will run. A refusal at any step halts the run, with the state named.
    - **Shape census:** shapes and bytes per admitted set, from Electric's own figures.
 2. **`predict`**. It writes `prediction.json` and `prediction.md`:
    - for each viewer and route, the after set equals the before set, minus Finding 5's rows for that viewer, by id;
+   - the `no_originator` list itself: each row's table, primary key and `releasable_to`, so the exception is named
+     row by row, not as a count only;
    - for each admitted set, the shapes that will be minted when the switch is on, and their bytes;
    - for one planted key arrival, the shapes replaced and the old shapes' bytes. The planted arrival is made through a
      real path, by a person. It is never an `INSERT`.
 3. **`read --phase after`** (switch on, after the PEP's roll). It refuses if `prediction.json` is missing, or if its
    hash of `before.json` does not match. It reads the same things as the before phase.
 4. **`compare`**. It writes `compare.json` and `compare.md`, and exits 0 only when every difference is one predicted.
+   - `compare.md` opens with the declared exception: "matches to the row, except N rows, reason `no_originator`",
+     with the list. It also writes `owed-declarations.json`, one entry per listed row, for a person to declare. The
+     script writes nothing to any store.
    - An extra id, a missing id that is not a Finding 5 row, or a gate count that moved is a diff (exit 1).
    - A keyless row that the predicate admits but that is not in Finding 5's class is a diff, and it is named first.
      It means a writer bypassed the trigger.
