@@ -132,6 +132,11 @@ The projector copies the label as it receives it (`openddil-projector/src/handle
 
 A deployment declares each dimension it labels by. A declaration gives a name, one of four types, the vocabulary of values, and the owner who decides what the values mean. A record's label holds a value set for every dimension the deployment declares.
 
+**Dimension names are snake_case, by rule (ruled by Chris, 2026-11-07).** A name matches `^[a-z][a-z0-9_]*$`, and the
+contract vocabulary writes that form. The key is built from the name (§2), so the key builder normalises a name to
+that form before it digests it, and one dimension cannot mint two keys by its spelling. The first restrictive
+dimension is `data_rights_holder`, which is also iagent's form.
+
 | Type | A record carries | A viewer is admitted when | Empty set means |
 |---|---|---|---|
 | **Hierarchical** | One level from an ordered list | The viewer's level is at or above it | Not allowed. A hierarchical dimension always has a level |
@@ -139,11 +144,31 @@ A deployment declares each dimension it labels by. A declaration gives a name, o
 | **Restrictive set** | Values that narrow the audience, such as caveats, compartments or data-rights holders | The viewer holds every one of them | No restriction from this dimension |
 | **Exclusionary** | Values that bar a holder | The viewer holds none of them | No exclusion from this dimension |
 
+**The last column is the default inside a deployment. A boundary may declare otherwise (amendment, drafted
+2026-11-07, not yet ruled).**
+- A deployment, and each egress destination it declares, may set per dimension:
+  - `required`: an empty or absent value at that boundary is withheld there;
+  - `empty_means`: what an empty set means at that boundary.
+- **Why.** "An empty restrictive set means no restriction" is right inside a mesh and wrong at an egress to a third
+  party. Take a record with no `program` value bound for an OEM. Inside the mesh it is unrestricted. At the OEM
+  boundary it must not leave by default.
+- **A required dimension that is empty or absent at a boundary is withheld, loud.**
+  - The reason is `dimension_missing`, named and counted for the owner.
+  - It is never a silent drop.
+- **The declaration is per boundary.** Nothing moves the in-mesh default. A destination that declares nothing keeps
+  the table's meaning.
+
 **Access is the conjunction.** A viewer sees a record only when every declared dimension admits them.
 
 **Undeclared fails closed, both ways.**
 - A record with no value for a declared dimension is served to nobody. This is ADR-0029 §7's deny-unlabeled, generalised.
 - A record carrying a dimension the deployment does not declare is served to nobody, and the stamp that wrote it is a defect.
+- **On an inbound record, that refusal is loud (ruled by Chris, 2026-11-07).**
+  - It is refused at intake with the reason `dimension_undeclared`, and the dimension is named and counted. It is
+    never a silent withhold.
+  - The record is kept and served to nobody, as a vocabulary refusal is.
+  - A deployment that wants to receive the dimension declares it.
+  - `program` is never declared at an edge (§5).
 
 **Values are validated at the stamp.**
 - Each dimension declares its vocabulary. For nation, that is ISO 3166-1 alpha-3, by the dimension's declaration, not by code.
@@ -289,13 +314,22 @@ A record computed from labelled inputs and emitted as one record, such as a fusi
 
 Any difference fails the migration. A difference is not tuned away.
 
+**One difference is named, not tuned away (ruled by Chris, 2026-11-07).**
+- A row with no originator and a non-empty `releasable_to` is served today, by the second clause of ADR-0029's
+  predicate. Under §2 it is unlabelled, and serving it today is the defect.
+- So the move withholds it.
+- The acceptance run reports these rows as a declared exception, with the reason `no_originator` and their count.
+  The row-match is to the row, except these N rows, which are listed.
+- **Each listed row is owed a declaration. It is not a permanent exception.** A row that gains a per-asset or site
+  declaration is labelled by it and leaves the list.
+
 ### 5. First slice: one restrictive dimension
 
-The first new dimension is **`data-rights-holder`**, a restrictive set. A record that carries data a holder licensed is visible only to viewers entitled by that holder.
+The first new dimension is **`data_rights_holder`**, a restrictive set. A record that carries data a holder licensed is visible only to viewers entitled by that holder.
 
 **Its red case is a same-nation refusal:**
 - The viewer is `ATL`. The record has `originator_nation = ATL`, so today's predicate admits the viewer on the author branch alone.
-- The record also carries `data-rights-holder = {H}`, and the viewer holds no entitlement from H.
+- The record also carries `data_rights_holder = {H}`, and the viewer holds no entitlement from H.
 - After the slice, the viewer is refused.
 
 Today's two fields cannot express that refusal. The test fails on the current predicate and passes on the conjunction.
@@ -305,19 +339,20 @@ as amended by PR #281, "Classification is a label of declared dimensions"):
 
 | iagent dimension | Type | Here |
 |---|---|---|
-| `level` | hierarchical | not declared. No first slice here has a hierarchical dimension |
-| `program` | restrictive set | not declared. iagent keeps it as a row filter at ticket time, not stamped on the dataset |
-| `data_rights_holder` | restrictive set | this slice, as `data-rights-holder` |
+| `level` | hierarchical | not declared. No first slice here has a hierarchical dimension. Inbound, it is refused as `dimension_undeclared` (§1) |
+| `program` | restrictive set | not declared, and never at an edge. iagent keeps it as a row filter at ticket time, not stamped on the dataset. Inbound, it is refused as `dimension_undeclared` (§1) |
+| `data_rights_holder` | restrictive set | this slice, by the same name (§1, ruled 2026-11-07) |
 | `nation` | permissive set | §4, the first dimension. iagent takes its vocabulary from this side |
 
 - **Two dimensions are shared:** nation, and the data-rights holder of this slice. Both sides type them the same.
-- **The name is not yet one name.** This record writes `data-rights-holder` and ADR-0064 writes
-  `data_rights_holder`. The key is a digest of the dimension names as well as the values (§2), so the two spellings
-  give two keys for one label. One spelling has to be declared for both sides before either stamps the dimension.
-  That is open (§6).
-- **`level` and `program` have no declaration here.** A record that crosses from iagent carrying either is a record
-  with an undeclared dimension, so it is served to nobody (§1). That is the right failure until a deployment declares
-  them. Whether a crossing ever needs them here is not decided by this record.
+- **One name (ruled by Chris, 2026-11-07).** Both sides write `data_rights_holder`. §1's snake_case rule makes that
+  the only form.
+- **`level` and `program` have no declaration here.**
+  - A record that crosses from iagent carrying either is refused at intake as `dimension_undeclared`, named and
+    counted (§1). That failure is correct, and it is loud.
+  - A deployment that receives them declares them.
+  - `program` is never declared at an edge. Where it is declared, and how it is filled, belongs to the
+    identity draft's "sustained-under" relation (ADR-0056, provisional), not to this record.
 
 ### 6. Alignment by concept name, schemes as declared policies
 
@@ -364,9 +399,10 @@ that were open here.
   - An iagent product and an OpenDDIL asset are two different things, in two id spaces.
   - Nothing maps one to the other by name.
   - A record that crosses carries its label body (§2), so its label does not depend on joining the ids.
-- **Still open between the two records.**
-  - One spelling for the data-rights-holder dimension (§5).
-  - Whether `level` or `program` is ever declared here (§5).
+- **The two items once open here are ruled (2026-11-07):** the name is `data_rights_holder`, and an undeclared
+  dimension inbound is refused, loud (§1, §5).
+- **ADR-0064's line saying §1a still awaits signature** is iagent's to update. Their architect has put it on Lane 1's
+  list. This side sends no packet.
 
 ### 7. The accreditation boundary
 
@@ -376,13 +412,13 @@ that were open here.
 
 Each of these is a test to write when the record is accepted. None exists.
 1. **Truth tables.** Each type admits and refuses per the table in §1, including the empty-set row.
-2. **Fail closed.** A record missing a declared dimension, and a record carrying an undeclared one, are each served to nobody.
+2. **Fail closed.** A record missing a declared dimension, and a record carrying an undeclared one, are each served to nobody. An inbound undeclared dimension is refused as `dimension_undeclared` and counted. A required dimension empty at a boundary is withheld there as `dimension_missing`.
 3. **Key determinism.** The same label stamped by two tiers gives the same key. Labels that differ in any value, or in declared-empty versus absent `releasable_to` on a record with an originator, give different keys. A record with no originator, under NULL/NULL or NULL/`{}`, gives no key, and is served to nobody.
 4. **High-water.** Each type composes per §3b. One unlabelled input leaves the result unlabelled.
 5. **The split.** The three-class case in §3a gives three rows, each readable only by its class. For each viewer, the sum of the rows they are admitted to equals the rollup computed from only the contributors they may see. With one unlabelled contributor added, the rows are unchanged and the withheld-contributor tally reads 1.
 6. **Downgrade refusal.** A downgrade without an owner or a reason is refused.
 7. **The red case.** The same-nation refusal in §5.
-8. **Acceptance.** The run in §4 matches to the row.
+8. **Acceptance.** The run in §4 matches to the row, except the listed `no_originator` rows.
 9. **Vocabulary.** A value outside a dimension's vocabulary is refused at the stamp, and its record is withheld, not dropped.
 10. **Reorder.** A record whose key the tier has never seen arrives first. It is served as soon as its key is decided, without waiting on any other record.
 11. **Key and body.** A key that does not match its body is refused.
