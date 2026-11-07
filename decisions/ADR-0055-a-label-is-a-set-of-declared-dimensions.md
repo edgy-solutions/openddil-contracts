@@ -111,6 +111,9 @@ The projector copies the label as it receives it (`openddil-projector/src/handle
   - downgrades are recorded with level, reason and steward (`:48-49`).
 - But it then makes one downgrade automatic: "One downgrade is automatic", for an aggregation that drops identifying columns (`:50-51`). §3 below refuses that, and §6 names it as an open alignment item.
 - Its levels are one ordered registry (`:92`), so it has only the hierarchical type.
+- These are the findings as read on 2026-11-05. Since then, invincible-agent PR #281 (branch
+  `lane/01-adr-0064-dimensions`, commit `4685ca45`) amends ADR-0064 to align with this record. ADR-0064 is still
+  Proposed. §6 records what the amendment changes.
 
 **6. The value format diverges.**
 - The contract-b validator requires three uppercase letters.
@@ -297,6 +300,25 @@ The first new dimension is **`data-rights-holder`**, a restrictive set. A record
 
 Today's two fields cannot express that refusal. The test fails on the current predicate and passes on the conjunction.
 
+**Against iagent's first dimensions.** iagent answered the brief's first question (its reply of 2026-11-06, and ADR-0064
+as amended by PR #281, "Classification is a label of declared dimensions"):
+
+| iagent dimension | Type | Here |
+|---|---|---|
+| `level` | hierarchical | not declared. No first slice here has a hierarchical dimension |
+| `program` | restrictive set | not declared. iagent keeps it as a row filter at ticket time, not stamped on the dataset |
+| `data_rights_holder` | restrictive set | this slice, as `data-rights-holder` |
+| `nation` | permissive set | §4, the first dimension. iagent takes its vocabulary from this side |
+
+- **Two dimensions are shared:** nation, and the data-rights holder of this slice. Both sides type them the same.
+- **The name is not yet one name.** This record writes `data-rights-holder` and ADR-0064 writes
+  `data_rights_holder`. The key is a digest of the dimension names as well as the values (§2), so the two spellings
+  give two keys for one label. One spelling has to be declared for both sides before either stamps the dimension.
+  That is open (§6).
+- **`level` and `program` have no declaration here.** A record that crosses from iagent carrying either is a record
+  with an undeclared dimension, so it is served to nobody (§1). That is the right failure until a deployment declares
+  them. Whether a crossing ever needs them here is not decided by this record.
+
 ### 6. Alignment by concept name, schemes as declared policies
 
 | This record | STANAG 4774 / 4778 concept |
@@ -317,12 +339,34 @@ ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-
 - No code maps one scheme to another by name, by level order or by position.
 - A record under a policy the deployment does not declare is served to nobody.
 
-**Alignment with iagent ADR-0064. Named here, not settled here.**
-- **The conflict.** ADR-0064 makes one downgrade automatic, for an aggregation that removes identifying columns (iagent ADR-0064:50-51). §3 refuses any automatic downgrade.
-- **Our position.** A standing downgrade is allowed only as a declared rule that a named owner has signed. It is applied as that owner's decision, and recorded at each application. A de-identifying aggregation can be such a rule. It cannot be the framework's default.
-- **Why it must be aligned.** If one side downgrades automatically and the other refuses, a record leaves one side at one label and the other side re-serves it at a lower one. A shared label structure exists to prevent exactly that.
-- **The structure itself.** ADR-0064's levels are one ordered registry (iagent ADR-0064:92), so it has only the hierarchical type. For the label to be one structure on both sides, the four types have to come across.
-- **The ask.** The brief to iagent's architect asks them to align ADR-0064 or argue the case. Two questions are theirs to answer: which dimensions iagent needs first, and whether its registry can take the four types.
+**Aligned with iagent ADR-0064, by invincible-agent PR #281.** ADR-0064 is still Proposed. The amendment is docs
+only, on branch `lane/01-adr-0064-dimensions` (commit `4685ca45`). iagent's reply of 2026-11-06 concedes both points
+that were open here.
+- **No automatic downgrade.** ADR-0064's "One downgrade is automatic" now reads "No downgrade is automatic".
+  - A standing downgrade is a declared rule with a named owner. It is applied as that owner's decision, and each
+    application is recorded.
+  - The de-identifying aggregation is the first such rule. A rule with no named owner applies to nothing.
+  - This is §3's position.
+- **The four types.** Classification in ADR-0064 is now a label of declared dimensions of this record's four types.
+  - Access is the conjunction.
+  - A dimension is a registry row with a name, a type, a vocabulary and an owner.
+  - A value outside its dimension's vocabulary is refused at validation.
+  - iagent's levels are its first hierarchical dimension, and its program cell is its first restrictive one. No
+    exclusionary dimension is declared there yet.
+- **What ADR-0064 takes from this record.**
+  - It adopts §1a's wording and cites it. Its text still says §1a awaits signature. §1a was signed on 2026-11-06, and
+    updating that text is iagent's.
+  - It cites §3b's composition per type, and adopts §3a, because its cell filter at ticket time already gives a reader
+    exactly their classes' rows.
+- **iagent's asset of record is the physical platform's URN.** That is the URN a data product's label is registered
+  under, and the catalog sync registers under it (ADR-0064, open question 1, closed 2026-11-06). It is not this
+  record's `asset_id`.
+  - An iagent product and an OpenDDIL asset are two different things, in two id spaces.
+  - Nothing maps one to the other by name.
+  - A record that crosses carries its label body (§2), so its label does not depend on joining the ids.
+- **Still open between the two records.**
+  - One spelling for the data-rights-holder dimension (§5).
+  - Whether `level` or `program` is ever declared here (§5).
 
 ### 7. The accreditation boundary
 
@@ -378,4 +422,4 @@ Each of these is a test to write when the record is accepted. None exists.
 - [AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md): label composition as a composability question.
 - [ADR-0050](ADR-0050-asset-arrivals-declare-and-expect.md): the declaration record and §2.6's lookup order. The amendment of 2026-11-06 is ruled the same date (§1a).
 - [ADR-0042](ADR-0042-intent-custody-retention-and-multi-tier-reconciliation.md): cross-child conflicts as named exceptions at the authority (ADR-0042:220).
-- iagent ADR-0064, *Classification propagates through derivation* (proposed 2026-11-05): high-water by column, and one automatic downgrade. Open alignment item, §6.
+- iagent ADR-0064, *Classification propagates through derivation* (proposed 2026-11-05, amended 2026-11-06 by invincible-agent PR #281): aligned with this record, with four types and no automatic downgrade (§6). Two items are open, both in §5.
