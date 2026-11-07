@@ -8,8 +8,8 @@
   this record from it. iagent aligns to this text under its own number, which its architect calls ADR-0067. Both sides
   cite this one text, and neither keeps a second copy.
 - **What iagent has on disk today (read 2026-11-07).** There is no ADR-0067 and no ADR-0065 on any iagent branch, and
-  no `graph_mapping`. This record names them as the architect's text names them. It does not cite them as records.
-- Every item marked "my reading" below is lane 02's inference, not a ruling. Chris rules on each one.
+  no `graph_mapping`. This record names all three as forthcoming. It does not cite them as records until they exist.
+- **The five items lane 02 left open are ruled by Chris, 2026-11-07** (see Rulings).
 
 ## Findings first
 
@@ -24,7 +24,9 @@ none of them carries an identity for the physical thing.
 | Egress episode (`episode_id`) | `assembler.py:167-174` (`episode_key`) | `{kind}\|{owning_tier}\|{asset}\|{component}\|{fault_code}` |
 
 - **The two episode ids differ for the same fault.** The CM seed has no kind and no owning tier. The egress seed has
-  both. Each one is correct for its own use, and nothing maps one to the other.
+  both, and nothing maps one to the other.
+  - **Ruled (Chris, 2026-11-07): CM's id is the right one, and the egress id carrying kind and tier is a bug.** Egress
+    adopts CM's id. The fix belongs to the occurrence work (§5).
 
 **2. The 2026-11-06 collision was a record id borrowing an entity-scoped key.**
 - In `openddil-demo` `d155dd9` ("Egress: event_id is the occurrence id, episode_id spans occurrences"), the record
@@ -66,7 +68,11 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   product and a BOM item. The scope comes from DMRA 2.6 as iagent's architect read it (§8).
 - **It is minted once, by the authority that first declares the thing.**
   - For an asset, that is the arrival declaration (ADR-0050). The tier that holds the declaration mints the identity.
-  - For a vocabulary term, it is the vocabulary's owner.
+  - **A vocabulary term or a data product is minted by the authority that owns the vocabulary or the catalog (ruled by
+    Chris, 2026-11-07).**
+    - Each authority has one generator.
+    - The generator is recorded in the vocabulary file itself, at release.
+    - For OpenDDIL's own vocabularies, the authority is the contracts repo.
   - **The edge mints nothing new.** An edge observes. It keeps what it sees under its `asset_id` until a tier holding
     a declaration binds it.
 - **It never encodes meaning.**
@@ -83,7 +89,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 
 ### 2. Every other id is an alias, held as a row
 
-- **An alias is a row:** `{scheme, value, authority, valid_from}`.
+- **An alias is a row:** `{scheme, value, authority, valid_from}`, with a `valid_to` once it stops holding (§4).
   - Examples of a scheme: a DIS entity id, `asset_id`, a serial number, an NSN, a PDM item number, a UII, a dataset
     URN.
   - **`asset_id` is an alias too.** Its scheme is the deployment's own, and its authority is the deployment.
@@ -112,8 +118,13 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 - **Two identities are the same thing only when someone declares it.** The equivalence is a row with the two
   identities, an owner, a date and a reason. In SKOS terms it is `skos:exactMatch` with an owner.
 - **Never by string similarity.** No rule matches names, serial numbers or URNs to propose or apply an equivalence.
-- **Which identity survives is named by the declaration.** The other is kept as an alias of the survivor and is
-  never deleted (my reading: the base text does not say which survives).
+- **Two identities declared for one thing: neither wins by rule (ruled by Chris, 2026-11-07).**
+  - The parent that sees both raises a named exception to both owners. This is the same path as two conflicting site
+    declarations (the site-declaration design, §6).
+  - A declared equivalence with an owner merges them.
+    - One identity survives.
+    - The other becomes an alias row of the survivor, with a `valid_to`. It is never deleted.
+  - Nothing is chosen by recency, and nothing by tier rank.
 
 ### 5. Record ids are scoped to the entity, and never borrow its key
 
@@ -122,8 +133,14 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 - **Label key:** a content hash of the label (ADR-0055 §2).
 - **The rule.** A record id is never an entity-scoped key reused as it is. An id that names one event carries what
   makes that event distinct. Finding 2 is what breaking this rule looks like.
-- **Kind and owning tier.** Today's egress seeds carry kind and owning tier, and the CM seed does not (finding 1).
-  Whether era 2 keeps them in the tuple is open (Open item 1).
+- **Kind and owning tier are not in the episode id (ruled by Chris, 2026-11-07).**
+  - An episode is the fault on the thing: entity, component and fault code.
+  - Which kind carried a fault and which tier owns the record are attributes of the record. They are not attributes of
+    the fault.
+  - So CM's id is the episode id, and egress adopts it (finding 1). The two-eras rule (§6) covers that change as it
+    covers the identity.
+  - **The October test still holds.** The pinned literal tests the era-1 function for ids already issued. That function
+    stays and the literal stays unedited. Only occurrences opened after the change take the new tuple.
 
 ### 6. Two id eras, and the rebinding row
 
@@ -133,8 +150,8 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   renumbered silently.
 - **The first-occurrence rule holds.**
   - Every id already issued stays as issued, and the October test (finding 3) keeps passing unchanged.
-  - An episode open at the binding keeps the id it opened with until it closes. Only an episode first observed after
-    `bound_at` takes an era-2 id (my reading: it is the only reading that leaves first-occurrence ids unchanged).
+  - **An episode open at the binding keeps its old id until it closes (ruled by Chris, 2026-11-07).** The rebinding
+    row records the date. The next occurrence opens under the entity-scoped id.
 - **The era is read from the binding row, never from the id.** A reader compares an episode's first-observed time with
   `bound_at`. The id itself encodes nothing (§1).
 
@@ -142,7 +159,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 
 - **A dataset keeps its URN.** The URN is a locator, not an identity.
 - **The mapping lives in the registry, never in the URN's text.** The architect's text calls it `graph_mapping`:
-  column, then alias lookup, then node. No such table exists on any iagent branch yet.
+  column, then alias lookup, then node. It is forthcoming and is not yet a record.
 - **This closes ADR-0055 §6's gap by declaration.** iagent's platform URN becomes an alias row of the platform's
   identity, under the catalog's scheme. It is never derived by parsing.
 
@@ -152,7 +169,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   S, with an owner and a date.
 - **It is declared per asset and per component.**
   - A component reaches its OEM and its program through iagent's where-used graph, named by the architect as ADR-0065.
-    No ADR-0065 exists on any iagent branch yet.
+    ADR-0065 is forthcoming and not yet a record.
   - The nearest file is `setup/ontologies/product_structure_extension.ttl` (iagent ADR-0051).
 - **Program at the funnel.**
   - **The edge never declares program** (ADR-0055 §5, ruled 2026-11-07).
@@ -165,8 +182,8 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   - `program` as an access dimension is in the label, and the PEP reads it.
   - "Sustained-under" is a routing relation, and egress reads it.
   - **The relation never writes the stored label.** If it did, a routing default would become an access grant.
-  - The relation fills `program` on the record bound for that boundary only (my reading of "filled by a declared
-    relation" alongside "kept separate").
+  - **`program` goes on outbound records at that boundary only (ruled by Chris, 2026-11-07).** It is a relation
+    declared at the funnel. No tier's stored label ever carries it.
 
 ### 9. `required` and `empty_means`, per deployment and per boundary
 
@@ -215,18 +232,25 @@ Each check is a test or a script that a named workflow runs. A check that nothin
 5. **No matching.** No code path creates an equivalence row except a declaration with an owner.
 6. **Rebinding is a row.** Each era-2 id has a binding row for its asset with `bound_at` at or before the episode's
    first-observed time.
-7. **Routing never writes access.** No write path from "sustained-under" reaches a stored label.
+7. **Routing never writes access.** No write path from "sustained-under" reaches a stored label, and no stored label
+   carries `program`.
+8. **One episode id.** For one fault on one thing, CM's episode id equals egress's `episode_id`, for every episode
+   opened after the change.
+9. **Generators are declared.** Each released vocabulary file names its one generator.
 
-## Open items for Chris
+## Rulings (were open items; Chris, 2026-11-07)
 
-1. **Kind and owning tier in the episode tuple.** Today's CM and egress episode ids differ for one fault (finding 1).
-   Does era 2 keep kind and tier in the tuple, or is the episode (identity, component, fault code) exactly, as the
-   base text says?
-2. **An episode open at the binding** keeps its era-1 id until it closes (§6, my reading).
-3. **Which identity survives a declared equivalence** (§4, my reading: the declaration names it).
-4. **Program on the outbound record only, never on the stored label** (§8, my reading).
-5. **Where identities are minted for terms and data products.** §1 names the asset case only. Terms and products need
-   an owning authority each.
+1. **Kind and owning tier come out of the episode id.** An episode is the fault on the thing. CM's id is the right
+   one, and egress adopts it under the two-eras rule (§5, §6).
+2. **An open episode keeps its old id until it closes.** The rebinding row records the date, and the next occurrence
+   opens under the entity-scoped id (§6).
+3. **Two identities declared for one thing: neither wins by rule.** It is raised as a named exception to both owners.
+   An owned equivalence merges them, and the loser becomes an alias row with a `valid_to`. There is no recency rule and
+   no tier rank (§4).
+4. **`program` goes on outbound records at that boundary only.** No tier's stored label carries it (§8).
+5. **Terms and data products are minted by the authority that owns the vocabulary or the catalog.** Each authority has
+   one generator, recorded in the vocabulary file at release. For OpenDDIL's own vocabularies, that is the contracts
+   repo (§1).
 
 ## What this does not establish
 
@@ -242,5 +266,5 @@ Each check is a test or a script that a named workflow runs. A check that nothin
 - [ADR-0050](ADR-0050-asset-arrivals-declare-and-expect.md): an arrival is a person's declaration.
 - [ADR-0055](ADR-0055-a-label-is-a-set-of-declared-dimensions.md): labels, §1a precedence, the boundary amendment, and
   §7.
-- iagent ADR-0067 (named, not yet on any branch): iagent's citation of this text.
-- iagent ADR-0065 (named, not yet on any branch): the where-used graph.
+- iagent ADR-0067 (forthcoming, not yet a record): iagent's citation of this text.
+- iagent ADR-0065 (forthcoming, not yet a record): the where-used graph.
