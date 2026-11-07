@@ -3,6 +3,9 @@
 ## Status
 
 **PROPOSED — 2026-11-07. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
+- **Read by Chris on 2026-11-07 and accepted as PROPOSED, with four edits.** They are lookup before mint (§1),
+  "observation never mints" (§1), the v7 timestamp as an accepted cost (§1), and two corrections (§5, §8). Check 10 was
+  added with them.
 - The number is provisional until the record is accepted.
 - **One text, two citations.** The base text is iagent's architect's, delivered by Chris on 2026-11-07. Lane 02 drafted
   this record from it. iagent aligns to this text under its own number, which its architect calls ADR-0067. Both sides
@@ -66,21 +69,35 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 - **Each thing has exactly one identity.** It is a UUID version 7 (RFC 9562), written as the IRI `urn:uuid:<uuid>`.
 - **"Thing" is any object, not only an asset.** That covers a physical asset, a component, a vocabulary term, a data
   product and a BOM item. The scope comes from DMRA 2.6 as iagent's architect read it (§8).
-- **It is minted once, by the authority that first declares the thing.**
-  - For an asset, that is the arrival declaration (ADR-0050). The tier that holds the declaration mints the identity.
+- **A declaration binds before it mints (Chris, 2026-11-07).**
+  - **Most things already have an identity elsewhere.** A tank has a UII and a serial number in the maintenance system
+    of record. A tier that minted a fresh identity on arrival would make OpenDDIL a second system of record for
+    identity. That sidestep is ruled out.
+  - **So the arrival declaration (ADR-0050) binds first.** The tier that holds it looks up every alias the declaration
+    carries (UII, serial number, hull number) against the registry it holds (§3). If one resolves, the tier binds the
+    observed `asset_id` to that existing identity, and mints nothing.
+  - **It mints only when no alias resolves.** The tier then records itself as the minting authority, with its
+    generator, on the row.
+  - **A tier-minted identity is provisional against the system of record.** When the link to the system of record
+    returns, the two are reconciled by declared equivalence (§4), never by matching.
   - **A vocabulary term or a data product is minted by the authority that owns the vocabulary or the catalog (ruled by
     Chris, 2026-11-07).**
     - Each authority has one generator.
     - The generator is recorded in the vocabulary file itself, at release.
     - For OpenDDIL's own vocabularies, the authority is the contracts repo.
-  - **The edge mints nothing new.** An edge observes. It keeps what it sees under its `asset_id` until a tier holding
-    a declaration binds it.
+  - **Observation never mints. A declaration may, after the lookup above, and the row names the generator.**
+    - Every tier runs declaration intake, edges included, so an edge holding a declaration may mint.
+    - An observation is kept under its `asset_id` until a declaration binds it.
 - **It never encodes meaning.**
   - Nobody reads a site, nation, kind, tier or time from it. ADR-0047's opacity rule covers it as it covers `asset_id`.
   - Version 7's leading bits are a timestamp. That makes the identity sortable within one generator. They are never
     read as a fact about the thing.
+  - **The timestamp is a stated cost, and it is accepted (Chris, 2026-11-07).** An identity that crosses the seam
+    carries the minute it was declared, whether anyone reads it or not. A sortable index is worth that. The rule
+    against reading it stands, and v4 for identities was considered and not taken.
 - **Minting while severed.**
-  - Version 7 is unique without coordination, so a severed tier holding a declaration can still mint.
+  - Version 7 is unique without coordination, so a severed tier holding a declaration can still mint. It does so only
+    after the lookup, when no alias resolves against the registry it holds.
   - The row records which generator minted the identity, as a declared authority. This follows the idea behind
     MIP/JC3IEDM OIDs: a minting authority is itself declared, so an id minted apart can be traced to who minted it.
     The OID scheme itself is cited by concept and unread here.
@@ -111,7 +128,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   - Any tier can compute it without a store.
   - Only a binding row says which identity it points to.
   - A lookup key is never written where an identity belongs (Check 3).
-- An edge that computes a key and finds no binding row keeps the record under its `asset_id`. It does not mint.
+- An observation whose key finds no binding row is kept under its `asset_id`. Observation never mints (§1).
 
 ### 4. Reconciliation is by declared equivalence, with an owner
 
@@ -129,7 +146,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 ### 5. Record ids are scoped to the entity, and never borrow its key
 
 - **Episode:** a uuid5 over (identity, component, fault code).
-- **Occurrence:** the episode plus `detected_at`.
+- **Occurrence:** the episode plus `detected_at_ns`, as the agreed contract spells it.
 - **Label key:** a content hash of the label (ADR-0055 §2).
 - **The rule.** A record id is never an entity-scoped key reused as it is. An id that names one event carries what
   makes that event distinct. Finding 2 is what breaking this rule looks like.
@@ -177,7 +194,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
     amendment on `required` and `empty_means` (§9).
   - The value is filled from the relation, in ADR-0055 §1a's order: the per-asset row, then a scoped rule (for example
     "every asset of type T in fleet F is sustained under P"), then nothing.
-  - **Nothing is withheld loud as `dimension_missing`.**
+  - **Nothing means withheld, loud, as `dimension_missing`.**
 - **Access and routing stay separate.**
   - `program` as an access dimension is in the label, and the PEP reads it.
   - "Sustained-under" is a routing relation, and egress reads it.
@@ -237,6 +254,8 @@ Each check is a test or a script that a named workflow runs. A check that nothin
 8. **One episode id.** For one fault on one thing, CM's episode id equals egress's `episode_id`, for every episode
    opened after the change.
 9. **Generators are declared.** Each released vocabulary file names its one generator.
+10. **Lookup before mint.** A declaration carrying a UII that already resolves never mints. The failing case is a
+    second identity row for a UII that the registry already binds.
 
 ## Rulings (were open items; Chris, 2026-11-07)
 
