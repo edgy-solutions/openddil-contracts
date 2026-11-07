@@ -7,6 +7,9 @@
 [Amendment 2026-10-05](#amendment-2026-10-05-a-refusal-for-an-unknown-answered-record-is-provisional).
 **Amended 2026-10-13:** a record's key names one event; an optional `episode_id` names its episode. See
 [Amendment 2026-10-13](#amendment-2026-10-13-one-key-per-event-the-episode-as-its-own-field).
+**Amended 2026-11-06:** the key is the occurrence, and `episode_id` names the episode across occurrences. This
+replaces the per-event ids of 2026-10-13. See
+[Amendment 2026-11-06](#amendment-2026-11-06-occurrence-identity-and-episode-identity).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -362,3 +365,67 @@ consumer confirms, its route dedupes on the event id. That is a deployment setti
 - The episode tuple, the owning tier, the first-observation rule, and when an episode opens or closes.
 - The gate and its order of checks. The intake's answered-record rule, which still matches the action's answered
   pointer against the kind's `key` (the event the action answers).
+
+
+## Amendment 2026-11-06: occurrence identity and episode identity
+
+### What happened
+The 2026-10-13 amendment wrote one identity under the name `episode_id`: the uuid5 of the episode tuple, the owning
+tier and the first observation. That identity names one **occurrence**: one opening of a fault, from its first
+observation to its close. A fault that closes and is filed again is a new occurrence with a new id. The name said
+episode, and the per-event `key` said something else again.
+
+In a lab rehearsal, an operator filed a fault into an occurrence that was still open. The tier appended the report
+as a source, and the consumer route deduplicated the revision on `episode_id`. Both did what the rules say. Nothing
+in the record told a reader that the filing belonged to an occurrence already sent.
+
+The consumer and this project agreed the identities below on 2026-11-06.
+
+### The rule
+- **`key` (`/event_id`) is the occurrence id.**
+  - It is the identity of §4 and of the 2026-10-13 amendment: the uuid5 of the kind, the owning tier, the
+    asset, the component, the fault code and the first observation. **The formula is unchanged.**
+  - Every event of one occurrence carries it: the opening, each revision (a new source while open) and each
+    re-send on a posture change.
+  - The per-revision and per-transition ids of 2026-10-13 are retired.
+- **`episode_id` is the episode id.** It is the uuid5 of the kind, the owning tier, the asset, the component and
+  the fault code, without the first observation. Every occurrence of one fault on one item of one asset shares it.
+  The pointer and the overlay schema's field are unchanged: a required uuid. Its meaning changes.
+- **The case id is the event id.** The consumer opens one case per occurrence.
+  - A new occurrence on a closed episode opens a new case. The consumer links that case to its predecessor
+    by `episode_id`.
+  - An event on an open occurrence attaches to that occurrence's case.
+- **On this side, a route to the consumer dedupes on `event_id` and names the case by `event_id`.**
+  - It sends once per opening.
+  - A refile into an open occurrence appends a source at the tier. It is produced as a revision and sends
+    nothing to the consumer.
+  - A route to a stand-in can omit the dedupe and receive every event.
+- **The Kafka message key stays the occurrence id.**
+- **Records are counted by distinct `event_id`, that is, by occurrence.** This replaces "distinct `episode_id`"
+  of 2026-10-13.
+- **The intake matches an action's answered id against the ledger row's case id and event id, not its episode
+  id.** An episode id spans occurrences, so it would match an earlier occurrence's case.
+- **The ledger's `event_id` column holds the route's dedupe value.** On a consumer route that is the occurrence
+  id. Its `episode_id` column holds the episode id from this amendment on.
+
+### Compatibility
+- **Every occurrence keeps its id.**
+  - The opening event of 2026-10-13 already carried the occurrence id as its event id. So every case already
+    opened keeps its key, and every ledger row still matches.
+  - An opening already delivered is still a duplicate after the change.
+- **Records and ledger rows written before the change carry the occurrence id at `episode_id`.** A reader of
+  `episode_id` on those rows reads an occurrence. A reader that needs the episode recomputes it from the
+  record's tuple, with the formula above.
+
+### What does not change
+- When an occurrence opens and closes, which is the tier's CM rule:
+  - a refile into an open occurrence appends a source;
+  - a resolve closes the occurrence and keeps it (`openddil:ADR-0051` §1);
+  - the next filing opens a new occurrence with a new first observation.
+- The gate and its order of checks. The door's case field.
+- The overlay schema's shape.
+
+### Superseded
+- From the 2026-10-13 amendment: the bullets that give each revision and each re-send its own id, and "The
+  consumer's case key".
+- The rest of that amendment stands under the names above.

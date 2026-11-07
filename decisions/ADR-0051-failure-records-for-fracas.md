@@ -7,6 +7,9 @@ written.
 **Amended 2026-10-30:** the closed set is keyed `(episode_id, detected_at_ns)`, not by the episode id alone (§1).
 **Amended 2026-11-01:** analyzer findings now keep their first `detected_at_ns` across re-evaluation, and the CM
 provenance entry's `observed_at` is the CM row's `as_of` (its last change). See the notes under Findings 1 and 2.
+**Amended 2026-11-06:** an episode in this record is one occurrence; the released ids are the occurrence
+(`event_id`) and the episode (`episode_id`). See
+[Amendment 2026-11-06](#amendment-2026-11-06-an-episode-here-is-one-occurrence).
 - Extends `openddil:ADR-0046`: one new outbound kind, one new inbound kind, and no new gate.
 - Uses `openddil:ADR-0009` (the CM model), `openddil:ADR-0048` / `openddil:ADR-0049` (the effector ledger) and
   `openddil:ADR-0044` (posture signals).
@@ -250,3 +253,30 @@ the slice. Status `open`.
 - `iagent:docs/adr/ADR-0054-data-classes-every-write-declares-what-it-is.md` §3: write-back is its own ruling.
 - `iagent:ADR-0063`: the receiving half; reserves `fracas_report`, `safety_finding` and `cyber_indicator`, and keeps
   source classes unmerged.
+
+
+## Amendment 2026-11-06: an episode here is one occurrence
+
+`openddil:ADR-0046`'s amendment of 2026-11-06 separates two identities:
+- **the occurrence id**, at `MaintenanceFaultEvent.event_id`. It names one opening, from first observation to close,
+  and it is the consumer's case id;
+- **the episode id**, at `episode_id`. It is shared by every occurrence of one fault on one item of one asset.
+
+This record was written before that split. Read it as follows.
+- **"Episode" in §1 to §6 names one occurrence:** opened by a filing, closed by a resolve. A failure record is an
+  occurrence.
+- **§1's closed set is unchanged.**
+  - Its key `(episode_id, detected_at_ns)` uses the tier's discrepancy id, which a refile reuses, plus the first
+    observation. The pair identifies the occurrence.
+  - The discrepancy id is the tier's own episode in the new sense. It is not the released `episode_id`. That one is
+    derived like the occurrence id, from the kind, the owning tier and the episode tuple.
+- **§3 and §5 count occurrences.**
+  - Incidence and recurrence count distinct occurrence ids.
+  - A recurrence is a new occurrence of the same episode, so the two rates of §5 count occurrence ids grouped by
+    episode id.
+- **§6's `FailureReport` carries both ids.**
+  - `event_id` is the occurrence it closes, so the consumer files it against that occurrence's case.
+  - `episode_id` is the episode, so the consumer places it in the lineage with the occurrences before and after it.
+  - "our `episode_id`" in §6 reads as these two fields.
+- **The first slice's table (scope 2) is keyed by the occurrence id and carries the episode id.** It is not built,
+  so no row changes.
