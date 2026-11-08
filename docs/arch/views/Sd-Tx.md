@@ -20,6 +20,13 @@ No row here is a conformance claim.
 | NIST SP 800-82, MITRE ATT&CK for ICS | Control-system detection vocabulary | Concept aligned | ADR-0053 |
 | STIX 2.1 | Indicators through the gate | Concept aligned | ADR-0053 |
 | CJCSM 6510.01 | Incident handling vocabulary | Concept aligned | ADR-0053 |
+| RFC 9562 | UUID v7 as an identity, v5 as a lookup key | Concept aligned | ADR-0056 |
+| ISO/IEC 15459, MIL-STD-130 IUID, DoDI 8320.04 | Item identifiers, held as aliases | Concept aligned | ADR-0056 |
+| ISO/IEC 11179 | A registry of identifier schemes, each with an owner | Concept aligned | ADR-0056 |
+| SKOS | Vocabularies, and equivalence with an owner | Concept aligned | ADR-0056 |
+| SD-22, MIL-STD-3018, IEC 62402 | Obsolescence, served by the where-used graph | Concept aligned | ADR-0056 |
+| DCAT, ODRL | Data products and their terms; owed | Declared intent | ADR-0056 |
+| DMRA 2.6 | A unique identifier as a core data service; the edition read is a draft | Concept aligned | ADR-0056 |
 | ISO 13374 | Reading of the condition-monitoring blocks | A reading, not conformance | ADR-0038 |
 | Cursor on Target | Bridge shape | Not in the citations note | CoT design |
 | BFO, CCO, IOF maintenance, W3C SOSA/SSN, PROV-O, OGC GeoSPARQL | Ontology alignment | Citation verified | Citations note |
@@ -37,6 +44,7 @@ Editions the citations note could not verify: the JC3IEDM edition, the date of G
 | The label rows | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md), [CoT design](../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Accepted | Not stated |
 | The maintenance rows | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | The failure rows | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |
+| The identity rows | [ADR-0056](../../../decisions/ADR-0056-one-identity-per-thing-every-other-id-is-an-alias.md) | Proposed | Status line |
 | The hazard row | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Status line |
 | The detection rows | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
 | The ISO 13374 reading | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
