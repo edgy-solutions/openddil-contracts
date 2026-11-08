@@ -1,5 +1,7 @@
 # ADR-0055 — A label is a set of declared dimensions, compiled to one key
 
+**Cites:** `invincible-agent/docs/adr/ADR-0064-classification-propagates-through-derivation.md` at `46df482`
+
 ## Status
 
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**

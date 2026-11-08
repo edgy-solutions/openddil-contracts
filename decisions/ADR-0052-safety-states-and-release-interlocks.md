@@ -1,5 +1,7 @@
 # ADR-0052 — Safety states as declared findings, and work release refused by named live state
 
+**Cites:** `invincible-agent/docs/adr/ADR-0063-field-kinds-from-openddil.md` at `46df482`
+
 ## Status
 
 **ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed. Approved with the request to
