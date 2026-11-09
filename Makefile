@@ -29,6 +29,10 @@ CSHARP_OUT   := gen/csharp
 # Protoc include path (for google/protobuf well-known types)
 PROTO_PATH   := $(PROTO_DIR)
 
+# Overridable so CI can run protoc through grpcio-tools:
+#   make python PROTOC="python -m grpc_tools.protoc"
+PROTOC       ?= protoc
+
 .PHONY: all python csharp clean dirs
 
 # ---------------------------------------------------------------------------
@@ -48,10 +52,12 @@ dirs:
 # ---------------------------------------------------------------------------
 python: dirs
 	@echo "==> Compiling Protobufs → Python..."
-	protoc \
+	$(PROTOC) \
 		--proto_path=$(PROTO_PATH) \
 		--python_out=$(PYTHON_OUT) \
 		$(PROTO_FILES)
+	@# Hand-written Python (the shared UCUM table) rides the same tree.
+	@cd $(PROTO_DIR) && find . -name '*.py' -exec cp --parents {} ../$(PYTHON_OUT) \;
 	@echo "==> Python classes generated in $(PYTHON_OUT)/"
 
 # ---------------------------------------------------------------------------
