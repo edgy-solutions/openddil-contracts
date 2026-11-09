@@ -57,7 +57,7 @@ python: dirs
 		--python_out=$(PYTHON_OUT) \
 		$(PROTO_FILES)
 	@# Hand-written Python (the shared UCUM table) rides the same tree.
-	@cd $(PROTO_DIR) && find . -name '*.py' -exec cp --parents {} ../$(PYTHON_OUT) \;
+	@cd $(PROTO_DIR) && find . -name '*.py' | while IFS= read -r f; do mkdir -p "$(CURDIR)/$(PYTHON_OUT)/$${f%/*}" && cp "$$f" "$(CURDIR)/$(PYTHON_OUT)/$$f"; done
 	@echo "==> Python classes generated in $(PYTHON_OUT)/"
 
 # ---------------------------------------------------------------------------
