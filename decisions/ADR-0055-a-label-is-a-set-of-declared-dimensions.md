@@ -94,7 +94,7 @@ The projector copies the label as it receives it (`openddil-projector/src/handle
 **4. No derived record computes a high-water label.**
 - **Copy one input's label:**
   - fusion (`openddil-logistics-fusion-service/src/workflows/asset_logistics.py:171-192`, `:967-969`);
-  - the edge agents (`openddil-tactical-agents/edge/faust_edge.py`; `edge/prognostics/agent.py:197-198`).
+  - the edge agents (`openddil-tactical-agents/edge/faust_edge.py`; `edge/algorithm_runtime/outputs.py:110-111`).
 - **Sticky label:** CM state takes the label of the latest event that states one. An event that omits it clears nothing (`openddil-cm-service/src/events/asset_cm.py:196-205`).
 - **The regional rollup partitions instead of intersecting.**
   - `openddil-tactical-agents/regional/aggregator_app.py:591-607` (`_effective_audience`) and `:633-656` (`_partition_by_audience`) group contributors by effective audience and emit one row per class.
