@@ -1,8 +1,290 @@
 # Follow-up index
 
-**Reconciled:** 2026-08-12. **This file is a POINTER, never a source.**
+**Reconciled:** 2026-08-12, and against rows named on working cards since 2026-10-29 on 2026-11-09. **This file is a POINTER, never a source.**
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
+
+## OPEN 2026-11-07 — the egress gate refuses "corpus unknown" while its policy decision point reloads
+
+A gate decision made during a policy reload can find the entitlements corpus unknown and refuse. Retrying inside the reload window is a code change, held until after the walk, on the local branch
+`fix/gate-unknown-reload-window`. Home: this row. Named by: the operations card of 2026-11-07.
+
+Close when a corpus-unknown decision during a reload is retried, with a test that reloads under a send.
+
+## OPEN 2026-11-07 — a roll that moves both the policy decision point and the gate has no declared order
+
+The decision point has to be up with its corpus before the gate. One roll's prediction carries that by hand, with a
+pre-check that reads the gate's corpus after the roll. The chart's ordering stays open. Home: this row. Named by: the operations
+card of 2026-11-07.
+
+Close when the chart orders the two, or a check refuses a roll that moves both without the pre-check.
+
+## OPEN 2026-11-07 — an assembler restart re-emits every open episode, and the first re-emits find the parts book cold
+
+**Measured once.** Within about 75 s of start the assembler re-emits every open episode. Its parts book fills about a
+minute after start, so an early re-emit lacks the nearest spare; the gate reads it `schema_invalid` and sends nothing.
+These were two items on the card; they are one row because one restart causes both. The fix is the local branch
+`fix/assembler-parts-primed`, after the walk. Home: this row. Named by: the operations card of 2026-11-07.
+
+Close when a re-emit waits for the book or carries the spare, with a test that restarts the assembler on open episodes.
+
+## OPEN 2026-11-06 — egress dedupes on an id that does not separate an occurrence from an episode
+
+**Status: a design, proposed.** Home: `ADR-0056` (PROPOSED 2026-11-07) and its first-increment spec. The local branch
+`feat/episode-id-from-cm` waits until after the walk. Named by: the operations cards of 2026-11-06 and 2026-11-07 and the
+architecture card of 2026-11-06.
+
+Close when ADR-0056 is ruled and its first increment has passed its acceptance run.
+
+## OPEN 2026-11-07 — a rehearsal of an egress kind predicts the gate without reading an assembled record
+
+A rehearsal of a kind should read one assembled record against that kind's required fields before it predicts what the
+gate does. Home: this row. Named by: the operations card of 2026-11-07.
+
+Close when the rehearsal procedure requires that read.
+
+## OPEN 2026-11-07 — a regional tier's Electric replication slot grows about 70 MB an hour
+
+**Measured.** The slot grew about 67-70 MB/h and held about 8 GB when read. Decided 2026-11-08: a dated clear, scripted
+with no chart change. A restart of that Electric before the clear means dropping the slot at once. The drop threshold
+(lag at or above 512 MB, or an inactive slot with Electric not Ready) is proposed and awaits the owner's confirmation.
+Electric 1.7.9 and later invalidate the stalled shapes that hold a slot back, so the upgrade row below may remove the
+mechanism. Home: this row. Named by: the operations card of 2026-11-07 and the operations decisions of 2026-11-08.
+
+Close when the threshold is confirmed or replaced and the slot's growth is bounded after the upgrade.
+
+## OPEN 2026-11-04 — an edge tier's Electric runs out of memory about a second into replication
+
+**Cause not found.** The Electric was OOM-killed about 1 s into replication with its slot 1.6 GB behind, and looped. The
+slot drop got it up; clearing the Electric alone leaves the slot. Phase reads hide the loop. Its 512 Mi limit is to be
+sized by measurement after the roll. Home: this row. Named by: the operations card of 2026-11-04.
+
+Close when the cause is read and the limit is set from a measurement.
+
+## OPEN 2026-11-04 — Electric has no readiness probe that reads a row
+
+Neither chart template has a hook for it, and Electric's start answers 202 before it can serve. Home: this row. Named by:
+the operations card of 2026-11-04.
+
+Close when an Electric reads Ready only once a row can be read through it.
+
+## OPEN 2026-11-04 — should the hub frontend stop requesting the element-state table
+
+**A decision, not made.** Home: this row; the shape inventory in `ADR-0058` is the read to start from. Named by: the
+operations card of 2026-11-04.
+
+Close when decided and, if yes, shipped.
+
+## OPEN 2026-10-31 — change-only writes at the edge: the next increment
+
+Decided 2026-10-31: element state is written on change at the edge, with a per-asset band-count delta upstream. Two open
+calls on the telemetry half, from 2026-11-08. It is built as "suppress writes that change only freshness, plus a
+heartbeat" (15 s, off by default), not as a write of the changed columns; the owner has to say whether the literal column
+subset was meant. An optional per-variant `positionDeadbandM` in `movement.standards`, passed to the projector, is
+proposed and not built. Home: this row until a design doc takes it. Named by: the operations decisions of 2026-10-31,
+the operations card of 2026-11-04 and the operations decisions of 2026-11-08.
+
+Close when both calls are made and the increment is deployed or declined.
+
+## OPEN 2026-11-08 — the "41% of hub growth" figure has no source on disk
+
+The nearest measured figure is telemetry's 88% share. The sizing row uses a pre-read instead. Home: this row. Named by:
+the operations decisions of 2026-11-08.
+
+Close when the figure is sourced, or struck wherever it is quoted.
+
+## OPEN 2026-10-30 — a declared ceiling on Electric shapes at the edge
+
+**Decided 2026-10-31.** Electric's shape delete stays behind its testing flag, so the route is a declared
+`ELECTRIC_MAX_SHAPES` ceiling at the edge plus a generation term. A spike picks the mechanism. Home: this row until the
+spike reports. Named by: the operations decisions of 2026-10-30 and 2026-10-31.
+
+Close when the spike has reported and a ceiling is declared and enforced.
+
+## OPEN 2026-10-31 — S1: Electric to 1.8.1 and secure mode
+
+**After the walk.** Secure mode is off by default in the chart (`electric.secure.enabled: false`); turning it on by
+default now or after a soak is open. Four things go with it, recorded here so they stay one row:
+
+- The PEP ships in the runtime bundle, so a secure roll needs the demo branch `feat/pep-electric-secret` and a new bundle
+  digest. Until then the old PEP sends no secret and reads 401 on every shape.
+- `reset-scenario.sh`'s verify reads and `check-shape-sizes.sh` read shapes straight from a pod and would read 401. They
+  need the in-pod secret, and the reset script rides the bundle.
+- The PEP serves only `/healthz`, so the frontend connectivity test fails whenever releasability is on. The PEP has to
+  pass `GET /v1/health` through.
+- Every shape rebuilds once at the first 1.8.1 start, and every reader refetches. Plan for it at the roll.
+
+Home: this row until a release note takes it. Named by: the operations decisions of 2026-10-31 and 2026-11-08.
+
+Close when both clusters serve 1.8.1 and the default is decided.
+
+## OPEN 2026-10-31 — Postgres 17
+
+**After the walk.** It needs a chart change on every tier and a store migration, and it waits so as not to confuse the
+Electric readings. Home: this row. Named by: the operations decisions of 2026-10-31.
+
+Close when every tier runs 17.
+
+## OPEN 2026-11-06 — older chart tests write unfiltered renders to a temp directory
+
+`element_state`, `link_traffic` and `forwarder_kinds` save a full chart render, Secrets included, to `mktemp`. Only the
+newer render test filters them first. Home: `openddil-helm` `scripts/tests`. Named by: the operations cards of 2026-11-06
+and 2026-11-07 and the analytics notes of 2026-11-07.
+
+Close when each one filters before writing, or writes nothing.
+
+## OPEN 2026-11-07 — three detector prototypes are built and nothing runs them
+
+`edge/edge_faust_detector.py`, `edge/edge_restate_detector.py` and `hub/hub_restate_projector.py` in `tactical-agents`
+date from April and predate the package layout. The recommendation is to delete all three and point the hub projector
+image at `restate_hub.py`, which is what the chart already runs. Nothing has been deleted; it waits for the owner's
+yes. Home: this row. Named by: the analytics notes of 2026-11-07.
+
+Close when each is deployed, declared or deleted.
+
+## OPEN 2026-11-08 — one unit table for detection, windows and fusion
+
+**Local, not for the walk.** A shared table in `openddil-contracts`, branch `units-table`, is imported by detection,
+windows and fusion, and retires their mirror tables. UCUM Celsius in the shared converter is the `units-celsius` branch
+of `tactical-agents`. They push after a bundle rebuild. Home: those branches. Named by: the analytics notes of 2026-11-08 and
+2026-11-09.
+
+Close when the three services import the table and the mirrors are gone.
+
+## OPEN 2026-11-08 — the thermal unit is ruled but not deployed
+
+It lands with the first deploy that carries thermal, after the recording; alerts then carry source labels, provenance and
+a stamp. Thermal's unused moving average comes out as its own commit after match-to-row, with a diff that removes only
+`temp_ewma_k`. Home: the `algorithms-thermal` branches. Named by: the operations card of 2026-11-07 and the analytics notes of 2026-11-08.
+
+Close when deployed and the moving average is out.
+
+## OPEN 2026-11-09 — a Restate runner for the fusion evaluators
+
+**A design note.** It would be ADR-0034's second runtime, and it needs hub-side recording of fusion inputs first. Home:
+`ADR-0034`. Named by: the analytics notes of 2026-11-09.
+
+Close when ruled in or out.
+
+## OPEN 2026-11-02 — a chart bump sends no signal to contracts
+
+The helm repo should send `repository_dispatch` to contracts on a chart bump, which needs a token secret. Home: this row.
+Named by: the operations card of 2026-11-02.
+
+Close when a chart bump triggers the contracts check.
+
+## OPEN 2026-11-03 — three test sets fail for reasons not tied to any change
+
+Recorded together because each is a known-red set a reader would otherwise take for a regression:
+
+- Helm's sparse-producer test reads 17 pass / 34 fail, and a second file fails the same way on untouched tips. Cause not
+  diagnosed.
+- 12 collection errors in the bundle-example tests.
+- One old projector test fails outside a checkout with its sibling stack repo. Unrelated to anything open.
+
+Home: this row. Named by: the operations cards of 2026-11-02, 2026-11-06 and 2026-11-07.
+
+Close when each set passes or is declared out of the suite.
+
+## OPEN 2026-11-06 — `_window_from_envelope` still reads the envelope's label
+
+Only band output moved to the tier label. Home: `ADR-0055`. Named by: the operations card of 2026-11-06.
+
+Close when windows take the tier label, or ADR-0055 rules that they keep the envelope's.
+
+## CLOSED 2026-11-06 — the five failing tests and a sixth
+
+Three egress tests lacked the contracts protos on the path; two were stale against a deliberate fixture; a sixth failure
+was a manual UDP script that sent at import, now excluded from collection. Not the chart tests that write renders to a
+temp directory, which are a separate open row. Home: `openddil-demo` `fix/master-tests` and the bundle example's test.
+Named by: the operations card of 2026-11-06.
+
+## OPEN 2026-11-06 — the pane's resolve button is built and not deployed
+
+Branch `feat/pane-resolve` of `openddil-demo`. A resolve stays a PEP POST until it ships. Home: this row. Named by: the
+operations card of 2026-11-06.
+
+Close when deployed, or declined.
+
+## OPEN 2026-11-07 — a stale docstring in `element_band_event.py`
+
+"Carried from the source record" stopped being true when band output moved to the tier label. One line. Home: this row.
+Named by: the operations card of 2026-11-07.
+
+Close when corrected.
+
+## OPEN 2026-11-07 — the live refusal path for a record with no nation is proven by tests only
+
+No record on the rehearsal cluster lacks a nation, so the path has not run against live traffic. Tests pass on Postgres
+15 and 16. Home: this row. Named by: the operations card of 2026-11-07.
+
+Close when a record lacking a nation is refused on a live cluster.
+
+## OPEN 2026-11-08 — the hub projector group for the retired element-telemetry topic reads Empty
+
+No consumer is on that topic, so this is a retired group, not a dead worker. The gate lets it through by name. Home: this
+row. Named by: the operations card of 2026-11-07.
+
+Close when the group is removed, or declared retired where the check reads it.
+
+## OPEN 2026-11-06 — ADR-0055: what follows the labels record
+
+High-water marking comes after. The site-declaration design, open items O1-O4, is ready to apply after the walk. O5 was
+ruled yes on 2026-11-06. The fold into the agent repo is held for a reply. Home: `ADR-0055`. Named by: the architecture
+card of 2026-11-06 and the analytics hand-off on the contract.
+
+Close when O1-O4 are ruled and applied and the fold has an answer.
+
+## OPEN 2026-11-02 — ADR-0054: the group-without-topic class needs rework
+
+`check_consumer_declarations.py` is in no helm workflow, the cited `SPEC-consumer-declarations.md` is missing, and the
+generator needs the release name `openddil`. Home: `ADR-0054`. Named by: the architecture card of 2026-11-02.
+
+Close when the class is reworked and the check runs in a workflow.
+
+## OPEN 2026-11-02 — architecture views: declared-source gaps
+
+14 of 27 slots have no declared source; marks copy words not verified against their source; 10 views have a source their
+author did not write; the bundle and releasability names do not match; regions show broker none. Home: the views'
+`slots.yaml`. Named by: the architecture card of 2026-11-02.
+
+Close when each slot has a declared source or a declared absence.
+
+## OPEN 2026-11-03 — the capability table fits at 1280 only with a narrow font
+
+Embedding a font would fix it and is not recommended. A decision. Home: this row. Named by: the architecture card of
+2026-11-03.
+
+Close when decided.
+
+## OPEN 2026-11-02 — `hq-heads-only` stays unmerged until after the walk
+
+A held branch of `openddil-demo`. Home: the branch. Named by: the operations card of 2026-11-02.
+
+Close when merged or dropped.
+
+## OPEN 2026-10-31 — the PEP's ConfigMap keeps one name across revisions
+
+A roll that changes `pep.py` can start the new pod on the old code, because the post-renderer reuses the name. A
+content-hashed name would close the race. The card asked whether to fix it first or make it a row; no answer is recorded,
+so it is a row. The fault catalog's ConfigMap has taken a content-hashed name (`openddil-helm` beb31b6); this one has not.
+Home: `openddil-helm` `scripts/RECORDING-READINESS.md`. Named by: the operations decisions of 2026-10-31.
+
+Close when the name carries the content.
+
+## OPEN 2026-10-31 — a declared `as_of` on the sources read is older than the store's and HQ's
+
+**Read once, on one asset.** `/cm/sources` returned an `as_of` about 8 hours older than the store and HQ read. Old and new
+code gave the same value. The hub Electric shape is the likely place, not read; frozen compacted shapes are recorded in
+`openddil-helm` `scripts/RECORDING-READINESS.md`, and whether they explain this value is not read either. Home: this row. Named by: the operations
+decisions of 2026-10-31.
+
+Close when the value is traced, or no longer reproduces.
+
+## CLOSED 2026-11-07 — CM reports off by default on the second cluster
+
+Opened 2026-10-31. Closed by folding the route and catalog into a later revision of that cluster's values. Home: the
+cluster's values. Named by: the operations decisions of 2026-10-31 and the operations card of 2026-11-07.
 
 ## OPEN 2026-11-03 — a retraction clears no label, and a declaration cannot be corrected through the product
 
@@ -42,6 +324,8 @@ Close when the sim withholds a declared asset's envelope until its map is loaded
 **A second soak, at a 3,500 Mi limit, held the store down for 9 h 30 min.** Memory started at 144 Mi, peaked at 655 Mi and ended at 576 Mi, so it did not grow without bound, and the peak is above the chart's 512 Mi. The backoff fix held at that limit: every retrying worker passed attempt 1,024, no overflow, no restart, and all groups drained within 46 s of the store returning, with no pod touched. A tier at the chart's limit still restarts in a long outage and recovers by itself.
 
 Close when the growth is attributed and either bounded or the limit is set from it, and a projector outlives a 9 h outage at the chart's limit.
+
+Separate from "a projector's health must reflect its workers": this row is memory growth during an outage, that one is a dead worker nothing can see. Neither fix closes the other.
 
 ## OPEN 2026-11-03 — CM's handler has little margin over its stream, so a backlog takes most of a day to clear
 
@@ -106,6 +390,8 @@ process's copy can be older than the store.
 Close when a stored "no row" does not admit the stamp on a failed lookup, or the window is decided acceptable and written
 where an operator would read it, with a test on the real binary either way.
 
+One of five rows on a label read from more than one writer, each its own mechanism and close condition: this one; "a file row added after a declaration"; "the logistics sim labels from the declaration topic"; "a retraction clears no label"; "a CM row cannot say what wrote its label".
+
 ## OPEN 2026-11-04 — a Fire record has two defects: no declared label, and lost at a tier in a store outage
 
 Decided 2026-11-04: both are fixed after the walk, and each roll until then carries them as named risks. They are one
@@ -141,6 +427,8 @@ fix, which does not make it worse.
 Close when a connection error in custom mode retries as the other modes do while a bad record still does not block its
 partition, with a test that drops the store under a Fire and sees the row arrive after it returns.
 
+Separate from "a launcher's Fire count resets": that row loses a count held in Restate state, this one loses a record at a store. Neither fix closes the other.
+
 ## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
 
 **Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
@@ -152,6 +440,8 @@ partition, with a test that drops the store under a Fire and sees the row arrive
 **A real defect for a customer, decided 2026-11-04: ledger counts belong in the store, not only in Restate state.** A roll on a lab with one launcher, an empty count and a last launch days old goes ahead with the wipe and loses nothing; that is the reason for that roll, not for this design.
 
 Close when a count survives an upgrade, from the store.
+
+Separate from "a Fire record has two defects": that row loses a record at a store, this one loses a count held in Restate state. Neither fix closes the other.
 
 ## OPEN 2026-11-04 — a file row added after a declaration wins through a restart in a store outage
 
@@ -181,6 +471,8 @@ Empty after the consumer's poll interval, and it recovers on its own.
 Close when a worker that ends unexpectedly ends the process, so the pod restarts, or when a liveness probe reads
 worker state the way `cmService.stallProbe` and `logisticsFusion.stallProbe` read theirs, with a test that kills a
 worker and sees the signal fail.
+
+Separate from "a projector is OOM-killed": this row is a dead worker nothing can see, that one is memory growth during an outage. Neither fix closes the other.
 
 ## CLOSED 2026-10-30 (opened 2026-10-30) — lab2 pins cm-service by digest after the roll that measures the re-seed fix
 
@@ -226,20 +518,24 @@ the reading in which Faust came up before the site's broker (an earlier version 
 reading is Faust, in both red runs). Both are about when a component retries, inside or across a site. Neither loses data. Close when the heal either restarts the bridge or proves it
 forwarding, or when the bridge retries in-process instead of exiting.
 
-## OPEN 2026-10-29 — the tier issuer's PEP code is committed but not served on lab2
+## CLOSED 2026-10-30 (opened 2026-10-29) — the tier issuer's PEP code is committed but not served on the second lab
 
 **Blocked on a bundle rebuild.** `ADR-0045` §"The next increment", progress: with the tier issuer on at edge-01,
-edgy-lab2 reads 2 / 4 at edge-01 as designed (no alias yet), link up and severed, with 0 diffs on role and
+The second lab reads 2 / 4 at edge-01 as designed (no alias yet), link up and severed, with 0 diffs on role and
 allowed_nations. The PEP changes for items 5–6 (`iss` checked before the signing key; `issuer` and `realm_version` in
-the decision record and on `/auth/me`) are committed in openddil-demo and ship in the runtime bundle, which lab2 pins
-by digest. Until the bundle is rebuilt and lab2's pin moves, a root-minted token is refused there on its key, not on
-`iss`, and neither field is visible. Close when lab2 serves the new PEP code and a root-minted token for edge-01's
+the decision record and on `/auth/me`) are committed in openddil-demo and ship in the runtime bundle, which the second lab pins
+by digest. Until the bundle is rebuilt and the second lab's pin moves, a root-minted token is refused there on its key, not on
+`iss`, and neither field is visible. Close when the second lab serves the new PEP code and a root-minted token for edge-01's
 client is refused on `iss` by the serving process.
 
 Related, recorded in the ADR and not separately open: `realm_version` is a digest of the import's inputs, including
 the deployment's user overlay, so a per-file digest of the artefact belongs in the bundle build; `home_tiers` for
 the test's homes lives in the openddil-demo realm artefact; the import has a fourth refusal, for a temporary
 credential.
+
+**Closed by the second lab's rev 11** (2026-10-30), which pinned a runtime bundle carrying the PEP code. The serving tier
+PEP refused a root-minted token for edge-01's client with "issuer mismatch", not on the key, and the decision records
+carry `issuer` and `realm_version` (4 / 4). Home: `ADR-0045` §"The next increment", progress, step 6.
 
 ## OPEN 2026-10-29 — the sever cuts the user too: decided and built; one question left on the red's location
 
