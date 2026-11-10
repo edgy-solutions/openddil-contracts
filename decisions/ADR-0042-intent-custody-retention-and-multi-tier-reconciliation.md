@@ -1,5 +1,7 @@
 # ADR-0042: Intent custody, retention, and multi-tier reconciliation
 
+**Cites:** `invincible-agent/docs/adr/ADR-0054-data-classes-every-write-declares-what-it-is.md` at `46df482`
+
 ## Status
 
 Proposed — 2026-09-16. **Design position. Nothing built, and nothing here
