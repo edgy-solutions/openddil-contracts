@@ -48,6 +48,8 @@ flowchart TB
 
 The same predicate serves both subjects. A severed tier still decides and enforces, because its decision point is its own.
 
+Designed, not built: a switch on the read-path enforcement point, off by default, filters on the label key in place of the two-column predicate, for nation only. The rows admitted are the same rows. It fails closed: a row whose key the enforcement point has not yet seen is served to nobody.
+
 ## Sources
 
 | Claim | Source | Decision | Evidence |
@@ -58,4 +60,5 @@ The same predicate serves both subjects. A severed tier still decides and enforc
 | Tier-bridge enforcement (slice 3) | [ADR-0029](../../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Fenced |
 | One predicate with the destination as a second subject | [ADR-0043](../../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
 | A tier realm with its own issuer and keys, credentials at the home tier | [ADR-0045](../../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Design only |
+| A label-key filter on the read path, off by default, fails closed | [Compatibility slice](../../../../decisions/DESIGN-2026-11-06-adr0055-compatibility-slice.md) | Design note | Design only |
 | Classification is fenced from the gate's decision | [ADR-0043](../../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Fenced |

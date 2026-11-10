@@ -21,6 +21,8 @@ erDiagram
     KIND ||--o{ DECISION_RECORD : "is decided in"
 ```
 
+Proposed, design only: each asset has one identity, minted once by the authority that declares it, after a lookup of the aliases it carries. Every other id (an observed asset id, a UII, a serial or hull number) is an alias held as a row with its scheme and authority. A record id, such as an episode's, is scoped to the entity: an episode is the entity, component and fault code, and an occurrence is the episode and its detection time.
+
 ## Sources
 
 | Claim | Source | Decision | Evidence |
@@ -30,6 +32,8 @@ erDiagram
 | Originator nation and releasable-to on provenance | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | Operational state axes | [ADR-0026](../../../decisions/ADR-0026-operational-state-orthogonal-axis-model.md) | Accepted | Not stated |
 | Configuration items | [ADR-0009](../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
+| One identity per thing; every other id is an alias | [ADR-0056](../../../decisions/ADR-0056-one-identity-per-thing-every-other-id-is-an-alias.md) | Proposed | Status line |
+| An episode is the entity, component and fault code | [ADR-0056](../../../decisions/ADR-0056-one-identity-per-thing-every-other-id-is-an-alias.md) | Proposed | Status line |
 | An episode is the failure record | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |
 | Declarations and fielding records | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | Effector and munition tracks | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md), [ADR-0049](../../../decisions/ADR-0049-in-flight-munitions-tracked-by-munition-id.md) | Accepted | Not stated |
