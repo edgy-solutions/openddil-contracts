@@ -10,6 +10,10 @@ mapper's concern) and ADR-0044 (lifecycle columns unchanged). Adds a fielding re
 **Amended 2026-11-04:** a store outage serves the last known answer per asset. See
 [the amendment](#amendment-2026-11-04-a-store-outage-serves-the-last-known-answer).
 
+**Amendment ruled 2026-11-06:** a default is not a declaration, so step 3 of item 2.6 is replaced by a cited
+site declaration, following ADR-0055 §1a, signed the same date. It takes effect on each deployment only in
+load-before-amend order. See [the amendment](#amendment-2026-11-06-ruled-a-default-is-not-a-declaration).
+
 ## Context
 
 - **Labels come from one file today.** Ingress stamps `originator_nation` and `releasable_to` from the deployment's
@@ -90,6 +94,7 @@ edge is cut.
      1. the owning store's `asset_declaration`, through a short-TTL cached query;
      2. else the file's `assets` row;
      3. else the file's `default_originator_nation` (a deployment default, e.g. per edge);
+        *(ruled 2026-11-06: replaced by a cited site declaration, load before amend. See the amendment.)*
      4. else unlabelled.
    - The file's rows win over a declaration for the same id, so a declaration for an id the file already labels
      is refused (already in fleet). Only `assets` rows count; the default never does.
@@ -191,6 +196,51 @@ was seen twice before `openddil-demo` 2309dc5, which makes it impossible.
 **Not proven:** a real declaration under a real outage. The outage branch was read with a row inserted directly and on
 the real binary. A real declaration was read with the store up.
 
+## Amendment 2026-11-06 (ruled): a default is not a declaration
+
+**Ruled by Chris, 2026-11-06, with ADR-0055 §1a signed the same date.** It takes effect on each deployment only in the order below.
+
+**Why.** Item 2.6 step 3 lets a deployment default label a record. The 2026-11-04 amendment refuses a default only
+after a failed lookup. Both sit against this record's own summary of ADR-0029 §3, "labels propagate, never default"
+(Status, and Related). A default is a label nobody stated about the record. This amendment makes the summary true.
+
+**Step 3 becomes a site declaration.** The lookup order is:
+1. the owning store's `asset_declaration`;
+2. else the file's `assets` row;
+3. else a **site declaration** that covers the record: a stored statement of scope, dimension values, owner and
+   date, through this record's intake. The stamp cites its id.
+4. else unlabelled, so withheld.
+
+- Two site declarations at one tier that cover a record and disagree give nothing, and a named exception to both
+  owners. The case across two tiers is in ADR-0055 §1a.
+- A per-asset declaration outranks a site declaration. So an asset labelled only by a site declaration is still
+  undeclared and may be declared, as an asset labelled only by a default may be today.
+- The 2026-11-04 amendment stands. A last known answer from a site declaration is a declared answer. "No stamp and
+  no default" now reads "no stamp": the default is gone.
+- The file's `assets` row keeps its place, and carries an owner and a date, as a site declaration does. Without
+  them it is a default (ADR-0055 §1a).
+
+**Order: load before amend.** On each deployment:
+1. Write a site declaration for every default in use, stating the same answer.
+2. Load them, and confirm every record a default labelled now cites one with the same value. The labelled and
+   unlabelled counts must not change.
+3. Only then remove step 3 and the defaults.
+
+In the other order, every record labelled only by a default is withheld at the change.
+
+**What it reaches.** Each row is a default today. Each becomes a cited declaration or stops stamping. The paths are
+in ADR-0055 Findings 3.
+- The logistics sim's edge default, its document default, and its `site_nation` fallback.
+- The publisher's spares, under a site declaration scoped to the site.
+- The DIS mapping's stamp-then-default.
+- The ingest's nation stamp:
+  - its per-entity overrides become per-asset declarations;
+  - its geofence and marking rules become site declarations scoped by rule;
+  - its country-code rules become a declared mapping between schemes (ADR-0055 §6).
+- The effector's path, already open in `FOLLOW-UPS.md` because it has no declaration lookup.
+
+**Not established.** The site declaration has no schema yet. No deployment has loaded one. Nothing here was run.
+
 ## Consequences
 
 ### Positive
@@ -215,3 +265,4 @@ the real binary. A real declaration was read with the store up.
 
 - 2026-10-15: §2 item 6 amended to declaration, then row, then default, then unlabelled. A default must never beat a person's declaration.
 - 2026-10-15: §2 item 4: cm-service reads the declaration on first-seen registration, so a declared baseline survives a state wipe. Reset: declarations are kept unless `clearExerciseDeclarations` is set.
+- 2026-11-06 (ruled): §2 item 6 step 3, the deployment default, replaced by a cited site declaration; load before amend. See the amendment.
