@@ -4,6 +4,34 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-10 — the intake reads kinds only at start
+
+A changed kind schema reaches the intake only through a chart upgrade. The kinds checksum rolls four workloads
+(assembler, forwarder, gate and intake), with the upgrade's hooks, so correcting one schema is a full roll. Home: the
+worked example in `docs/arch/views/Op-Cn.md`, finding O1. Named by: the operations card, entry of 2026-11-10.
+
+Close when a kind change is loaded without a roll, or when the roll is the documented step for it.
+
+## OPEN 2026-11-10 — a final `schema_invalid` refusal is not re-decided after its kind is corrected
+
+The intake skips a final refusal whose body hash is unchanged, so an action refused against a wrong kind stays refused
+after the kind is corrected. A fix is written and held for the next roll, on the local branch
+`fix/intake-redecide-schema-invalid`: a same-hash `schema_invalid` row whose body now passes the loaded schema is decided
+again, the new decision replaces the stored row, and `schema_redecided` counts it. Every other same-hash row is still
+skipped. It changes ADR-0046's hash-skip rule, which needs an amendment. Home: the worked example in
+`docs/arch/views/Op-Cn.md`, finding O2. Named by: the operations card, entry of 2026-11-10.
+
+Close when the fix is deployed, the walk's action reads admitted with `schema_redecided` 1, and ADR-0046 records the rule.
+
+## OPEN 2026-11-10 — the stand-in answers `task_refs` as strings
+
+The stand-in that answers in place of the maintenance system in tests sends `task_refs` as strings. Under the kind
+changed to the object shape, its answers would be refused `schema_invalid`. Nothing polls it today. Change its answer to
+the object shape, or record that its answers are refused. Home: the worked example in `docs/arch/views/Op-Cn.md`,
+finding O4. Named by: the operations card, entry of 2026-11-10.
+
+Close when the stand-in's answer passes the deployed kind, or the refusal is recorded as intended.
+
 ## OPEN 2026-11-07 — every image in the chart by digest, and every Dockerfile from its lock
 
 **A design, not built.** Of the chart's 33 default image blocks, 3 render by digest; 14 owned images resolve to `:latest`
