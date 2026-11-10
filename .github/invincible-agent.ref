@@ -1,0 +1,11 @@
+# The invincible-agent commit that the ADRs in decisions/ cite. It is read by
+# scripts/check-iagent-citation-pins.sh (run by scripts/check-decision-indexes.sh) and by
+# .github/workflows/decision-indexes.yml, which check that every `**Cites:**` line names a sha
+# this file pins, and that the cited file exists at that sha in invincible-agent.
+#
+# Bump it ONLY in the same commit as the Cites lines (today ADR-0042, ADR-0051, ADR-0052,
+# ADR-0053 and ADR-0055, citing iagent ADR-0054, ADR-0063 and ADR-0064). A pin that moves alone
+# leaves the ADRs citing a text nobody reads; a Cites line that moves alone fails the check.
+#
+# Currently invincible-agent master at 46df482 (2026-11-07), which holds all three cited files.
+46df48255d02274ac66538fe77bd7b0a69da48cb

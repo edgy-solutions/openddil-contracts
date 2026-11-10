@@ -1,5 +1,7 @@
 # ADR-0053 — Logistics cyber detection as surfaced disagreement
 
+**Cites:** `invincible-agent/docs/adr/ADR-0063-field-kinds-from-openddil.md` at `46df482`
+
 ## Status
 
 **ACCEPTED — approved 2026-10-29.** Design only. Nothing here is built or deployed.

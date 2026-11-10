@@ -181,12 +181,17 @@ fi
 # WHAT THIS CAN AND CANNOT CHECK, stated rather than implied:
 #   * an unknown prefix          -> a finding; the vocabulary is closed
 #   * `openddil:ADR-NNNN`        -> must resolve to a document HERE
-#   * `iagent:ADR-NNNN`          -> form checked, EXISTENCE NOT CHECKED
+#   * `iagent:ADR-NNNN`          -> form checked, and PINNED: the citing ADR
+#                                   carries a Cites line at a sha that is a
+#                                   prefix of .github/invincible-agent.ref
+#                                   (scripts/check-iagent-citation-pins.sh)
 #
-# The third is the honest limit. This repo cannot see that one, and a checker
-# that reported a foreign citation as "verified" would be asserting something
-# it has no access to -- the same shape as a check that cannot fail. So they
-# are counted and listed, and the summary says they are unresolved.
+# This script still cannot see the other repo. A checker that reported a
+# foreign citation as "verified" here would be asserting something it has
+# no access to -- the same shape as a check that cannot fail. So the pin is
+# checked here, and that each cited file EXISTS at the pin is checked by the
+# workflow's fetch (decision-indexes.yml), which needs the network.
+# Set PINS_OUT to a file to receive the pin list that the fetch reads.
 KNOWN_REPOS="openddil|iagent"
 
 # NO  IN THIS PATTERN, deliberately. An earlier version carried one and a
@@ -225,14 +230,22 @@ fi
 foreign=$(printf '%s
 ' "$xrefs" | grep -cE "^iagent:ADR-" || true)
 
+# --- cross-seam pins --------------------------------------------------------
+if ! pins=$(../scripts/check-iagent-citation-pins.sh ..); then
+  echo "FAIL: an iagent citation is not pinned (errors above)" >&2
+  fail=1
+fi
+if [ -n "${PINS_OUT:-}" ]; then printf '%s\n' "$pins" > "$PINS_OUT"; fi
+
 if [ "$fail" -eq 0 ]; then
   echo "decision indexes clean: $(echo "$corpus" | wc -l | tr -d ' ') IDs, all documents indexed, all statuses agree"
   echo "note: 'agree' means the index matches the home, NOT that either is true."
   echo "cross-repo citations: $(printf '%s
 ' "$xrefs" | grep -c . || true) prefixed, all prefixes known,"
   echo "  all openddil:-prefixed ones resolve here."
-  echo "  ${foreign:-0} iagent:-prefixed reference(s) NOT resolved — this repo"
-  echo "  cannot see that corpus, and reporting them as verified would assert"
-  echo "  something it has no access to."
+  echo "  ${foreign:-0} iagent:-prefixed reference(s); $(printf '%s\n' "$pins" | grep -c .) Cites line(s), each"
+  echo "  pinned at $(printf '%s\n' "$pins" | awk 'NR==1{print substr($3,1,7)}'). That each cited file exists"
+  echo "  at the pin is checked by the workflow's fetch, not here: this repo"
+  echo "  cannot see that corpus."
 fi
 exit "$fail"

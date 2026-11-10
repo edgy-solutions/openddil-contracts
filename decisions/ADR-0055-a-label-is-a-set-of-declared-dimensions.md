@@ -1,5 +1,7 @@
 # ADR-0055 — A label is a set of declared dimensions, compiled to one key
 
+**Cites:** `invincible-agent/docs/adr/ADR-0064-classification-propagates-through-derivation.md` at `46df482`
+
 ## Status
 
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
@@ -94,7 +96,7 @@ The projector copies the label as it receives it (`openddil-projector/src/handle
 **4. No derived record computes a high-water label.**
 - **Copy one input's label:**
   - fusion (`openddil-logistics-fusion-service/src/workflows/asset_logistics.py:171-192`, `:967-969`);
-  - the edge agents (`openddil-tactical-agents/edge/faust_edge.py`; `edge/prognostics/agent.py:197-198`).
+  - the edge agents (`openddil-tactical-agents/edge/faust_edge.py`; `edge/algorithm_runtime/outputs.py:110-111`).
 - **Sticky label:** CM state takes the label of the latest event that states one. An event that omits it clears nothing (`openddil-cm-service/src/events/asset_cm.py:196-205`).
 - **The regional rollup partitions instead of intersecting.**
   - `openddil-tactical-agents/regional/aggregator_app.py:591-607` (`_effective_audience`) and `:633-656` (`_partition_by_audience`) group contributors by effective audience and emit one row per class.
@@ -105,15 +107,15 @@ The projector copies the label as it receives it (`openddil-projector/src/handle
 
 **5. Contradictions in the record.**
 - ADR-0029:302 says the fields are "not yet in" the proto. ADR-0029:631 marks that step DONE, and the proto has them.
-- iagent ADR-0064 (`docs/adr/ADR-0064-classification-propagates-through-derivation.md`, Proposed) agrees on the structure:
+- `iagent:ADR-0064` (`docs/adr/ADR-0064-classification-propagates-through-derivation.md`, Proposed) agrees on the structure:
   - a derived column takes the maximum of its sources (`:35-36`);
   - an unlabelled source is most restrictive;
   - downgrades are recorded with level, reason and steward (`:48-49`).
 - But it then makes one downgrade automatic: "One downgrade is automatic", for an aggregation that drops identifying columns (`:50-51`). §3 below refuses that, and §6 names it as an open alignment item.
 - Its levels are one ordered registry (`:92`), so it has only the hierarchical type.
-- These are the findings as read on 2026-11-05. Since then, invincible-agent PR #281 (branch
-  `lane/01-adr-0064-dimensions`, commit `4685ca45`) amends ADR-0064 to align with this record. ADR-0064 is still
-  Proposed. §6 records what the amendment changes.
+- These are the findings as read on 2026-11-05. Since then, invincible-agent PR #281 (commit `4685ca45`, on
+  iagent master by 2026-11-07) amends ADR-0064 to align with this record. ADR-0064 is still Proposed. §6 records
+  what the amendment changes. The text this record cites is ADR-0064 at the pin in its header.
 
 **6. The value format diverges.**
 - The contract-b validator requires three uppercase letters.
@@ -376,7 +378,7 @@ ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-
 - A record under a policy the deployment does not declare is served to nobody.
 
 **Aligned with iagent ADR-0064, by invincible-agent PR #281.** ADR-0064 is still Proposed. The amendment is docs
-only, on branch `lane/01-adr-0064-dimensions` (commit `4685ca45`). iagent's reply of 2026-11-06 concedes both points
+only (commit `4685ca45`), and it is on iagent master. iagent's reply of 2026-11-06 concedes both points
 that were open here.
 - **No automatic downgrade.** ADR-0064's "One downgrade is automatic" now reads "No downgrade is automatic".
   - A standing downgrade is a declared rule with a named owner. It is applied as that owner's decision, and each
@@ -459,4 +461,4 @@ Each of these is a test to write when the record is accepted. None exists.
 - [AUDIT-2026-08-07](AUDIT-2026-08-07-aggregation-composability.md): label composition as a composability question.
 - [ADR-0050](ADR-0050-asset-arrivals-declare-and-expect.md): the declaration record and §2.6's lookup order. The amendment of 2026-11-06 is ruled the same date (§1a).
 - [ADR-0042](ADR-0042-intent-custody-retention-and-multi-tier-reconciliation.md): cross-child conflicts as named exceptions at the authority (ADR-0042:220).
-- iagent ADR-0064, *Classification propagates through derivation* (proposed 2026-11-05, amended 2026-11-06 by invincible-agent PR #281): aligned with this record, with four types and no automatic downgrade (§6). Two items are open, both in §5.
+- `iagent:ADR-0064`, *Classification propagates through derivation* (proposed 2026-11-05, amended 2026-11-06 by invincible-agent PR #281): aligned with this record, with four types and no automatic downgrade (§6). Two items are open, both in §5.
