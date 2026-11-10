@@ -43,6 +43,6 @@ Exported separately as SV-6.
 | Contract A | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
 | Contract B | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
 | Release and intake at the hub | [ADR-0046](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
-| Cursor-on-target bridge | [CoT bridge design](../../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Design note | Not stated |
+| Cursor-on-target bridge | [CoT bridge design](../../../../decisions/DESIGN-2026-10-01-cot-bridge.md) | Design note | Built |
 | Member-to-member flows in the matrix | [ADR-0033](../../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Declared |
 | Writers and consumers, per topic, from workload annotations | [ADR-0054](../../../../decisions/ADR-0054-workload-annotations-declare-broker-use.md) | Accepted | Declared |

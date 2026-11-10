@@ -245,8 +245,8 @@ class Perturbed(unittest.TestCase):
         self.assertEqual(rc, 1, out + err)
         rows = [l for l in err.splitlines() if l.startswith("FAIL: marks:") and "no record it cites" in l]
         views = sorted({l.split(":")[2].strip() for l in rows})
-        self.assertEqual(len(rows), 11, err)
-        self.assertEqual(views, ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Sm-Ov", "Sv-Cn"], err)
+        self.assertEqual(len(rows), 13, err)
+        self.assertEqual(views, ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Rs-Sr", "Sm-Ov", "Sv-Cn"], err)
 
     def test_7_marks_accepted_flipped_to_proposed(self):
         edit(self.root, "views/Op-If.md", "ADR-0047-asset-id-is-opaque.md) | Accepted |",

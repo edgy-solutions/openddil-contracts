@@ -324,7 +324,7 @@ class TempTree(unittest.TestCase):
         rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "before")
         self.assertEqual(rc, 0, err)
         before = self.design_rows(self.tmp / "before")
-        views = ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Sm-Ov", "Sv-Cn"]
+        views = ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Rs-Sr", "Sm-Ov", "Sv-Cn"]
         self.assertEqual(sorted(before), views)
         self.assertEqual({v for vs in before.values() for v in vs}, {"Nothing built"})
         d = self.tmp / "decisions" / "DESIGN-2026-09-06-interface-contracts.md"
