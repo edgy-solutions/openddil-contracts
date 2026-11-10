@@ -4,6 +4,23 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-07 — every image in the chart by digest, and every Dockerfile from its lock
+
+**A design, not built.** Of the chart's 33 default image blocks, 3 render by digest; 14 owned images resolve to `:latest`
+and 16 third-party images to tags. No Dockerfile takes its dependencies from a `uv.lock`, though five have one in their
+build context, and a `uv pip compile` during the build re-resolves on every build. The design adds a pin table that
+fails when a tag changes without its digest, a render guard and an in-template guard that fail on a tag, the locks, and a
+Dockerfile check, in five stages.
+
+Two neighbours are tracked here. The `fix/ci-latest-master-only` workflow row is held until after the walk, because CI's
+`:latest` moved to an unmerged branch's image once; both clusters pin by digest, so nothing was harmed. The contracts CI
+installs `grpcio-tools` unpinned.
+
+Home: `DESIGN-2026-11-08-image-pinning-render-check.md`; `ADR-0057` lists it open. Named by: the architecture card of
+2026-11-06, addendum 17, the operations card of 2026-11-07 and the analytics report of 2026-11-09.
+
+Close when the guard is on for every image and every Dockerfile builds from its lock, each with its red check.
+
 ## OPEN 2026-11-07 — the egress gate refuses "corpus unknown" while its policy decision point reloads
 
 A gate decision made during a policy reload can find the entitlements corpus unknown and refuse. Retrying inside the reload window is a code change, held until after the walk, on the local branch
