@@ -1,0 +1,31 @@
+# Sample Fleet System: CV-4 Capability Dependencies (DoDAF 2.02)
+
+built on OpenDDIL 0.1.161
+
+From UAF 1.2 Strategic-Connectivity (St-Cn).
+
+Which capability depends on which. The table is generated when the view is rendered. It joins the roadmap note's `depends on` and `folds into` columns to [capability-record.yaml](../../capability-record.yaml) by each capability's increment. A dependency cell that names no increment, or more than one, fails the render, and so does an increment with no capability, so an edit to the note cannot drop an edge silently.
+
+| Increment | Capability | Depends on | Relation |
+|---|---|---|---|
+| PDP per tier | TierLocalDecision | none | Done first |
+| Identity per tier | TierLocalSignIn | PDP per tier: TierLocalDecision | Needs |
+| Maintenance chain per tier | TierLocalMaintenanceChain | Identity per tier: TierLocalSignIn | Needs |
+| Workflow per tier | TierLocalWorkflow | Maintenance chain per tier: TierLocalMaintenanceChain | Needs |
+| One session | OneSession | Identity per tier: TierLocalSignIn | Needs |
+| False-readiness view (fold-in A) | DisagreementDetection | Maintenance chain per tier: TierLocalMaintenanceChain | Rides with, not a dependency |
+| Interlock refusals (fold-in B) | SafetyInterlockRefusal | Maintenance chain per tier: TierLocalMaintenanceChain | Rides with, not a dependency |
+| FRACAS record (fold-in C) | FailureReporting | Maintenance chain per tier: TierLocalMaintenanceChain | Rides with, not a dependency |
+| Cyber alerts (fold-in D) | DisagreementDetection | Maintenance chain per tier: TierLocalMaintenanceChain | Rides with, not a dependency |
+
+A row that reads "Needs" cannot start before the capability it names. A fold-in rides with an increment and costs that increment nothing. It is not a dependency, and the increment does not wait for it. [Strategic-Roadmap-Phasing](../../views/St-Rm-P.md) draws the same order as a lane, and [Strategic-Taxonomy](../../views/St-Tx.md) defines each capability.
+
+The note orders the increments and deliberately gives no dates. A deployment supplies those on the roadmap view.
+
+## Sources
+
+| Claim | Source | Decision | Evidence |
+|---|---|---|---|
+| The table | [Roadmap note](../../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Generated | Generated |
+| Each capability's increment | [capability-record.yaml](../../capability-record.yaml) | Generated | Generated |
+| The order and the fold-ins, not a decision | [Roadmap note](../../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Not stated |

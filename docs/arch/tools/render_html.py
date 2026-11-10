@@ -475,6 +475,56 @@ def checked(diagram: Diagram, vid: str) -> Diagram:
     return run
 
 
+# --- the declarations page ---------------------------------------------------
+
+DECLARATIONS_TITLE = "What your deployment declares to fill these views"
+
+
+def declarations_md(views: dict) -> str:
+    """The declarations page as markdown, built from INVENTORY.md's slot table and slots.yaml.
+
+    One row per slot that no declared artefact fills yet: what it fills, the
+    declaration and the artefact INVENTORY names for it, and the views that show it."""
+    lines = check_views.outside_fences((ROOT / "INVENTORY.md").read_text(encoding="utf-8"))
+    at = [i for i, ln in enumerate(lines) if ln.strip() == check_views.SLOT_INVENTORY_HEADER]
+    if len(at) != 1:
+        raise InputError(f"INVENTORY.md has {len(at)} slot tables, expected one")
+    _, rows = check_views.table_after(lines, at[0])
+    registry = (rp.load_yaml(ROOT / "slots.yaml") or {}).get("slots") or {}
+    shown: dict[str, list[str]] = {}
+    for vid, e in views.items():
+        for name in rp.SLOT_RE.findall((ROOT / e["file"]).read_text(encoding="utf-8")):
+            if vid not in shown.setdefault(name, []):
+                shown[name].append(vid)
+    body = []
+    for r in rows:
+        if len(r) != 3:
+            raise InputError(f"INVENTORY.md's slot table has a row of {len(r)} cells, expected 3")
+        name = r[0].strip("` ")
+        if name not in registry:
+            raise InputError(f"INVENTORY.md's slot table names {name}, which slots.yaml does not hold")
+        if not shown.get(name):
+            raise InputError(f"INVENTORY.md's slot table names {name}, which no view shows")
+        fills = str((registry[name] or {}).get("fills") or "").strip()
+        where = ", ".join(f"[{v}]({Path(views[v]['file']).name})" for v in shown[name])
+        body.append(f"| `{name}` | {fills} | {r[1]} | {r[2]} | {where} |")
+    if not body:
+        raise InputError("INVENTORY.md's slot table has no rows")
+    return "\n".join([
+        f"These views mark {len(body)} facts about a deployment with a slot that no declared artefact fills yet. "
+        "The framework cannot know them. Each row names the declaration a deployment would write, the artefact "
+        "it would live in, and the views that show the slot. Until it is written, the slot stays marked in "
+        "each of those views. None of these declarations exists yet.",
+        "",
+        "| Slot | What it fills | Declaration that would fill it | Artefact | Shown in |",
+        "|---|---|---|---|---|",
+        *body,
+        "",
+        "Built from [INVENTORY.md](../INVENTORY.md) and [slots.yaml](../slots.yaml) when the export is rendered.",
+        "",
+    ])
+
+
 # --- provenance --------------------------------------------------------------
 
 def values_digest(values: list[str]) -> str:
@@ -830,6 +880,12 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
     if total_exceptions == 0:
         raise CheckError("no exception table found: no heading starting with 'Exception' is directly "
                          "followed by a table\n")
+    decl_html = style_tables(Page("declarations", views, checked(diagram, "declarations")).render(declarations_md(views)))
+    sections.append(
+        f'<section id="declarations" class="page" data-declarations>'
+        f'<h1>{esc(pre)}{esc(DECLARATIONS_TITLE)}</h1>'
+        f'<p><a href="#front">Front page</a></p>'
+        f'<div class="body">{decl_html}</div>{prov}</section>')
 
     grids = [grid_uaf(rows, views, names, uaf.uaf_label),
              grid_selected(renderers["dodaf202"], rows, names),
@@ -840,7 +896,9 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
         f'<button type="button" data-profile-btn="{p}" aria-pressed="{"true" if p == "uaf" else "false"}">'
         f"{esc(renderers[p].label)}</button>" for p in PROFILE_NAMES)
     front = (f'<section id="front" class="page" data-front><h1>{esc(pre)}architecture views</h1>'
-             f'{"".join(grids)}<nav class="views"><h2>Views</h2><ul>{"".join(nav)}</ul></nav>{prov}</section>')
+             f'{"".join(grids)}<nav class="views"><h2>Views</h2><ul>{"".join(nav)}</ul></nav>'
+             f'<nav class="declarations"><h2>For a deployment</h2><ul><li><a href="#declarations">'
+             f'{esc(DECLARATIONS_TITLE)}</a></li></ul></nav>{prov}</section>')
     return (f'<!doctype html>\n<html lang="en" data-profile="uaf" {title_attrs}>\n<head>\n<meta charset="utf-8">\n'
             f'<meta name="viewport" content="width=device-width, initial-scale=1">\n'
             f'<meta http-equiv="Content-Security-Policy" content="{CSP}">\n'

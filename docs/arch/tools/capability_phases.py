@@ -32,6 +32,7 @@ from pathlib import Path
 import yaml
 
 from data_exchange import InputError
+from marks import adr_status
 
 PHASES = ["measured", "built unmeasured", "accepted design", "proposed", "row"]
 NOT_MEASURED = "not measured"
@@ -92,7 +93,6 @@ def adr_file(decisions_dir: Path, adr: str) -> Path | None:
 
 def adr_lead(decisions_dir: Path, adr: str) -> str | None:
     """The file's status, lowercased, leading `*` and space stripped; None if there is no file or status."""
-    from check_views import adr_status  # check_views imports render_profile, which imports this module
     path = adr_file(decisions_dir, adr)
     text = read_text(path) if path else None
     status = adr_status(text) if text is not None else None

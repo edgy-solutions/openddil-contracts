@@ -23,4 +23,4 @@ The information as it exists on the wire: proto contracts, ontology files, and t
 |---|---|---|---|
 | Labels are carried on provenance | [ADR-0029](../../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | Kinds, routes and destinations live in the overlay | [ADR-0046](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
-| Contract B's catalog shape | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |
+| Contract B's catalog shape | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |

@@ -30,5 +30,5 @@ The Activity, Function and Capability columns use names the other views and the 
 | Claim | Source | Decision | Evidence |
 |---|---|---|---|
 | The matrix joins [Operational-Processes](Op-Pr.md) and [Resources-Processes](Rs-Pr.md) and adds no claim of its own; marks are in those views | [ADR-0037](../../../decisions/ADR-0037-verification-evidence-is-a-deliverable.md) | Standing | Not stated |
-| A7.3 gap | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Design only |
-| A8 gap | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Nothing built |
+| A7.3 gap | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Status line |
+| A8 gap | [ADR-0040](../../../decisions/ADR-0040-offline-sustainment-and-intent-reconciliation.md) | Accepted | Status line |

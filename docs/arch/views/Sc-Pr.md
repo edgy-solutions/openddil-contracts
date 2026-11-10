@@ -34,6 +34,6 @@ Decision-record fields and the reason list are local to this architecture and ar
 | Reasons, one line per record, fail closed and loud | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
 | A refusal for an unknown answered record is provisional | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
 | Intake steps | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
-| An interlock refusal joins the intake's reasons | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Design only |
-| Detectors are disagreements; detection never enforces | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Design only |
+| An interlock refusal joins the intake's reasons | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Status line |
+| Detectors are disagreements; detection never enforces | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
 | Failure detectability and degraded mode | [ADR-0036](../../../decisions/ADR-0036-failure-detectability-and-degraded-mode.md) | Standing | Not stated |

@@ -2,7 +2,41 @@
 
 built on OpenDDIL 0.1.161
 
+From UAF 1.2 Resources-Taxonomy (Rs-Tx).
 From UAF 1.2 Resources-Structure (Rs-Sr).
+
+## Resources-Taxonomy (Rs-Tx)
+
+The resource types, what each one specialises, and where each is a part. The table is generated from package ResourceKit in [the model](../../model/openddil.sysml) when the view is rendered, so it cannot drift from the model. A type the model does not define fails the render. [Resources-Structure](../../views/Rs-Sr.md) shows the same package as a structure, and [Resources-Constraints](../../views/Rs-Ct.md) holds the rules a deployment's choice of members keeps.
+
+| Type | Kind | Specialises | Is a part of, with multiplicity |
+|---|---|---|---|
+| KitMember | abstract | none | Uplink.bridge (multiplicity not stated); Uplink.proxy (multiplicity not stated) |
+| Broker | member | KitMember | Node.broker [0..1] |
+| Aggregator | member | KitMember | Node.aggregator [1] |
+| Projector | member | KitMember | Node.projector [0..1] |
+| Store | member | KitMember | Node.store [0..1] |
+| Presentation | member | KitMember | Node.presentation [0..1] |
+| PolicySidecar | member | KitMember | Node.policySidecar [0..1] |
+| Uplink | composite | none | Node.uplink [0..1] |
+| Node | composite | none | none |
+| EgressGate | member | none | EgressChain.gate [1] |
+| EgressAssembler | member | none | EgressChain.assembler [0..1] |
+| EgressForwarder | member | none | EgressChain.forwarder [1] |
+| EgressIntake | member | none | EgressChain.intake [0..1] |
+| EgressChain | composite | none | none |
+
+A multiplicity of `[0..1]` is a member a deployment may leave out of a tier. `[1]` is one it may not. A row that reads "multiplicity not stated" is one where the model gives none. Which members each tier carries is deployment configuration: {{slot:tier-tree}}.
+
+### Sources
+
+| Claim | Source | Decision | Evidence |
+|---|---|---|---|
+| The table | [ResourceKit](../../model/openddil.sysml) | Generated | Generated |
+| The node kit: optional members, the aggregator universal | [ADR-0033](../../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Pending |
+| The egress chain: at the hub in this pass, per tier later | [ADR-0046](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
+
+## Resources-Structure (Rs-Sr)
 
 A tier is one kit, and a deployment decides which members each tier carries. The deployment's tree: {{slot:tier-tree}}.
 
@@ -73,7 +107,7 @@ A store needs a projector, presentation needs a store, and presentation that has
 
 The rendered chart today gives a region no broker of its own, so a region's rows in the generated view read `none rendered` in the Broker column. The kit allows either.
 
-## Sources
+### Sources
 
 | Claim | Source | Decision | Evidence |
 |---|---|---|---|

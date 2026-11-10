@@ -8,18 +8,20 @@ This is a framework description. A deployment fills the `{{slot:name}}` placehol
 
 ## The views
 
-| | Taxonomy | Structure | Connectivity | Processes | States | Information | Roadmap | Traceability | Summary |
-|---|---|---|---|---|---|---|---|---|---|
-| **Summary** | | | | | | | | | [Sm-Ov](views/Sm-Ov.md) |
-| **Strategic** | [St-Tx](views/St-Tx.md) | | | | | | [St-Rm-P](views/St-Rm-P.md) | | |
-| **Operational** | [Op-Tx](views/Op-Tx.md) | [Op-Sr](views/Op-Sr.md) | [Op-Cn](views/Op-Cn.md) | [Op-Pr](views/Op-Pr.md) | [Op-St](views/Op-St.md) | [Op-If](views/Op-If.md) | | | |
-| **Resources** | | [Rs-Sr](views/Rs-Sr.md) | [Rs-Cn](views/Rs-Cn.md) | [Rs-Pr](views/Rs-Pr.md) | | [Rs-If](views/Rs-If.md) | | [Rs-Tr](views/Rs-Tr.md) | |
-| **Security** | | [Sc-Sr](views/Sc-Sr.md) | [Sc-Cn](views/Sc-Cn.md) | [Sc-Pr](views/Sc-Pr.md) | | | | | |
-| **Standards** | [Sd-Tx](views/Sd-Tx.md) | | | | | | | | |
+| | Taxonomy | Structure | Connectivity | Processes | States | Sequences | Information | Constraints | Roadmap | Traceability | Summary |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| **Architecture management** | | | | | | | [Am-If](views/Am-If.md) | | | | |
+| **Summary** | | | | | | | | | | | [Sm-Ov](views/Sm-Ov.md) |
+| **Strategic** | [St-Tx](views/St-Tx.md) | | [St-Cn](views/St-Cn.md) | [St-Pr](views/St-Pr.md) | | | | | [St-Rm-P](views/St-Rm-P.md) | | |
+| **Operational** | [Op-Tx](views/Op-Tx.md) | [Op-Sr](views/Op-Sr.md) | [Op-Cn](views/Op-Cn.md) | [Op-Pr](views/Op-Pr.md) | [Op-St](views/Op-St.md) | [Op-Sq](views/Op-Sq.md) | [Op-If](views/Op-If.md) | [Op-Ct](views/Op-Ct.md) | | | |
+| **Services** | | | [Sv-Cn](views/Sv-Cn.md) | | | | | | | | |
+| **Resources** | [Rs-Tx](views/Rs-Tx.md) | [Rs-Sr](views/Rs-Sr.md) | [Rs-Cn](views/Rs-Cn.md) | [Rs-Pr](views/Rs-Pr.md) | [Rs-St](views/Rs-St.md) | [Rs-Sq](views/Rs-Sq.md) | [Rs-If](views/Rs-If.md) | [Rs-Ct](views/Rs-Ct.md) | | [Rs-Tr](views/Rs-Tr.md) | |
+| **Security** | | [Sc-Sr](views/Sc-Sr.md) | [Sc-Cn](views/Sc-Cn.md) | [Sc-Pr](views/Sc-Pr.md) | | | | | | | |
+| **Standards** | [Sd-Tx](views/Sd-Tx.md) | | | | | | | | | | |
 
 ## How to read the marks
 
-Every view has a Sources table with a Decision and an Evidence column. In every view but St-Rm-P, both copy the words of the decision record they cite. They were not re-verified against a running system, and a status line can lag the code.
+Every view has a Sources table with a Decision and an Evidence column. In every view but St-Rm-P, both copy the words of the decision record they cite, with one exception. When the cited record's status line says design only, plan only or nothing built, the Evidence cell says `Status line` and the value is read from the record when the view is rendered ([`tools/marks.py`](tools/marks.py)). So every view that cites a record shows the same Evidence for it, and a change to the status line changes all of them together. The marks were not re-verified against a running system, and a status line can lag the code.
 
 | Decision | Meaning |
 |---|---|
@@ -44,6 +46,7 @@ Every view has a Sources table with a Decision and an Evidence column. In every 
 | Design only | The record says design only. |
 | Nothing built | The record says nothing is built. |
 | Not stated | The record does not say. Read its body before relying on the row. |
+| Status line | In the view's source only: read from the cited record's status line when the view is rendered, as Design only or Nothing built. |
 | Generated | Computed when the view is rendered, not written in it. |
 
 ## Models and diagrams

@@ -46,6 +46,6 @@ This is a reading of the functions through ISO 13374 and not a conformance claim
 | F6, F7, F8 | [ADR-0022](../../../decisions/ADR-0022-hierarchical-aggregation-is-the-architecture.md), [ADR-0023](../../../decisions/ADR-0023-hierarchy-restoration-topology-and-phase-plan.md) | Accepted | Declared |
 | F11, F14 | [ADR-0046](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
 | F12, F13 | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
-| F15 | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Design only |
-| F16 | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |
+| F15 | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
+| F16 | [ADR-0051](../../../decisions/ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |
 | The ISO 13374 reading | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |

@@ -29,10 +29,11 @@ def run(root, *extra):
 
 
 def copy_tree(dest: Path) -> Path:
-    """docs/arch and decisions under dest, same relative distance as in the repo."""
+    """docs/arch, decisions and ontology under dest, same relative distance as in the repo."""
     ignore = shutil.ignore_patterns("__pycache__", "out", "node_modules")
     shutil.copytree(ARCH, dest / "docs" / "arch", ignore=ignore)
     shutil.copytree(REPO / "decisions", dest / "decisions")
+    shutil.copytree(REPO / "ontology", dest / "ontology")
     return dest / "docs" / "arch"
 
 
@@ -47,7 +48,7 @@ class RealTree(unittest.TestCase):
     def test_real_tree_passes(self):
         rc, out, err = run(ARCH)
         self.assertEqual(rc, 0, err)
-        self.assertTrue(out.startswith("ok: 13 rules"), out)
+        self.assertTrue(out.startswith("ok: 14 rules"), out)
         self.assertIn("not run: quotes, floor (test)", out)
 
     def test_bare_invocation_is_bad_input_and_names_the_flags(self):
@@ -207,9 +208,45 @@ class Perturbed(unittest.TestCase):
         self.expect("marks", "ADR-0043")
 
     def test_7_marks_design_only_flipped_to_built(self):
-        edit(self.root, "views/Op-If.md", "ADR-0051-failure-records-for-fracas.md) | Accepted | Design only |",
+        edit(self.root, "views/Op-If.md", "ADR-0051-failure-records-for-fracas.md) | Accepted | Status line |",
              "ADR-0051-failure-records-for-fracas.md) | Accepted | Built |")
-        self.expect("marks", "ADR-0051", "design only")
+        self.expect("marks", "ADR-0051", "as Design only", "not Built")
+
+    def test_7_marks_not_stated_on_a_design_record(self):
+        # The reader once read ADR- files only, so this row passed against a status line saying Nothing built.
+        edit(self.root, "views/Op-Cn.md", "DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |",
+             "DESIGN-2026-09-06-interface-contracts.md) | Design note | Not stated |")
+        self.expect("marks", "Op-Cn", "DESIGN-2026-09-06-interface-contracts.md", "as Nothing built", "not Not stated")
+
+    def test_7_marks_copied_word_where_the_token_belongs(self):
+        edit(self.root, "views/Op-Cn.md", "DESIGN-2026-09-06-interface-contracts.md) | Design note | Status line |",
+             "DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |")
+        self.expect("marks", "Op-Cn", "must say Status line, not Nothing built")
+
+    def test_7_marks_token_where_the_status_fixes_nothing(self):
+        edit(self.root, "views/Op-If.md", "ADR-0047-asset-id-is-opaque.md) | Accepted | Not stated |",
+             "ADR-0047-asset-id-is-opaque.md) | Accepted | Status line |")
+        self.expect("marks", "Op-If", "no record it cites fixes the evidence")
+
+    def test_7_marks_token_with_no_record(self):
+        edit(self.root, "views/Am-If.md", "(../../../ontology/) | Generated | Generated |",
+             "(../../../ontology/) | Generated | Status line |")
+        self.expect("marks", "Am-If", "cites no record")
+
+    def test_7_marks_cited_records_disagree(self):
+        edit(self.root, "../../decisions/ADR-0042-intent-custody-retention-and-multi-tier-reconciliation.md",
+             "Nothing built, and nothing here", "Design only, and nothing here")
+        self.expect("marks", "St-Tx", "OfflineIntentReconciliation", "disagree")
+
+    def test_7_marks_a_status_change_reaches_every_citing_row(self):
+        edit(self.root, "../../decisions/DESIGN-2026-09-06-interface-contracts.md",
+             "PLAN ONLY. Nothing built.", "Approved.")
+        rc, out, err = run(self.root)
+        self.assertEqual(rc, 1, out + err)
+        rows = [l for l in err.splitlines() if l.startswith("FAIL: marks:") and "no record it cites" in l]
+        views = sorted({l.split(":")[2].strip() for l in rows})
+        self.assertEqual(len(rows), 11, err)
+        self.assertEqual(views, ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Sm-Ov", "Sv-Cn"], err)
 
     def test_7_marks_accepted_flipped_to_proposed(self):
         edit(self.root, "views/Op-If.md", "ADR-0047-asset-id-is-opaque.md) | Accepted |",
@@ -281,6 +318,34 @@ class Perturbed(unittest.TestCase):
     def test_13_phases_marker_missing(self):
         edit(self.root, "views/St-Rm-P.md", "<!-- generated: capability-phases -->", "")
         self.expect("phases", "0 times")
+
+    def test_14_derived_marker_missing(self):
+        edit(self.root, "views/Rs-Tx.md", "<!-- generated: resource-taxonomy -->", "")
+        self.expect("derived", "resource-taxonomy", "0 times", "expected once, in Rs-Tx")
+
+    def test_14_derived_marker_outside_its_view(self):
+        edit(self.root, "views/St-Cn.md", "<!-- generated: capability-dependencies -->", "")
+        p = self.root / "views" / "Op-Sq.md"
+        p.write_text(p.read_text(encoding="utf-8") + "\n<!-- generated: capability-dependencies -->\n",
+                     encoding="utf-8", newline="\n")
+        self.expect("derived", "1 times, in Op-Sq", "expected once, in St-Cn")
+
+    def test_14_derived_table_cannot_build(self):
+        (self.root.parent.parent / "ontology" / "new_terms.yaml").write_text("terms: []\n", encoding="utf-8")
+        self.expect("derived", "ontology/new_terms.yaml has no dictionary row")
+
+    def test_4_slots_inventory_line_removed(self):
+        edit(self.root, "INVENTORY.md", "| `increment-dates` |", "| `not-a-slot-line` |")
+        self.expect("slots", "increment-dates has no source and no line",
+                    "names not-a-slot-line, which slots.yaml does not hold")
+
+    def test_4_slots_inventory_line_for_a_sourced_slot(self):
+        edit(self.root, "INVENTORY.md", "| `increment-dates` |", "| `tier-tree` | a | b |\n| `increment-dates` |")
+        self.expect("slots", "tier-tree has a source in slots.yaml and still a line")
+
+    def test_4_slots_inventory_table_missing(self):
+        edit(self.root, "INVENTORY.md", "| Slot | Declaration that would fill it | Artefact |", "| Slot | Fill | Artefact |")
+        self.expect("slots", "0 slot tables")
 
 
 if __name__ == "__main__":

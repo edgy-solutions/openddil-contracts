@@ -2,7 +2,7 @@
 """check_views_canary.py - prove the `quotes` and `floor` rules can fail.
 
 A rule that has never failed is not known to work. This copies docs/arch,
-decisions and .github to a temp directory (same relative layout), breaks the copy one way
+decisions, ontology and .github to a temp directory (same relative layout), breaks the copy one way
 per case, runs check_views.py on it as a subprocess, and compares the exit
 code and a required fragment of stderr.
 
@@ -88,11 +88,13 @@ def run_cases(a: argparse.Namespace, tmp: Path) -> int:
     shutil.copytree(ARCH, tmp / "docs" / "arch", ignore=ignore)
     shutil.copytree(REPO / "decisions", tmp / "decisions")
     shutil.copytree(REPO / ".github", tmp / ".github")  # the README links to the workflows
+    shutil.copytree(REPO / "ontology", tmp / "ontology")  # Am-If's table is built from it
     clean = tmp / "docs" / "arch"
     pristine = tmp / "pristine"
     shutil.copytree(clean, pristine / "docs" / "arch")
     shutil.copytree(tmp / "decisions", pristine / "decisions")
     shutil.copytree(tmp / ".github", pristine / ".github")
+    shutil.copytree(tmp / "ontology", pristine / "ontology")
 
     def flags(barred: list[str]) -> list[str]:
         out = ["--chart", a.chart, "--release", a.release, "--readiness", a.readiness]

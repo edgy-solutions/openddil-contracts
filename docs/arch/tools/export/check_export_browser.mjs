@@ -103,7 +103,7 @@ try {
   const hash = (t) => createHash("sha256").update(t).digest("hex");
 
   // --- front, UAF ---
-  check(views.length === 18, "18 view sections", String(views.length));
+  check(views.length === 28, "28 view sections", String(views.length));
   check((await display("#front")) === "block", "front is visible on load");
   let pr = await pressed();
   check(pr.uaf === "true" && pr.dodaf202 === "false" && pr.naf4 === "false", "UAF button is pressed on load", JSON.stringify(pr));
@@ -117,7 +117,7 @@ try {
   check((await display("#view-Rs-Cn")) === "block" && (await display("#front")) === "none",
     "clicking a filled cell shows that view and hides the front");
   const provCount = await page.evaluate(() => document.querySelectorAll("[data-provenance]").length);
-  check(provCount === 19, "a provenance block on every page", String(provCount));
+  check(provCount === 30, "a provenance block on every page", String(provCount));
 
   const uafBody = await body("uaf");
   const uafH1 = await page.evaluate(() => document.querySelector("#view-Rs-Cn h1").textContent);
@@ -229,7 +229,7 @@ try {
   await go("#view-Op-Tx");
   await page.emulateMediaType("print");
   const shown = await page.evaluate(() => [...document.querySelectorAll(".page")].filter((e) => getComputedStyle(e).display !== "none").length);
-  check(shown === 19, "print: all 19 pages are displayed", String(shown));
+  check(shown === 30, "print: all 30 pages are displayed", String(shown));
   check((await display(".bar")) === "none", "print: the bar is hidden");
   check((await display("#results")) === "none", "print: the search panel is hidden");
   const gridsShown = await page.evaluate(() => [...document.querySelectorAll(".grid")].filter((e) => getComputedStyle(e).display !== "none").length);
@@ -237,7 +237,7 @@ try {
   await shot("print-view.png");
   const pdf = Buffer.from(await page.pdf({ format: "A4", printBackground: true, preferCSSPageSize: true }));
   const count = (pdf.toString("latin1").match(/\/Type\s*\/Page(?![A-Za-z])/g) || []).length;
-  check(count >= 19, "print: the PDF has at least 19 pages", String(count));
+  check(count >= 30, "print: the PDF has at least 30 pages", String(count));
   const openAtPrint = await page.evaluate(() => window.__printOpen);
   check(openAtPrint.length > 0 && openAtPrint.every(Boolean), "print: details are open when the PDF is made", JSON.stringify(openAtPrint));
   await page.emulateMediaType("screen");
@@ -496,7 +496,7 @@ try {
   check(pr2.wide === 0, "print: no table is wider than its parent at 980", String(pr2.wide));
   check(pr3 === 0, "print: no table is wider than its parent at 980 under a wide font", String(pr3));
   const boxes = [...pdf.toString("latin1").matchAll(/\/MediaBox\s*\[\s*0 0 ([\d.]+) ([\d.]+)/g)].map((m) => [Number(m[1]), Number(m[2])]);
-  check(boxes.length >= 19 && boxes.every(([w, h]) => w > h), "print: the PDF's pages are landscape", `${boxes.length} boxes, first ${boxes[0]}`);
+  check(boxes.length >= 30 && boxes.every(([w, h]) => w > h), "print: the PDF's pages are landscape", `${boxes.length} boxes, first ${boxes[0]}`);
 
   check(badRequests.length === 0, "no request but file: and data:", badRequests.slice(0, 3).join(" "));
   check(consoleErrors.length === 0, "no console error", consoleErrors.slice(0, 3).join(" | "));

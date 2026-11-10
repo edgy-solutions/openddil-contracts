@@ -269,6 +269,69 @@ class Args(unittest.TestCase):
             self.assertNotEqual(render_html.values_digest([str(a)]), render_html.values_digest([str(b)]))
 
 
+class Declarations(unittest.TestCase):
+    """The declarations page is built from INVENTORY.md's slot table; a table it cannot read is exit 2."""
+
+    def inventory_slots(self, root):
+        lines = check_views.outside_fences((root / "INVENTORY.md").read_text(encoding="utf-8"))
+        _, rows = check_views.table_after(lines, lines.index(check_views.SLOT_INVENTORY_HEADER))
+        return [r[0].strip("` ") for r in rows if r]
+
+    def rows(self, md):
+        return [ln for ln in md.splitlines() if ln.startswith("| `")]
+
+    def test_one_row_per_inventory_slot_in_order_each_shown_somewhere(self):
+        md = render_html.declarations_md(PROFILES["views"])
+        rows = self.rows(md)
+        self.assertEqual([r.split("`")[1] for r in rows], self.inventory_slots(ARCH))
+        self.assertEqual(len(rows), 13)
+        for r in rows:
+            shown = re.findall(r"\[([^\]]+)\]\(([^)]+)\.md\)", r.rstrip(" |").rsplit("|", 1)[1])
+            self.assertTrue(shown, r)
+            for vid, stem in shown:
+                self.assertEqual(vid, stem)
+                self.assertIn(vid, PROFILES["views"])
+
+    def temp_root(self):
+        import tempfile
+        root = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, root, True)
+        shutil.copy(ARCH / "INVENTORY.md", root)
+        shutil.copy(ARCH / "slots.yaml", root)
+        shutil.copytree(ARCH / "views", root / "views")
+        return root
+
+    def red(self, root, word):
+        with mock.patch.object(render_html, "ROOT", root):
+            with self.assertRaises(InputError) as cm:
+                render_html.declarations_md(PROFILES["views"])
+        self.assertIn(word, str(cm.exception))
+
+    def test_a_slot_slots_yaml_does_not_hold_is_exit_2(self):
+        root = self.temp_root()
+        first = self.inventory_slots(root)[0]
+        inv = root / "INVENTORY.md"
+        inv.write_text(inv.read_text(encoding="utf-8").replace(f"| `{first}` |", "| `spare-slot` |", 1),
+                       encoding="utf-8")
+        self.red(root, "spare-slot, which slots.yaml does not hold")
+
+    def test_a_slot_no_view_shows_is_exit_2(self):
+        root = self.temp_root()
+        first = self.inventory_slots(root)[0]
+        for f in (root / "views").glob("*.md"):
+            f.write_text(f.read_text(encoding="utf-8").replace("{{slot:" + first + "}}", "x"), encoding="utf-8")
+        self.red(root, f"{first}, which no view shows")
+
+    def test_a_row_of_the_wrong_width_is_exit_2(self):
+        root = self.temp_root()
+        first = self.inventory_slots(root)[0]
+        inv = root / "INVENTORY.md"
+        text = inv.read_text(encoding="utf-8")
+        at = text.index(f"| `{first}` |")
+        inv.write_text(text[:at] + "| `x` | y |\n" + text[at:], encoding="utf-8")
+        self.red(root, "a row of 2 cells")
+
+
 @unittest.skipUnless(HAVE_BUILD, SKIP_WHY)
 class Built(unittest.TestCase):
     @classmethod
@@ -325,9 +388,20 @@ class Built(unittest.TestCase):
         self.assertNotIn("grid-dndaf", self.doc.lower())
         self.assertNotIn("data-profile-btn=\"dndaf", self.doc.lower())
 
+    def test_the_declarations_page_is_linked_from_the_front_and_its_view_links_resolve(self):
+        pages = re.findall(r'<section id="declarations" class="page" data-declarations>(.*?)</section>', self.doc, re.S)
+        self.assertEqual(len(pages), 1)
+        self.assertIn(render_html.DECLARATIONS_TITLE, pages[0])
+        self.assertEqual(len(re.findall(r"<tr>\s*<td", pages[0])), 13)
+        front = re.search(r'<section id="front"[^>]*>(.*?)</section>', self.doc, re.S).group(1)
+        self.assertIn('href="#declarations"', front)
+        links = re.findall(r'href="#view-([^"]+)"', pages[0])
+        self.assertTrue(links)
+        self.assertTrue(set(links) <= set(PROFILES["views"]))
+
     def test_every_page_has_all_four_provenance_parts_alike(self):
         blocks = re.findall(r'<div class="provenance" data-provenance>(.*?)</div>', self.doc, re.S)
-        self.assertEqual(len(blocks), len(PROFILES["views"]) + 1)
+        self.assertEqual(len(blocks), len(PROFILES["views"]) + 2)  # the front page and the declarations page
         self.assertEqual(len(set(blocks)), 1)
         text = plain(blocks[0])
         self.assertRegex(text, r"Chart: \S+ \S+ Bundle digest: sha256:[0-9a-f]{64} of the values files read")

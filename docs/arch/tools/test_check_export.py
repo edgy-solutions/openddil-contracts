@@ -4,7 +4,7 @@ Run from the worktree root:
     python -m unittest discover -s docs/arch/tools -p "test_*.py"
 
 The export under test is a small page built here from the real view ids, so
-these tests need neither helm nor a browser. Each of the eight checks has a
+these tests need neither helm nor a browser. Each of the nine checks has a
 test that makes it fail, and the barred scan has one for a value split across
 tags and one for a value escaped.
 """
@@ -33,9 +33,18 @@ PROV = ('<div class="provenance" data-provenance><p data-prov="chart">Chart: dem
         '<p data-prov="declared">Declared, not measured: this export reads the views.</p></div>')
 SVG = '<figure class="diagram"><svg id="d" xmlns="http://www.w3.org/2000/svg"><text>a</text></svg></figure>'
 BARRED = "zebra-[0-9]{3}\nstriped horse\n"
+_INV = check_views.outside_fences(TREE.text(ARCH / "INVENTORY.md"))
+SLOTS = [r[0].strip("` ") for r in check_views.table_after(
+    _INV, _INV.index(check_views.SLOT_INVENTORY_HEADER))[1] if r]
 
 
-def good(views=None, diagrams=FENCES, prov=PROV):
+def declarations(slots=SLOTS, prov=PROV):
+    rows = "".join(f'<tr><td><code><span class="nb">{s}</span></code></td><td>f</td></tr>' for s in slots)
+    return (f'<section id="declarations" class="page" data-declarations><h1>d</h1>'
+            f'<table><tr><th>Slot</th><th>What it fills</th></tr>{rows}</table>{prov}</section>')
+
+
+def good(views=None, diagrams=FENCES, prov=PROV, decl=None):
     views = list(TREE.views) if views is None else views
     pages = [f'<section id="front" class="page" data-front><h1>x</h1><a href="#view-{views[0]}">v</a>{prov}</section>']
     for i, v in enumerate(views):
@@ -43,6 +52,7 @@ def good(views=None, diagrams=FENCES, prov=PROV):
         if i == 0:
             body += '<details class="exceptions"><summary>Exceptions: 1 row</summary></details>'
         pages.append(f'<section id="view-{v}" class="page view" data-view="{v}"><h1>{v}</h1>{body}{prov}</section>')
+    pages.append(declarations(prov=prov) if decl is None else decl)
     return ('<!doctype html><html><head>'
             f'<meta http-equiv="Content-Security-Policy" content="{CSP}"></head><body>'
             + "".join(pages) + "</body></html>")
@@ -159,6 +169,15 @@ class Red(Base):
 
     def test_8_exceptions(self):
         self.fails(good().replace('<details class="exceptions">', "<details>"), "exceptions")
+
+    def test_9_declarations(self):
+        self.assertEqual(len(SLOTS), 13)
+        self.fails(good(decl=""), "declarations")
+        self.fails(good(decl=declarations() + declarations()), "declarations")
+        err = self.fails(good(decl=declarations(SLOTS[:-1])), "declarations")
+        self.assertIn("lists 12 slots, INVENTORY.md's slot table 13", err)
+        self.fails(good(decl=declarations([SLOTS[1], SLOTS[0]] + SLOTS[2:])), "declarations")
+        self.fails(good(decl=declarations(SLOTS[:-1] + ["spare-slot"])), "declarations")
 
 
 class Input(Base):
