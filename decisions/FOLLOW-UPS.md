@@ -71,6 +71,51 @@ Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.3. Named by
 
 Close when the harness runs over a recording with confirmed failures and reports each metric, citing the paper.
 
+## OPEN 2026-11-11 — no collector at any tier; telemetry does not travel upward
+
+**A design, not built.** Nothing emits OpenTelemetry, and no collector is deployed. The proposal is a collector per
+tier: it exports locally, and forwards upward over OTLP through a persistent queue with a bound and a counted drop.
+Metrics have two named upward paths, remote write (ADR-0059 §7.6) and OTLP. The record proposes remote write for
+metrics and asks for the ruling.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 2, 3. Named by: the architecture order of 2026-11-11.
+
+Close when the ruling on metrics' path is recorded, and a cut tier's queued telemetry arrives upward after the link
+returns, with the drop counter at zero.
+
+## OPEN 2026-11-11 — no trace context crosses the egress or intake doors
+
+**A design, not built.** No `traceparent` is read or written anywhere. The forwarder sends a content type and a bearer
+token only. The proposal is W3C Trace Context on every forward, in the record's headers across the broker, and
+continued at intake. iagent is asked by packet to propagate it through its workflow and back.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 4. Named by: the architecture order of 2026-11-11.
+
+Close when one filing shows as one trace from the discrepancy door to the gate's release, and through iagent's answer
+if iagent propagates.
+
+## OPEN 2026-11-11 — spans and logs must carry opaque ids only; three log lines carry content or labels
+
+**A design, not built.** The forwarder logs up to 300 bytes of a destination's refusal body. The gate's decision lines
+carry the releasability label, and its details can quote a record value or name a classification marking. Intake's
+lines carry free-text details and subject names. The proposal is the rule, a redaction processor in each collector that
+keeps an allow list of id fields, and a test that plants a label, a marking and a record value and fails if any reaches
+an exporter. Open: whether a subject name counts as an opaque id.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 5. Named by: the architecture order of 2026-11-11.
+
+Close when the test runs in CI against the collector's configuration and the three lines log ids only.
+
+## OPEN 2026-11-11 — decision records ride the log stream
+
+**A design, not built.** The gate's and intake's decision records are log lines, so forwarding logs would forward their
+labels. The proposal moves decision records to their own sink, with the log line naming the decision id only, and
+lets a decision record carry its trace id for correlation. A trace id is never provenance.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 6, 7. Named by: the architecture order of 2026-11-11.
+
+Close when the decision records are read from their own sink, and the log stream carries no label.
+
 ## OPEN 2026-11-11 — no observed link-state kind for a network management system's input
 
 **A design, not built.** OpenDDIL's link state is derived from its own heartbeats only. Nothing reads a network
