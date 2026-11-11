@@ -43,6 +43,7 @@ from pathlib import Path
 import yaml
 
 import capability_floor
+import adr_sections
 import capability_phases
 import data_exchange
 import derived
@@ -51,7 +52,7 @@ from marks import adr_status
 from render_profile import mask_sysml, package_depths
 
 EXIT_OK, EXIT_CHECK, EXIT_INPUT = 0, 1, 2
-RULES = ["exports", "appendix-a", "view-files", "slots", "links", "sources-table",
+RULES = ["exports", "appendix-a", "view-files", "slots", "links", "decision-links", "sources-table",
          "marks", "model", "capabilities", "trace", "outputs", "generated", "phases", "derived", "quotes", "floor"]
 APPENDIX_HEADER = "| View | Name | DoDAF 2.02 | NAF 4.0 | DNDAF |"
 APPENDIX_COLUMNS = {"dodaf202": 2, "naf4": 3}
@@ -307,6 +308,52 @@ def rule_links(t: Tree) -> list[str]:
             rel = target.split("#", 1)[0]
             if rel and not (path.parent / rel).exists():
                 fails.append(f"links: {name}: link {target} does not resolve")
+    return fails
+
+
+COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+CITED_VIEW = "St-Tx"
+DECISION_FILE_RE = re.compile(r"^(ADR-\d{4})-.+\.md$")
+TEXT_LINK_RE = re.compile(r"\[([^\]\n]*)\]\(([^)\s]+)\)")
+
+
+def rule_decision_links(t: Tree) -> list[str]:
+    """A link to a decision record names the section it relies on: `[ADR-0045 §6](...)`.
+
+    In St-Tx every such link must. In any view a link text with a § must be a citation of the linked
+    record that resolves, and a fragment must be the slug of the section it names."""
+    fails = []
+    decisions = (t.root.parent.parent / "decisions").resolve()
+    for vid, text in t.view_text.items():
+        for line in outside_fences(COMMENT_RE.sub("", text)):
+            for label, target in TEXT_LINK_RE.findall(CODE_SPAN_RE.sub("", line)):
+                if re.match(r"^([a-z][a-z0-9+.-]*:|#)", target, re.I):
+                    continue
+                path, _, fragment = target.partition("#")
+                file = (t.root / "views" / path).resolve()
+                m = DECISION_FILE_RE.match(file.name)
+                if file.parent != decisions or not m or not file.is_file():
+                    continue
+                label = label.strip()
+                if vid != CITED_VIEW and "§" not in label:
+                    continue
+                c = adr_sections.CITATION_RE.match(label)
+                if not c:
+                    fails.append(f"decision-links: {vid}: link text {label!r} is not a citation of the form "
+                                 f"ADR-NNNN §LABEL")
+                    continue
+                if c.group(1) != m.group(1):
+                    fails.append(f"decision-links: {vid}: link text {label!r} cites {c.group(1)} "
+                                 f"and the link is to {m.group(1)}")
+                    continue
+                try:
+                    heading = adr_sections.resolve(file.read_text(encoding="utf-8"), c.group(2))
+                except LookupError as e:
+                    fails.append(f"decision-links: {vid}: {label}: {e.args[0]}")
+                    continue
+                if fragment and fragment != heading.slug:
+                    fails.append(f"decision-links: {vid}: {label} links #{fragment}, the section's slug is "
+                                 f"#{heading.slug}")
     return fails
 
 
@@ -580,7 +627,8 @@ def rule_floor(t: Tree, a: argparse.Namespace) -> list[str]:
         return [str(e)]
 
 
-CHECKS = [rule_exports, rule_appendix, rule_view_files, rule_slots, rule_links, rule_sources_table,
+CHECKS = [rule_exports, rule_appendix, rule_view_files, rule_slots, rule_links, rule_decision_links,
+          rule_sources_table,
           rule_marks, rule_model, rule_capabilities, rule_trace, rule_outputs, rule_generated, rule_phases,
           rule_derived]
 

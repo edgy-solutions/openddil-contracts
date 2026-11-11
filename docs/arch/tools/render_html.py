@@ -59,6 +59,8 @@ except ImportError:  # reported as an input error by main
     MarkdownIt = None
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import adr_sections  # noqa: E402
+import capability_phases  # noqa: E402
 import check_views  # noqa: E402
 import render_profile as rp  # noqa: E402
 from capability_phases import PHASES, CheckError  # noqa: E402
@@ -315,30 +317,93 @@ def strip_comments(text: str) -> str:
     return "\n".join(out)
 
 
-def repo_relative(href: str) -> str:
-    """The repo-relative path a relative link resolves to from the views directory."""
+def repo_relative(href: str, base: Path | None = None) -> str:
+    """The repo-relative path a relative link resolves to from `base` (default: the views directory)."""
     path = href.partition("#")[0]
-    absolute = (ROOT / "views" / path).resolve()
+    absolute = ((base or ROOT / "views") / path).resolve()
     try:
         return absolute.relative_to(REPO.resolve()).as_posix() + ("/" if path.endswith("/") else "")
     except ValueError:
         raise InputError(f"link '{href}' resolves outside the repository") from None
 
 
+ROADMAP_KEY = "roadmap"
+ROADMAP_PAGE = "decision-roadmap"
+
+
+class Decisions:
+    """The decision records the export holds a page for: every decisions/ADR-*.md, then the roadmap note."""
+
+    def __init__(self, directory: Path):
+        self.dir = Path(directory)
+        self.files: dict[str, Path] = {}
+        for f in sorted(self.dir.glob("ADR-*.md")):
+            m = re.match(r"ADR-\d{4}", f.name)
+            if not m:
+                continue
+            if m.group(0) in self.files:
+                raise InputError(f"decisions/ has two files for {m.group(0)}")
+            self.files[m.group(0)] = f
+        road = self.dir / capability_phases.ROADMAP
+        if not road.is_file():
+            raise InputError(f"decisions/{capability_phases.ROADMAP} does not exist")
+        self.files[ROADMAP_KEY] = road
+        self.resolved = {k: f.resolve() for k, f in self.files.items()}
+        self.texts = {k: f.read_text(encoding="utf-8").replace("\r\n", "\n") for k, f in self.files.items()}
+        self.heads = {k: adr_sections.headings(t) for k, t in self.texts.items()}
+
+    def keys(self) -> list[str]:
+        return list(self.files)
+
+    @staticmethod
+    def page_id(key: str) -> str:
+        return ROADMAP_PAGE if key == ROADMAP_KEY else key.lower()
+
+    def key_of(self, target: Path) -> str | None:
+        for k, r in self.resolved.items():
+            if r == target:
+                return k
+        return None
+
+    def anchor(self, key: str, heading: "adr_sections.Heading") -> str:
+        return adr_sections.anchor_id(self.page_id(key), heading)
+
+    def cite(self, adr: str, label: str) -> str:
+        """The anchor id `ADR-NNNN §LABEL` names. LookupError when the record or the section is not there."""
+        if adr not in self.files:
+            raise LookupError(f"{adr} is not a decision record")
+        return self.anchor(adr, adr_sections.resolve(self.texts[adr], label))
+
+    def heading(self, adr: str, label: str) -> "adr_sections.Heading":
+        return adr_sections.resolve(self.texts[adr], label)
+
+    def target(self, key: str, fragment: str) -> str:
+        """A link's anchor: the heading its fragment names, else the page. The roadmap note is the page."""
+        if key != ROADMAP_KEY:
+            for h in self.heads[key]:
+                if fragment and h.slug == fragment:
+                    return self.anchor(key, h)
+        return self.page_id(key)
+
+
 class Page:
     """Markdown to html for one view, with the link, slot, table and diagram rules applied."""
 
-    def __init__(self, vid: str, views: dict, diagram: Diagram):
-        self.vid, self.views, self.diagram = vid, views, diagram
+    def __init__(self, vid: str, views: dict, diagram: Diagram, dec: Decisions | None = None):
+        self.vid, self.views, self.diagram, self.dec = vid, views, diagram, dec
+        self.base = ROOT / "views"
         self.n = 0
         self.stack: list[tuple[str, str, str]] = []
         self.exceptions = 0
+        self.in_h1 = False
         md = MarkdownIt("commonmark", {"html": False}).enable("table")
         md.renderer.rules["fence"] = self.fence
         md.renderer.rules["text"] = self.text
         md.renderer.rules["link_open"] = self.link_open
         md.renderer.rules["link_close"] = self.link_close
         md.renderer.rules["image"] = self.image
+        md.renderer.rules["heading_open"] = self.heading_open
+        md.renderer.rules["heading_close"] = self.heading_close
         md.renderer.rules["table_open"] = lambda t, i, o, e: '<div class="scroll"><table>\n'
         md.renderer.rules["table_close"] = lambda t, i, o, e: "</table></div>\n"
         self.md = md
@@ -353,13 +418,60 @@ class Page:
         cls = f' class="language-{esc(lang)}"' if lang else ""
         return f'<div class="scroll"><pre><code{cls}>{esc(tok.content)}</code></pre></div>\n'
 
-    @staticmethod
-    def text(tokens, idx, options, env) -> str:
+    def heading_open(self, tokens, idx, options, env) -> str:
+        self.in_h1 = tokens[idx].tag == "h1"
+        return self.md.renderer.renderToken(tokens, idx, options, env)
+
+    def heading_close(self, tokens, idx, options, env) -> str:
+        self.in_h1 = False
+        return self.md.renderer.renderToken(tokens, idx, options, env)
+
+    def text(self, tokens, idx, options, env) -> str:
         parts = rp.SLOT_RE.split(tokens[idx].content)
         out = []
         for k, p in enumerate(parts):
-            out.append(f'<span class="slot">{{{{slot:{esc(p)}}}}}</span>' if k % 2 else esc(p))
+            out.append(f'<span class="slot">{{{{slot:{esc(p)}}}}}</span>' if k % 2 else self.cited(p))
         return "".join(out)
+
+    def cited(self, text: str) -> str:
+        """Escaped text, with each `ADR-NNNN §LABEL` a link to its section. Not inside a link or an h1."""
+        if self.dec is None or self.stack or self.in_h1:
+            return esc(text)
+        out, at = [], 0
+        for m in adr_sections.CITATION_IN_TEXT_RE.finditer(text):
+            out.append(esc(text[at:m.start()]))
+            try:
+                anchor = self.dec.cite(m.group(1), m.group(2))
+            except LookupError as e:
+                raise CheckError(f"{self.vid}: {m.group(0)}: {e.args[0]}\n") from None
+            out.append(f'<a href="#{esc(anchor)}">{esc(m.group(0))}</a>')
+            at = m.end()
+        out.append(esc(text[at:]))
+        return "".join(out)
+
+    @staticmethod
+    def link_text(tokens, idx) -> str:
+        parts = []
+        for t in tokens[idx + 1:]:
+            if t.type == "link_close":
+                break
+            if t.type in ("text", "code_inline"):
+                parts.append(t.content)
+        return "".join(parts).strip()
+
+    def decision_link(self, key: str, fragment: str, text: str) -> str:
+        """The anchor a link to decision record `key` becomes."""
+        if key == ROADMAP_KEY:
+            return ROADMAP_PAGE
+        m = adr_sections.CITATION_RE.match(text)
+        if m:
+            if m.group(1) != key:
+                raise CheckError(f"{self.vid}: the link text {text!r} cites {m.group(1)} and links {key}\n")
+            try:
+                return self.dec.cite(key, m.group(2))
+            except LookupError as e:
+                raise CheckError(f"{self.vid}: {text}: {e.args[0]}\n") from None
+        return self.dec.target(key, fragment)
 
     def link_open(self, tokens, idx, options, env) -> str:
         tok = tokens[idx]
@@ -370,14 +482,19 @@ class Page:
         if href.startswith("#") or not href:
             self.stack.append(("ref", "", tok.markup))
             return '<span class="ref">'
-        path = href.partition("#")[0]
-        target = (ROOT / "views" / path).resolve()
+        path, _, fragment = href.partition("#")
+        target = (self.base / path).resolve()
         for vid, e in self.views.items():
             if target == (ROOT / e["file"]).resolve():
                 self.stack.append(("view", vid, tok.markup))
                 return f'<a href="#view-{esc(vid)}">'
+        key = self.dec.key_of(target) if self.dec else None
+        if key:
+            anchor = self.decision_link(key, fragment, self.link_text(tokens, idx))
+            self.stack.append(("view", key, tok.markup))
+            return f'<a href="#{esc(anchor)}">'
         self.stack.append(("ref", "", tok.markup))
-        return f'<span class="ref" title="{esc(repo_relative(href))}">'
+        return f'<span class="ref" title="{esc(repo_relative(href, self.base))}">'
 
     def link_close(self, tokens, idx, options, env) -> str:
         kind, value, markup = self.stack.pop()
@@ -416,6 +533,68 @@ class Page:
             out.append(t)
             i += 1
         return self.md.renderer.render(out, self.md.options, {})
+
+
+class DecisionPage(Page):
+    """One decision record's body: links to the other records and the views, a heading id per h2 to h4."""
+
+    def __init__(self, key: str, views: dict, dec: Decisions):
+        super().__init__(key, views, lambda source, svg_id: "", dec)
+        self.key = key
+        self.base = dec.dir
+        self.ids = [dec.anchor(key, h) for h in dec.heads[key]]
+        self.seen = 0
+
+    def fence(self, tokens, idx, options, env) -> str:
+        tok = tokens[idx]
+        lang = tok.info.strip().split(None, 1)[0].lower() if tok.info.strip() else ""
+        cls = f' class="language-{esc(lang)}"' if lang and lang != "mermaid" else ""
+        return f'<div class="scroll"><pre><code{cls}>{esc(tok.content)}</code></pre></div>\n'
+
+    def heading_open(self, tokens, idx, options, env) -> str:
+        tag = tokens[idx].tag
+        if tag in ("h2", "h3", "h4"):
+            if self.seen >= len(self.ids):
+                raise CheckError(f"{self.key}: the page has more h2 to h4 headings than adr_sections reads\n")
+            anchor = self.ids[self.seen]
+            self.seen += 1
+            return f'<{tag} id="{esc(anchor)}">'
+        return f"<{tag}>"
+
+    def heading_close(self, tokens, idx, options, env) -> str:
+        return f"</{tokens[idx].tag}>\n"
+
+    def cited(self, text: str) -> str:
+        return esc(text)
+
+    def link_open(self, tokens, idx, options, env) -> str:
+        tok = tokens[idx]
+        href = tok.attrGet("href") or ""
+        if re.match(r"^[a-z][a-z0-9+.-]*:", href, re.I):
+            self.stack.append(("url", href, tok.markup))
+            return ""
+        if href.startswith("#") or not href:
+            self.stack.append(("ref", "", tok.markup))
+            return '<span class="ref">'
+        path, _, fragment = href.partition("#")
+        target = (self.base / path).resolve()
+        key = self.dec.key_of(target)
+        if key:
+            self.stack.append(("view", key, tok.markup))
+            return f'<a href="#{esc(self.dec.target(key, fragment))}">'
+        for vid, e in self.views.items():
+            if target == (ROOT / e["file"]).resolve():
+                self.stack.append(("view", vid, tok.markup))
+                return f'<a href="#view-{esc(vid)}">'
+        self.stack.append(("ref", "", tok.markup))
+        return f'<span class="ref" title="{esc(repo_relative(href, self.base))}">'
+
+    def render(self, text: str) -> str:
+        html_text = self.md.renderer.render(self.md.parse(strip_comments(text), {}), self.md.options, {})
+        if self.seen != len(self.ids):
+            raise CheckError(f"{self.key}: the page has {self.seen} h2 to h4 headings, adr_sections reads "
+                             f"{len(self.ids)}\n")
+        return html_text
 
 
 # --- diagrams ----------------------------------------------------------------
@@ -577,7 +756,7 @@ def hold_words(content: str) -> str:
     return "".join(p if i % 2 else re.sub(r"\S+", tok, p) for i, p in enumerate(parts))
 
 
-def style_table(t: str) -> str:
+def style_table(t: str, view: bool = True) -> str:
     split = t.find("<tbody")
     rows = list(ROW_RE.finditer(t))
     if not rows:
@@ -586,8 +765,8 @@ def style_table(t: str) -> str:
     grid = [[(c.group(1), c.group(2), c.group(3)) for c in CELL_RE.finditer(m.group(1))] for m in rows]
     ncols = max(len(r) for r in grid)
     head_texts = [plain(c[2]) for c in grid[0]] if rows[0].start() in head_starts else []
-    lane_col = head_texts.index("Lane") if "Lane" in head_texts else -1
-    phase_col = head_texts.index("Phase") if "Phase" in head_texts else -1
+    lane_col = head_texts.index("Lane") if view and "Lane" in head_texts else -1
+    phase_col = head_texts.index("Phase") if view and "Phase" in head_texts else -1
     mins: dict[int, int] = {}
     for col in range(ncols):
         words, cell = 0, 0
@@ -635,12 +814,12 @@ def style_table(t: str) -> str:
     return ROW_RE.sub(do_row, t)
 
 
-def style_tables(body_html: str) -> str:
+def style_tables(body_html: str, view: bool = True) -> str:
     """Table styling the CSS cannot do alone: words held whole, column minimums, phase badges, lane rules.
-    Call it after apply_header_cells. Text inside svg blocks and in grid tables is left alone."""
+    Call it after apply_header_cells. A decision page passes view=False: no phase badge or lane rule. Text inside svg blocks and in grid tables is left alone."""
     def one(m: re.Match) -> str:
         t = m.group(0)
-        return t if "gridtable" in t[: t.index(">")] else style_table(t)
+        return t if "gridtable" in t[: t.index(">")] else style_table(t, view)
     parts = SVG_RE.split(body_html)
     return "".join(p if i % 2 else TABLE_RE.sub(one, p) for i, p in enumerate(parts))
 
@@ -669,8 +848,8 @@ a{color:var(--accent)}
 main{padding:0 16px 48px}
 main p,main ul,main ol,main h1,main h2,main h3,main nav{max-width:1100px}
 .page{display:none}
-.page:target{display:block}
-body:not(:has(.page:target)) #front{display:block}
+.page:target,.page:has(:target){display:block}
+body:not(:has(.page:target,.page :target)) #front{display:block}
 h1{font-size:1.5rem;line-height:1.25;overflow-wrap:anywhere}
 h2{font-size:1.25rem;margin-top:2rem}
 h3{font-size:1.1rem}
@@ -713,14 +892,16 @@ html[data-profile="dodaf202"] .profile-only[data-for="dodaf202"],html[data-profi
 .provenance{margin-top:2.5rem;padding-top:8px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
 .provenance p{margin:2px 0}
 .provenance .note{display:block}
-nav.views ul{columns:2 280px;padding-left:1.2em}
+nav.views ul,nav.capabilities ul,nav.decisions ul{columns:2 280px;padding-left:1.2em}
+.stamp,.derived,.cap-group,.cap-increment{color:var(--muted);margin:4px 0}
+.stamp{font-size:13px}
 @page{size:landscape}
 @media (max-width:600px){h1{font-size:1.3rem}.bar{gap:6px 8px}}
 @media print{
   .bar,#results{display:none!important}
   body{font-size:11pt}
   main{max-width:none;padding:0}
-  .page,.page:target,body:not(:has(.page:target)) #front{display:block}
+  .page,.page:target,.page:has(:target),body:not(:has(.page:target,.page :target)) #front{display:block}
   .page{break-before:page}
   .page:first-of-type{break-before:auto}
   .scroll{overflow:visible}
@@ -729,6 +910,9 @@ nav.views ul{columns:2 280px;padding-left:1.2em}
   tbody tr:nth-child(even)>*,tbody th,.gridtable td:has(.filled){background:none}
   .badge,.phase-measured,.phase-built-unmeasured,.phase-accepted-design,.phase-proposed,.phase-row{background:none;color:inherit;padding:0;border-radius:0;font-weight:600}
   th:nth-child(n+4){min-width:0!important}
+  .decision th{min-width:0!important}
+  .decision td:nth-child(n+4),.decision th:nth-child(n+4){overflow-wrap:anywhere}
+  .decision td:nth-child(n+4) .nb{white-space:normal}
   table:has(thead th:nth-child(8)) td:nth-child(n+4),table:has(thead th:nth-child(8)) th:nth-child(n+4){overflow-wrap:anywhere}
   table:has(thead th:nth-child(8)) td:nth-child(n+4) .nb,table:has(thead th:nth-child(8)) th:nth-child(n+4) .nb{white-space:normal}
   pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:8.5pt}
@@ -824,6 +1008,187 @@ JS = """
 """.strip()
 
 
+# --- capability and decision pages -------------------------------------------
+
+CAP_NAME_VIEWS = ("St-Tx", "St-Rm-P")
+STAMP_DIRTY = " (working tree differs from this commit)"
+SHALLOW_MESSAGE = "the repository is a shallow clone: decision stamps need full history (fetch-depth: 0)"
+
+
+def git_out(*args: str) -> str:
+    try:
+        r = subprocess.run(["git", "-C", str(REPO), *args], capture_output=True, text=True, encoding="utf-8")
+    except OSError as e:
+        raise InputError(f"git cannot run: {e.strerror or e}") from None
+    if r.returncode != 0:
+        raise InputError(f"git {' '.join(args)} failed: {r.stderr.strip() or r.returncode}")
+    return r.stdout
+
+
+def check_history() -> None:
+    if git_out("rev-parse", "--is-shallow-repository").strip() == "true":
+        raise InputError(SHALLOW_MESSAGE)
+
+
+def decision_stamp(path: Path) -> str:
+    """`Commit SHORT7, YYYY-MM-DD: decisions/FILE`, from the last commit that touched the file."""
+    rel = Path(path).resolve().relative_to(REPO.resolve()).as_posix()
+    line = git_out("log", "-1", "--format=%h%x09%cs", "--", rel).strip()
+    sha, _, day = line.partition("\t")
+    if not sha or not day:
+        raise InputError(f"git has no commit that touched {rel}")
+    dirty = STAMP_DIRTY if git_out("status", "--porcelain", "--", rel).strip() else ""
+    return f"Commit {sha[:7]}, {day}: decisions/{Path(path).name}{dirty}"
+
+
+def split_title(text: str) -> tuple[str | None, str]:
+    """The first `# ` line outside fences, and the text without it."""
+    lines = text.split("\n")
+    for i, (fence, _, line) in enumerate(rp.split_fences(text)):
+        if not fence and line.startswith("# "):
+            return line[2:].strip(), "\n".join(lines[:i] + lines[i + 1:])
+    return None, text
+
+
+def link_capability_names(vid: str, body_html: str, cap_names: list[str]) -> str:
+    """Wrap each capability name in the first cell of each body row of every table in a link to its page."""
+    pat = re.compile(r"\b(" + "|".join(sorted((re.escape(n) for n in cap_names), key=len, reverse=True)) + r")\b")
+    linked: set[str] = set()
+
+    def sub(m: re.Match) -> str:
+        linked.add(m.group(1))
+        return f'<a href="#cap-{m.group(1)}">{m.group(1)}</a>'
+
+    def cell(m: re.Match) -> str:
+        depth, out = 0, []
+        for i, part in enumerate(TAG_RE.split(m.group(3))):
+            if i % 2:
+                if re.match(r"<a\b", part):
+                    depth += 1
+                elif part.startswith("</a"):
+                    depth -= 1
+                out.append(part)
+            else:
+                out.append(part if depth else pat.sub(sub, part))
+        return f"<{m.group(1)}{m.group(2)}>{''.join(out)}</{m.group(1)}>"
+
+    def row(m: re.Match) -> str:
+        first = CELL_RE.search(m.group(0))
+        return m.group(0) if not first else m.group(0)[:first.start()] + cell(first) + m.group(0)[first.end():]
+
+    def table(m: re.Match) -> str:
+        t = m.group(0)
+        split = t.find("<tbody")
+        return t if split < 0 else t[:split] + ROW_RE.sub(row, t[split:])
+
+    out = TABLE_RE.sub(table, body_html)
+    missing = [n for n in cap_names if n not in linked]
+    if missing:
+        raise CheckError(f"view {vid}: no table row links {', '.join(missing)} to its capability page\n")
+    return out
+
+
+def status_word(lead: str | None) -> str:
+    if not lead:
+        return "no status"
+    for w in ("accepted", "proposed"):
+        if lead.startswith(w):
+            return w.capitalize()
+    return lead.split()[0].capitalize()
+
+
+def capability_pages(a: argparse.Namespace, uaf: "rp.Renderer", views: dict, names: dict, dec: Decisions,
+                     prov: str) -> tuple[list[str], list[str]]:
+    """(page sections, nav items): one page per capability in the model, in model order."""
+    record = capability_phases.load_record(getattr(a, "record", None) or ROOT / "capability-record.yaml")
+    cmap = capability_phases.model_capabilities(uaf.sysml)
+    ddir = dec.dir
+    cdir = Path(a.chart)
+    rpath = Path(a.readiness) if getattr(a, "readiness", None) else cdir.parent / "scripts" / "RECORDING-READINESS.md"
+    try:
+        readiness = rpath.read_text(encoding="utf-8")
+    except OSError as e:
+        raise InputError(f"cannot read the readiness doc {rpath}: {e.strerror or e}; pass --readiness")
+    evidence = capability_phases.evidence_cells(record, readiness)
+    statuses = capability_phases.statuses_of(record, ddir)
+    road_rows = capability_phases.roadmap_rows(capability_phases.read_text(ddir / capability_phases.ROADMAP) or "")
+    register: dict[str, tuple[str, str]] = {}
+    for f in (capability_phases.FOLLOW_UPS, capability_phases.DEBT):
+        for k, v in capability_phases.register_subjects(capability_phases.read_text(ddir / f) or "").items():
+            register.setdefault(k, v)
+    sources = {vid: strip_comments((ROOT / e["file"]).read_text(encoding="utf-8")) for vid, e in views.items()}
+
+    def link(name: str, adr: str, label: str) -> str:
+        try:
+            return f'<a href="#{esc(dec.cite(adr, label))}">{esc(adr)} §{esc(label)}</a>'
+        except LookupError as e:
+            raise CheckError(f"{name}: {adr} §{label}: {e.args[0]}\n") from None
+
+    sections, nav = [], []
+    for name in cmap:
+        cap = record["capabilities"].get(name) or {}
+        phase = capability_phases.phase_of(cap, statuses)
+        if phase is None:
+            raise CheckError(f"{name}: the record gives it no phase\n")
+        label = capability_phases.increment_label(cap, road_rows)
+        lane = str(record["lanes"][cmap[name]])
+        head = f'<h1>{esc(name)}</h1><p class="cap-group">Group: {esc(lane)}</p>'
+        if label:
+            head += f'<p class="cap-increment">Increment: {esc(label)}</p>'
+        source = capability_phases.derived_citations(cap) or capability_phases.record_citations(cap)
+        written = ", ".join(link(name, adr, lab) for adr, lab in source)
+        what = (f'<h2>What it is</h2><p data-what>{esc(" ".join(str(cap.get("description") or "").split()))}</p>'
+                f'<p class="derived" data-derived>Written from {written}. The decision records are the authority; '
+                f'this description is not their text.</p>')
+        ev = evidence.get(name)
+        ev_html = ("<ul>" + "".join(f"<li>{esc(x)}</li>" for x in ev) + "</ul>" if ev else
+                   "<p>Not measured: the readiness doc has no entry for this capability.</p>")
+        built = list(dict.fromkeys(f"templates/{b['template']}" for b in cap.get("built") or []))
+        evid = (f'<h2>Phase</h2><p><span class="badge phase-{phase.replace(" ", "-")}">{esc(phase)}</span></p>'
+                f'<h2>Evidence</h2>{ev_html}<p>Built: {esc(", ".join(built) or "-")}</p>')
+        items = []
+        for adr, lab in capability_phases.record_citations(cap):
+            h = dec.heading(adr, lab)
+            items.append(f"<li>{link(name, adr, lab)} {esc(h.text)} ({esc(status_word(statuses.get(adr)))})</li>")
+        for s in capability_phases.still_open(cap):
+            adr, lab = adr_sections.parse_citation(s["adr"])
+            items.append(f"<li>{link(name, adr, lab)} names it still open: {esc(str(s['says']))}</li>")
+        decs = f'<h2>Decisions</h2><ul>{"".join(items) or "<li>-</li>"}</ul>'
+        pat = re.compile(rf"\b{re.escape(name)}\b")
+        cited = sorted({v for v, t in sources.items() if pat.search(t)} | {"St-Rm-P"} & set(views))
+        cites = "".join(f'<li><a href="#view-{esc(v)}">{esc(names[v])} ({esc(v)})</a></li>' for v in cited)
+        rows = []
+        for rid in cap.get("rows") or []:
+            subject, status = register.get(rid, ("", ""))
+            rows.append(f"<li>{esc(rid)}: {esc(subject)} ({esc(status)})</li>" if subject else f"<li>{esc(rid)}</li>")
+        sections.append(
+            f'<section id="cap-{esc(name)}" class="page capability" data-capability="{esc(name)}">{head}'
+            f'<p><a href="#front">Front page</a></p>{what}{evid}{decs}'
+            f'<h2>Cited by</h2><ul>{cites}</ul>'
+            f'<h2>Open rows</h2>{"<ul>" + "".join(rows) + "</ul>" if rows else "<p>-</p>"}{prov}</section>')
+        nav.append(f'<li><a href="#cap-{esc(name)}">{esc(name)}</a></li>')
+    return sections, nav
+
+
+def decision_pages(views: dict, dec: Decisions, prov: str) -> tuple[list[str], list[str]]:
+    check_history()
+    sections, nav = [], []
+    for key in dec.keys():
+        title, rest = split_title(dec.texts[key])
+        if title is None:
+            raise InputError(f"decisions/{dec.files[key].name} has no '# ' title line")
+        body = style_tables(DecisionPage(key, views, dec).render(rest), view=False)
+        pid = dec.page_id(key)
+        label = "" if key == ROADMAP_KEY else key
+        sections.append(
+            f'<section id="{pid}" class="page decision" data-decision="{esc(label or "roadmap")}">'
+            f'<h1>{esc(title)}</h1><p class="stamp" data-stamp>{esc(decision_stamp(dec.files[key]))}</p>'
+            f'<p><a href="#front">Front page</a></p><div class="body">{body}</div>{prov}</section>')
+        shown = title if key == ROADMAP_KEY or title.startswith(key) else f"{key} {title}"
+        nav.append(f'<li><a href="#{pid}">{esc(shown)}</a></li>')
+    return sections, nav
+
+
 def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
     """The whole file as text. a holds chart, values, release, readiness, record, slots."""
     if MarkdownIt is None:
@@ -838,6 +1203,7 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
     pre = f"{system}: " if system else ""
     rows = appendix_ids(ROOT)
     prov = provenance(a, date)
+    dec = Decisions(REPO / "decisions")
 
     dx_text, dx_cells = dx_variants({p: r.dx_content() for p, r in renderers.items()})
 
@@ -862,8 +1228,10 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
                 only.append(f'<p class="profile-only" data-profile-only data-for="{p}">{esc(reason)}</p>')
         attrs = " ".join(f'data-{p}="{esc(h1[p])}"' for p in PROFILE_NAMES)
         _, body = uaf.view_text(vid, rp.demote(dx_text))
-        page = Page(vid, views, checked(diagram, vid))
+        page = Page(vid, views, checked(diagram, vid), dec)
         body_html = page.render(body.rstrip("\n") + "\n")
+        if vid in CAP_NAME_VIEWS:
+            body_html = link_capability_names(vid, body_html, list(capability_phases.model_capabilities(uaf.sysml)))
         if vid == uaf.home:
             body_html = apply_header_cells(body_html, dx_cells)
             if "zzpname" in body_html:
@@ -880,12 +1248,16 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
     if total_exceptions == 0:
         raise CheckError("no exception table found: no heading starting with 'Exception' is directly "
                          "followed by a table\n")
-    decl_html = style_tables(Page("declarations", views, checked(diagram, "declarations")).render(declarations_md(views)))
+    decl_html = style_tables(Page("declarations", views, checked(diagram, "declarations"), dec).render(declarations_md(views)))
     sections.append(
         f'<section id="declarations" class="page" data-declarations>'
         f'<h1>{esc(pre)}{esc(DECLARATIONS_TITLE)}</h1>'
         f'<p><a href="#front">Front page</a></p>'
         f'<div class="body">{decl_html}</div>{prov}</section>')
+
+    cap_sections, cap_nav = capability_pages(a, uaf, views, names, dec, prov)
+    dec_sections, dec_nav = decision_pages(views, dec, prov)
+    sections += cap_sections + dec_sections
 
     grids = [grid_uaf(rows, views, names, uaf.uaf_label),
              grid_selected(renderers["dodaf202"], rows, names),
@@ -897,6 +1269,8 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
         f"{esc(renderers[p].label)}</button>" for p in PROFILE_NAMES)
     front = (f'<section id="front" class="page" data-front><h1>{esc(pre)}architecture views</h1>'
              f'{"".join(grids)}<nav class="views"><h2>Views</h2><ul>{"".join(nav)}</ul></nav>'
+             f'<nav class="capabilities"><h2>Capabilities</h2><ul>{"".join(cap_nav)}</ul></nav>'
+             f'<nav class="decisions"><h2>Decision records</h2><ul>{"".join(dec_nav)}</ul></nav>'
              f'<nav class="declarations"><h2>For a deployment</h2><ul><li><a href="#declarations">'
              f'{esc(DECLARATIONS_TITLE)}</a></li></ul></nav>{prov}</section>')
     return (f'<!doctype html>\n<html lang="en" data-profile="uaf" {title_attrs}>\n<head>\n<meta charset="utf-8">\n'

@@ -33,6 +33,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import capability_phases  # noqa: E402
 import check_views  # noqa: E402
 import render_profile as rp  # noqa: E402
 from capability_phases import CheckError, load_barred, scan_barred  # noqa: E402
@@ -129,7 +130,8 @@ def check_network(raw: str) -> list[str]:
         fails.append("network: the export holds a src attribute")
     bad = [m for m in ATTR_RE.finditer(raw) if m.group(1).lower() == "href" and not (m.group(2) or m.group(3) or "").startswith("#")]
     if bad:
-        fails.append(f"network: {len(bad)} href(s) do not start with #")
+        shown = ", ".join(repr(m.group(2) if m.group(2) is not None else m.group(3)) for m in bad[:3])
+        fails.append(f"network: {len(bad)} href(s) do not start with #: {shown}")
     return fails
 
 
@@ -157,6 +159,51 @@ def check_diagrams(raw: str, tree: check_views.Tree) -> list[str]:
     got = diagram_count(raw)
     if got != want:
         fails.append(f"diagrams: {got} SVG diagrams, {want} Mermaid fences in the views")
+    return fails
+
+
+STAMP_RE = re.compile(r"^Commit [0-9a-f]{7,}, \d{4}-\d{2}-\d{2}: decisions/ADR-\d{4}-.+\.md")
+WHAT_RE = re.compile(r"<p data-what>(.*?)</p>", re.S)
+STAMP_P_RE = re.compile(r'<p class="stamp" data-stamp>(.*?)</p>', re.S)
+
+
+def check_capabilities(raw: str, tree: check_views.Tree) -> list[str]:
+    """One page per capability in the model, each with a description and the line that says where it comes from."""
+    fails: list[str] = []
+    pages = {pid: body for pid, body in PAGE_RE.findall(raw) if pid.startswith("cap-")}
+    want = list(capability_phases.model_capabilities(tree.sysml))
+    got = [pid[4:] for pid in pages]
+    if got != want:
+        fails.append(f"capabilities: the export has {len(got)} capability pages, the model {len(want)}"
+                     + "".join(f"; missing {n}" for n in want if n not in got)
+                     + "".join(f"; extra {n}" for n in got if n not in want))
+    for pid, body in pages.items():
+        m = WHAT_RE.search(body)
+        if not m or not plain(m.group(1)):
+            fails.append(f"capabilities: {pid} has no description under 'What it is'")
+        if "data-derived" not in body:
+            fails.append(f"capabilities: {pid} has no data-derived line")
+    return fails
+
+
+def check_decisions(raw: str, tree: check_views.Tree) -> list[str]:
+    """One page per decision record, each stamped with the commit it was read at."""
+    fails: list[str] = []
+    pages = {pid: body for pid, body in PAGE_RE.findall(raw) if pid.startswith(("adr-", "decision-"))}
+    directory = tree.root.parent.parent / "decisions"
+    if directory.is_dir():
+        want = sorted(f.name[:8].lower() for f in directory.glob("ADR-*.md")) + ["decision-roadmap"]
+        got = sorted(i for i in pages if i != "decision-roadmap") + ["decision-roadmap"] * ("decision-roadmap" in pages)
+        if got != want:
+            fails.append(f"decisions: the export has {len(pages)} decision pages, decisions/ has {len(want)}"
+                         + "".join(f"; missing {n}" for n in want if n not in got)
+                         + "".join(f"; extra {n}" for n in got if n not in want))
+    for pid, body in pages.items():
+        m = STAMP_P_RE.search(body)
+        if not m:
+            fails.append(f"decisions: {pid} has no data-stamp line")
+        elif pid.startswith("adr-") and not STAMP_RE.match(plain(m.group(1))):
+            fails.append(f"decisions: {pid} has a malformed stamp: {plain(m.group(1))[:80]!r}")
     return fails
 
 
@@ -200,12 +247,14 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_INPUT
     fails = (check_views_equal(raw, tree) + check_barred(raw, barred) + check_provenance(raw)
              + check_network(raw) + check_size(len(data)) + check_links(raw)
-             + check_diagrams(raw, tree) + check_exceptions(raw) + check_declarations(raw, tree))
+             + check_diagrams(raw, tree) + check_exceptions(raw) + check_declarations(raw, tree)
+             + check_capabilities(raw, tree) + check_decisions(raw, tree))
     for f in fails:
         print(f"FAIL: {f}", file=sys.stderr)
     if fails:
         return EXIT_CHECK
-    print(f"ok: export: {len(tree.views)} views, equal to check_views; {diagram_count(raw)} diagrams; "
+    print(f"ok: export: {len(PAGE_RE.findall(raw))} pages, {len(tree.views)} views, equal to check_views; "
+          f"{diagram_count(raw)} diagrams; "
           f"{len(data)} bytes; barred: 0 on {len(barred)} entries of "
           f"{', '.join(Path(p).name for p in a.barred)}")
     return EXIT_OK

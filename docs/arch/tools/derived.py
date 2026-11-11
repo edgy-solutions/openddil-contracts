@@ -137,7 +137,7 @@ def dependencies(record: dict, roadmap: str) -> str:
         slice_name = re.sub(r"\s*\(.*$", "", bare(r[1]))
         m = re.search(r"increment (\d+)", bare(r[2]))
         adrs = ADR_RE.findall(r[1])
-        owners = sorted({n for n, cap in caps.items() if set(adrs) & set(cap.get("adrs") or [])})
+        owners = sorted({n for n, cap in caps.items() if set(adrs) & set(capability_phases.record_adrs(cap))})
         if not m or m.group(1) not in numbered:
             fails.append(f"derived: fold-in {bare(r[0])} names no numbered increment")
             continue
@@ -296,10 +296,10 @@ def traceability(decisions: Path, views: Path, record: dict, exemptions: Path) -
         if not isinstance(cap, dict):
             continue
         for a in cap.get("adrs") or []:
-            cited.setdefault(str(a), set()).add("St-Rm-P")
+            cited.setdefault(capability_phases.adr_id(a), set()).add("St-Rm-P")
         for o in cap.get("still_open") or []:
             if isinstance(o, dict) and o.get("adr"):
-                cited.setdefault(str(o["adr"]), set()).add("St-Rm-P")
+                cited.setdefault(capability_phases.adr_id(o["adr"]), set()).add("St-Rm-P")
     try:
         data = yaml.safe_load(exemptions.read_text(encoding="utf-8"))
     except (OSError, yaml.YAMLError) as e:

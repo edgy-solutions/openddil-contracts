@@ -250,9 +250,9 @@ class Traceability(unittest.TestCase):
         rec = yaml.safe_load(self.record.read_text(encoding="utf-8"))
         for cap in rec["capabilities"].values():
             if "adrs" in cap:
-                cap["adrs"] = [a for a in cap["adrs"] if a != "ADR-0057"]
+                cap["adrs"] = [a for a in cap["adrs"] if a.split()[0] != "ADR-0057"]
             if "still_open" in cap:
-                cap["still_open"] = [o for o in cap["still_open"] if o.get("adr") != "ADR-0057"]
+                cap["still_open"] = [o for o in cap["still_open"] if o.get("adr", "").split()[:1] != ["ADR-0057"]]
         self.record.write_text(yaml.safe_dump(rec, sort_keys=False), encoding="utf-8")
         self.refused("ADR-0057")
 
