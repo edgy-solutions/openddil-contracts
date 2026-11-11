@@ -71,6 +71,19 @@ Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.3. Named by
 
 Close when the harness runs over a recording with confirmed failures and reports each metric, citing the paper.
 
+## OPEN 2026-11-11 — the remaining-life output kind is specified, not built
+
+**A design, not built.** `DESIGN-2026-11-11-remaining-life-output-kind.md` specifies, by concept, a third output
+kind for a declared analytic unit: a distribution over the use remaining before a declared failure threshold, in a
+declared usage meter's unit, with a horizon, a confidence with its kind or none, and always advisory. It drafts the
+ADR-0057 amendment that admits the kind, and the scoring harness's inputs and join. The amendment is applied when
+the design is accepted. The harness waits for confirmed outcomes from the completed work order (ADR-0059 §4.4).
+
+Home: `DESIGN-2026-11-11-remaining-life-output-kind.md`. Named by: ADR-0059 §4.2, §4.3.
+
+Close when a unit emits the kind through the amended validator, and one scoring run joins its outputs to a
+confirmed failure.
+
 ## OPEN 2026-11-11 — no collector at any tier; telemetry does not travel upward
 
 **A design, not built.** Nothing emits OpenTelemetry, and no collector is deployed. The proposal is a collector per
