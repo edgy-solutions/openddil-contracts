@@ -92,12 +92,12 @@ every step was read on the deployment, apart from the last row, which is a predi
   unchanged ([ADR-0046](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md)), so this action would stay
   refused after the kind changed. It would be admitted only on a changed body from the other side. A fix is written and
   held for the next roll: a same-hash `schema_invalid` row whose body now passes the loaded schema is decided again, and
-  every other same-hash row is still skipped. That is a change to ADR-0046's rule, and the ADR does not record it yet.
+  every other same-hash row is still skipped. ADR-0046's amendment of 2026-11-10 records the rule.
 - **O3. This view has no need for an operator's fault report.** The walk's filing, its resolve and its refile ran on a
   need the table does not hold. N1 covers faults from feeds, and N9 covers declarations of arrival. They are marked
   "none" above.
 - **O4. The stand-in still answers in the old shape.** The stand-in that answers in place of {{slot:maintenance-system}}
-  in tests sends `task_refs` as strings. Under the changed kind, its answers would be refused `schema_invalid`.
+  in tests sends `task_refs` as strings. Under the changed kind, its answers would be refused `schema_invalid`. Decided: the stand-in changes to the object shape.
 
 **{{slot:maintenance-system}}**
 
