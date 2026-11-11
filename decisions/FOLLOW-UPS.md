@@ -84,6 +84,18 @@ Home: `DESIGN-2026-11-11-remaining-life-output-kind.md`. Named by: ADR-0059 §4.
 Close when a unit emits the kind through the amended validator, and one scoring run joins its outputs to a
 confirmed failure.
 
+## OPEN 2026-11-11 — the built-in test record kind is specified, not built
+
+**A design, not built.** `DESIGN-2026-11-11-bit-record-kind.md` specifies, by concept, a declared record for one
+built-in test result: test type and result from declared vocabularies, a fault code from the catalog, the ambiguity
+group as ordered component identities, and a confidence with its kind or none. A `fail` opens or joins an episode;
+a `pass` never closes one. It describes the inputs and join for ADR-0059 §4.1's detection and isolation counts.
+Open for a ruling: whether `active_fault_codes` stays beside the kind while sources are mapped.
+
+Home: `DESIGN-2026-11-11-bit-record-kind.md`. Named by: ADR-0059 §5.
+
+Close when one deployment's source is mapped into the kind, and the counts are read from it at one tier.
+
 ## OPEN 2026-11-11 — no collector at any tier; telemetry does not travel upward
 
 **A design, not built.** Nothing emits OpenTelemetry, and no collector is deployed. The proposal is a collector per
