@@ -27,7 +27,8 @@ Close when the fix is deployed and the walk's action reads admitted with `schema
 
 The stand-in that answers in place of the maintenance system in tests sends `task_refs` as strings. Under the kind
 changed to the object shape, its answers would be refused `schema_invalid`. Nothing polls it today. Decided
-2026-11-10: the stand-in changes its answer to the object shape. Owner: operations. Home: the worked example in
+2026-11-10: the stand-in changes its answer to the object shape, in the deployment's overlay, at the next roll.
+Owner: operations. Home: the worked example in
 `docs/arch/views/Op-Cn.md`, finding O4. Named by: the operations card, entry of 2026-11-10.
 
 Close when the stand-in's answer passes the deployed kind.

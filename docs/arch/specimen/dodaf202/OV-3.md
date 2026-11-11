@@ -99,7 +99,7 @@ every step was read on the deployment, apart from the last row, which is a predi
   need the table does not hold. N1 covers faults from feeds, and N9 covers declarations of arrival. They are marked
   "none" above.
 - **O4. The stand-in still answers in the old shape.** The stand-in that answers in place of {{slot:maintenance-system}}
-  in tests sends `task_refs` as strings. Under the changed kind, its answers would be refused `schema_invalid`. Decided: the stand-in changes to the object shape.
+  in tests sends `task_refs` as strings. Under the changed kind, its answers would be refused `schema_invalid`. Decided: the stand-in changes to the object shape, in the deployment's overlay, at the next roll.
 
 **{{slot:maintenance-system}}**
 
