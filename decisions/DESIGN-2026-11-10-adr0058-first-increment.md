@@ -271,7 +271,8 @@ What this increment holds OpenDDIL to, and what it asks of iagent:
   - Each tier's `intake_records` rows are stored at that tier.
   - The hub keeps a route to its own iagent for the steps the hub owns.
 - **This is ADR-0046's stated design,** not a reversal: "Per-tier instances are the design" (decision 2), and "storage
-  at the owning tier stays the design" (§5.4). When it is built, ADR-0046 gains a status line saying so.
+  at the owning tier stays the design" (§5.4). ADR-0046's status block says so (noted 2026-11-11). The note applies
+  when this is built.
 - **One door per record.** A record is delivered by the door at its owning tier only. The hub's door skips records
   whose owning tier has its own door. A record delivered twice would open two cases (ADR-0046, "The consumer's case
   key").
