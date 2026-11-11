@@ -13,7 +13,7 @@ Model: [CapabilityTaxonomy](../model/openddil.sysml)
 | DataAcquisition, DataManipulation, StateDetection (ISO 13374 blocks 1 to 3) | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Built |
 | HealthAssessment (block 4) | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
 | PrognosticAssessment (block 5): the mechanism, not a prediction | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
-| AdvisoryGeneration (block 6): rule-based | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
+| AdvisoryGeneration (block 6): constraining factors only, no condition advice; the configuration analyzer is under ConfigurationStatusAccounting | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
 | InformationPresentation | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Built |
 | HierarchicalAggregation | [ADR-0022](../../../decisions/ADR-0022-hierarchical-aggregation-is-the-architecture.md) | Accepted | Declared |
 | TierLocalDecision | [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md), [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
@@ -22,6 +22,7 @@ Model: [CapabilityTaxonomy](../model/openddil.sysml)
 | TierLocalWorkflow | [ADR-0034](../../../decisions/ADR-0034-tier-analytics-are-deployment-configuration.md), [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Not stated |
 | TacticalSustainmentCorrelation | [ADR-0039](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
 | ConfigurationStatusAccounting | [ADR-0009](../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
+| ConfigurationStatusAccounting holds the configuration analyzer, not StateDetection or AdvisoryGeneration | [ADR-0059](../../../decisions/ADR-0059-condition-monitoring-bit-and-usage-alignment.md) | Proposed | Status line |
 | ArrivalDeclaration | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | LabelledReadEnforcement | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | GatedRelease | [ADR-0043](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
