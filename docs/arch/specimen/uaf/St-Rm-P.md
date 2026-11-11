@@ -4,7 +4,7 @@ built on OpenDDIL 0.1.161
 
 Where each capability in [Strategic-Taxonomy](../../views/St-Tx.md) stands, read from the record. Phase and evidence are computed at render from [capability-record.yaml](../../capability-record.yaml), and every citation in it has to resolve or the render fails. A capability with no phase also fails the render.
 
-Phases: 7 measured, 9 built unmeasured, 6 accepted design, 4 proposed, 2 row.
+Phases: 7 measured, 9 built unmeasured, 7 accepted design, 5 proposed, 2 row.
 
 | Capability | Lane | Phase | Evidence | Built | Decisions | Rows |
 |---|---|---|---|---|---|---|
@@ -16,13 +16,13 @@ Phases: 7 measured, 9 built unmeasured, 6 accepted design, 4 proposed, 2 row.
 | AdvisoryGeneration | Condition monitoring | built unmeasured | not measured | templates/tier-node.yaml | ADR-0038 | AE-2 |
 | InformationPresentation | Condition monitoring | measured | 2026-09-26, lab A, The pre-flight: shape sizes: TOTAL 85 KiB one client load; worst in-flight 194 KiB vs 256Mi limit | templates/tier-node.yaml | ADR-0038 | - |
 | DeclaredAnalyticUnits | Condition monitoring | proposed | not measured | - | ADR-0057 | - |
-| DeclaredCards | Condition monitoring | proposed | not measured | - | ADR-0058 | - |
 | HierarchicalAggregation | Hierarchy | measured | 2026-09-26, lab A, E. Severance, both dimensions: rollup 4 partials / 15 assets: was 3 / 14: ⚠ see FINDING-03 §3a | templates/regional.yaml | ADR-0022 | - |
 | TierLocalDecision | Isolation increments, done: PDP per tier | built unmeasured | not measured | templates/tier-node.yaml | ADR-0029 | - |
 | TierLocalSignIn | Isolation increments, 1: Identity per tier | built unmeasured | not measured | templates/tier-identity.yaml | ADR-0045 | - |
 | TierLocalMaintenanceChain | Isolation increments, 2: Maintenance chain per tier | accepted design | not measured | - | ADR-0046 (record: accepted; index: proposed) | - |
 | TierLocalWorkflow | Isolation increments, 3: Workflow per tier | built unmeasured | not measured | templates/tier-node.yaml | ADR-0034 | - |
 | OneSession | Isolation increments, 4: One session | proposed | not measured | - | ADR-0045 (names it still open) | - |
+| EdgeWorkflow | Isolation increments | accepted design | not measured | - | ADR-0031 | - |
 | TacticalSustainmentCorrelation | Correlation | accepted design | not measured | - | ADR-0039 | - |
 | ConfigurationStatusAccounting | Correlation | measured | 2026-10-30, lab B, G. Things that will bite if forgotten: (2026-10-30, the first roll on the new image): through the Restate wipe, the in-compliance fixture asset stayed in compliance in its tier store and at HQ, with its stored part and mod times byte-identical, one restore line in the log, and no event re-sent. | templates/tier-node.yaml | ADR-0009 | - |
 | ArrivalDeclaration | Correlation | built unmeasured | not measured | templates/hub.yaml | ADR-0050 | - |
@@ -30,6 +30,8 @@ Phases: 7 measured, 9 built unmeasured, 6 accepted design, 4 proposed, 2 row.
 | GatedRelease | Releasability | built unmeasured | not measured | templates/egress.yaml | ADR-0043 | - |
 | GatedIntake | Releasability | built unmeasured | not measured | templates/egress.yaml | ADR-0046 (record: accepted; index: proposed) | - |
 | DeclaredLabelDimensions | Releasability | proposed | not measured | - | ADR-0055 | - |
+| OneIdentityPerThing | Data management | proposed | not measured | - | ADR-0056 | - |
+| DeclaredCards | Operator interaction | proposed | not measured | - | ADR-0058 | - |
 | SustainmentFeasibility | Anticipated | row | not measured | - | - | AE-3, AE-5, GD-10 |
 | AdvisoryProvenance | Anticipated | row | not measured | - | - | AE-2 |
 | OfflineIntentReconciliation | Anticipated | accepted design | not measured | - | ADR-0040, ADR-0042 | - |

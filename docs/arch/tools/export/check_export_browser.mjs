@@ -409,7 +409,7 @@ try {
       names: bs.every((b) => names.includes(b.textContent)),
       minC: Math.min(...cs.map((c) => contrast(c.color, c.backgroundColor))) };
   `);
-  check(badges.n === 33 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 33 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
+  check(badges.n === 35 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 35 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
 
   const head = await inPage(`
     const hs = [...document.querySelectorAll("#view-Op-Tx thead th")].map((h) => getComputedStyle(h));
@@ -430,7 +430,7 @@ try {
     const r = [...document.querySelectorAll("#view-St-Rm-P tr.lane-start")];
     return [r.length, r.filter((x) => getComputedStyle(x.cells[0]).borderTopWidth !== "2px").length];
   });
-  check(lanes[0] === 9 && lanes[1] === 0, "lane rules: 9 lane starts in the roadmap, each a 2px top rule", lanes.join(" "));
+  check(lanes[0] === 12 && lanes[1] === 0, "lane rules: 12 lane starts in the roadmap, each a 2px top rule", lanes.join(" "));
 
   const viewHead = await page.evaluate(() => getComputedStyle(document.querySelector("#view-Op-Tx thead th")).backgroundColor);
   const filledBg = await page.evaluate(() => {

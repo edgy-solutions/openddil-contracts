@@ -42,7 +42,7 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0028 | Proposed | none |
 | ADR-0029 | Accepted | Op-Cn, Op-Ct, Op-If, Op-Pr, Rs-If, Rs-Pr, Rs-Sq, Rs-Sr, Sc-Cn, Sc-Sr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0030 | Accepted | Op-Cn, Op-Pr, Rs-Cn, Rs-Pr, Rs-Sr |
-| ADR-0031 | Accepted | Rs-Sr |
+| ADR-0031 | Accepted | Rs-Sr, St-Rm-P, St-Tx |
 | ADR-0032 | Accepted | Op-Cn, Op-Sr, Rs-Sr |
 | ADR-0033 | Accepted | Op-Cn, Op-Ct, Op-Sr, Op-Tx, Rs-Cn, Rs-Ct, Rs-Sr, Rs-Tx, Sm-Ov |
 | ADR-0034 | Accepted | Rs-Sr, St-Rm-P, St-Tx |
@@ -67,7 +67,7 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0053 | Accepted | Op-Pr, Rs-Pr, Sc-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0054 | Accepted | Rs-Cn, Rs-Sr |
 | ADR-0055 | Proposed | St-Rm-P, St-Tx |
-| ADR-0056 | Proposed | Op-If, Rs-If, Sd-Tx |
+| ADR-0056 | Proposed | Op-If, Rs-If, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0057 | Proposed | St-Rm-P, St-Tx |
 | ADR-0058 | Proposed | St-Rm-P, St-Tx |
 

@@ -19,7 +19,6 @@ package OpenDDIL {
         occurrence def AdvisoryGeneration :> ConditionMonitoring;
         occurrence def InformationPresentation :> ConditionMonitoring;
         occurrence def DeclaredAnalyticUnits :> ConditionMonitoring;
-        occurrence def DeclaredCards :> ConditionMonitoring;
 
         occurrence def HierarchicalAggregation :> Capability;
 
@@ -29,6 +28,7 @@ package OpenDDIL {
         occurrence def TierLocalMaintenanceChain :> Isolation;
         occurrence def TierLocalWorkflow :> Isolation;
         occurrence def OneSession :> Isolation;
+        occurrence def EdgeWorkflow :> Isolation;
 
         abstract occurrence def Correlation :> Capability;
         occurrence def TacticalSustainmentCorrelation :> Correlation;
@@ -40,6 +40,12 @@ package OpenDDIL {
         occurrence def GatedRelease :> Releasability;
         occurrence def GatedIntake :> Releasability;
         occurrence def DeclaredLabelDimensions :> Releasability;
+
+        abstract occurrence def DataManagement :> Capability;
+        occurrence def OneIdentityPerThing :> DataManagement;
+
+        abstract occurrence def OperatorInteraction :> Capability;
+        occurrence def DeclaredCards :> OperatorInteraction;
 
         abstract occurrence def AnticipatedCapability :> Capability;
         occurrence def SustainmentFeasibility :> AnticipatedCapability;

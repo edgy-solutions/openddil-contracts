@@ -21,6 +21,8 @@ lanes:
   Isolation: Isolation increments
   Correlation: Correlation
   Releasability: Releasability
+  DataManagement: Data management
+  OperatorInteraction: Operator interaction
   AnticipatedCapability: Anticipated
 
 # Labs are named by letter. A letter is declared here, not read from the entry.
@@ -73,8 +75,6 @@ capabilities:
     measured: [{entry: preflight-51, line: "| 4 | shape sizes | **TOTAL 85 KiB**"}]
   DeclaredAnalyticUnits:
     adrs: [ADR-0057]
-  DeclaredCards:
-    adrs: [ADR-0058]
   HierarchicalAggregation:
     adrs: [ADR-0022]
     built: [{template: regional.yaml, contains: regions}]
@@ -97,6 +97,8 @@ capabilities:
   OneSession:
     increment: "**One session**"
     still_open: [{adr: ADR-0045, says: "Federation across tiers, partly closed."}]
+  EdgeWorkflow:
+    adrs: [ADR-0031]
   TacticalSustainmentCorrelation:
     adrs: [ADR-0039]
   ConfigurationStatusAccounting:
@@ -120,6 +122,10 @@ capabilities:
     built: [{template: egress.yaml, contains: intake}]
   DeclaredLabelDimensions:
     adrs: [ADR-0055]
+  OneIdentityPerThing:
+    adrs: [ADR-0056]
+  DeclaredCards:
+    adrs: [ADR-0058]
   SustainmentFeasibility:
     rows: [AE-3, AE-5, GD-10]
   AdvisoryProvenance:
