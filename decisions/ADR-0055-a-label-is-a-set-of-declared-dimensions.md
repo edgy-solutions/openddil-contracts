@@ -7,7 +7,7 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
-- **§1a is signed by Chris, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
+- **§1a is signed by the project owner, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
 
 ## Findings first
 
@@ -86,7 +86,7 @@ The other three stamp a nation the source did not give. They are six default row
 - FOLLOW-UPS.md:30 records that rows 1 and 3, on a deployment with declared assets, give the mislabel already seen once.
 - **ADR-0050 §2.6 permits a deployment default.** Its step 3 is one (ADR-0050:92). The 2026-11-04 amendment refuses a stamp or a default only when the lookup failed with no answer (ADR-0050:180).
 - ADR-0050 also summarises ADR-0029 §3 as "labels propagate, never default" (ADR-0050:5, :210). Its own step 3 contradicts that.
-- §1a below rules that a deployment default is not a declaration. Chris signed it on 2026-11-06.
+- §1a below rules that a deployment default is not a declaration. The project owner signed it on 2026-11-06.
 
 The projector copies the label as it receives it (`openddil-projector/src/handlers/base.py:289-297`):
 - With no nation it writes neither column, so both are NULL.
@@ -134,7 +134,7 @@ The projector copies the label as it receives it (`openddil-projector/src/handle
 
 A deployment declares each dimension it labels by. A declaration gives a name, one of four types, the vocabulary of values, and the owner who decides what the values mean. A record's label holds a value set for every dimension the deployment declares.
 
-**Dimension names are snake_case, by rule (ruled by Chris, 2026-11-07).** A name matches `^[a-z][a-z0-9_]*$`, and the
+**Dimension names are snake_case, by rule (ruled by the project owner, 2026-11-07).** A name matches `^[a-z][a-z0-9_]*$`, and the
 contract vocabulary writes that form. The key is built from the name (§2), so the key builder normalises a name to
 that form before it digests it, and one dimension cannot mint two keys by its spelling. The first restrictive
 dimension is `data_rights_holder`, which is also iagent's form.
@@ -165,10 +165,10 @@ dimension is `data_rights_holder`, which is also iagent's form.
 **Undeclared fails closed, both ways.**
 - A record with no value for a declared dimension is served to nobody. This is ADR-0029 §7's deny-unlabeled, generalised.
 - A record carrying a dimension the deployment does not declare is served to nobody, and the stamp that wrote it is a defect.
-- **On an inbound record, that refusal is loud (ruled by Chris, 2026-11-07).**
+- **On an inbound record, that refusal is loud (ruled by the project owner, 2026-11-07).**
   - It is refused at intake with the reason `dimension_undeclared`, and the dimension is named and counted. It is
     never a silent withhold.
-  - **The record is kept, served to nobody, and counted (ruled by Chris, 2026-11-07).** It is handled like an
+  - **The record is kept, served to nobody, and counted (ruled by the project owner, 2026-11-07).** It is handled like an
     out-of-vocabulary value: withheld so it can be corrected, never dropped.
   - A deployment that wants to receive the dimension declares it.
   - `program` is never declared at an edge (§5).
@@ -317,7 +317,7 @@ A record computed from labelled inputs and emitted as one record, such as a fusi
 
 Any difference fails the migration. A difference is not tuned away.
 
-**One difference is named, not tuned away (ruled by Chris, 2026-11-07).**
+**One difference is named, not tuned away (ruled by the project owner, 2026-11-07).**
 - A row with no originator and a non-empty `releasable_to` is served today, by the second clause of ADR-0029's
   predicate. Under §2 it is unlabelled, and serving it today is the defect.
 - So the move withholds it.
@@ -348,7 +348,7 @@ as amended by PR #281, "Classification is a label of declared dimensions"):
 | `nation` | permissive set | §4, the first dimension. iagent takes its vocabulary from this side |
 
 - **Two dimensions are shared:** nation, and the data-rights holder of this slice. Both sides type them the same.
-- **One name (ruled by Chris, 2026-11-07).** Both sides write `data_rights_holder`. §1's snake_case rule makes that
+- **One name (ruled by the project owner, 2026-11-07).** Both sides write `data_rights_holder`. §1's snake_case rule makes that
   the only form.
 - **`level` and `program` have no declaration here.**
   - A record that crosses from iagent carrying either is refused at intake as `dimension_undeclared`, named and
