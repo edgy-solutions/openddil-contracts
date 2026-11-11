@@ -45,7 +45,7 @@ entries:
 
 capabilities:
   DataAcquisition:
-    adrs: [ADR-0038]
+    adrs: [ADR-0038, ADR-0010]
     built: [{template: edge.yaml, contains: sensor-ingest}]
     measured: [{entry: preflight-51, line: "| 1 | advancing | exit 0 |"}]
   DataManipulation:
@@ -71,6 +71,10 @@ capabilities:
     adrs: [ADR-0038]
     built: [{template: tier-node.yaml, contains: tier-electric}]
     measured: [{entry: preflight-51, line: "| 4 | shape sizes | **TOTAL 85 KiB**"}]
+  DeclaredAnalyticUnits:
+    adrs: [ADR-0057]
+  DeclaredCards:
+    adrs: [ADR-0058]
   HierarchicalAggregation:
     adrs: [ADR-0022]
     built: [{template: regional.yaml, contains: regions}]
@@ -114,6 +118,8 @@ capabilities:
   GatedIntake:
     adrs: [ADR-0046]
     built: [{template: egress.yaml, contains: intake}]
+  DeclaredLabelDimensions:
+    adrs: [ADR-0055]
   SustainmentFeasibility:
     rows: [AE-3, AE-5, GD-10]
   AdvisoryProvenance:

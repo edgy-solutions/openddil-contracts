@@ -18,6 +18,8 @@ package OpenDDIL {
         occurrence def PrognosticAssessment :> ConditionMonitoring;
         occurrence def AdvisoryGeneration :> ConditionMonitoring;
         occurrence def InformationPresentation :> ConditionMonitoring;
+        occurrence def DeclaredAnalyticUnits :> ConditionMonitoring;
+        occurrence def DeclaredCards :> ConditionMonitoring;
 
         occurrence def HierarchicalAggregation :> Capability;
 
@@ -37,6 +39,7 @@ package OpenDDIL {
         occurrence def LabelledReadEnforcement :> Releasability;
         occurrence def GatedRelease :> Releasability;
         occurrence def GatedIntake :> Releasability;
+        occurrence def DeclaredLabelDimensions :> Releasability;
 
         abstract occurrence def AnticipatedCapability :> Capability;
         occurrence def SustainmentFeasibility :> AnticipatedCapability;
