@@ -175,7 +175,16 @@ detection is weaker than the claim it supports.
 `Status: open`
 
 **UD-1 — The severance detector depends on the uplink whose loss it
-detects.** `edge_buffer_monitor._probe_hq_link_severed` reads the
+detects.** *Restated 2026-11-11: the probe described here was
+replaced on 2026-10-05 (openddil-projector 556d4ec). The flag is now
+derived from local observables, as the fix shape below asks: the
+`LinkReachability` class (`openddil-projector/src/edge_buffer_monitor.py:196`)
+reads the relay group's own commits and lag, with a sever threshold
+(`LINK_SEVER_AFTER_S`, `:100`) and restore hysteresis. The rest of
+this paragraph is the record of the old probe. The row stays open until
+a severance rehearsal reads the new flag; see FOLLOW-UPS.md,
+"hq_link_severed tracks the simulator, not reachability".*
+`edge_buffer_monitor._probe_hq_link_severed` read the
 toxiproxy API at a **root-tier** service. Its companion lag probe reads
 the tier's own broker and works while severed; the link probe does not.
 Observed in rehearsal on a pre-0.1.42 build: the link-down flag appeared
