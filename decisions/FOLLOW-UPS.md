@@ -10,7 +10,8 @@ and this file is the thing that is wrong.
 and 16 third-party images to tags. No Dockerfile takes its dependencies from a `uv.lock`, though five have one in their
 build context, and a `uv pip compile` during the build re-resolves on every build. The design adds a pin table that
 fails when a tag changes without its digest, a render guard and an in-template guard that fail on a tag, the locks, and a
-Dockerfile check, in five stages.
+Dockerfile check, in five stages. Its two design calls were ruled 2026-11-11: the pins live in git as `values-pins.yaml`, and
+where deployments run different digests, Stage 1 pins the one that ran longest under load and declares the other's roll.
 
 Two neighbours are tracked here. The `fix/ci-latest-master-only` workflow row is held until after the walk, because CI's
 `:latest` moved to an unmerged branch's image once; both clusters pin by digest, so nothing was harmed. The contracts CI

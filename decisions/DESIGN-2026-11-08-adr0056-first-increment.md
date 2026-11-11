@@ -1,7 +1,8 @@
 # DESIGN 2026-11-08 — ADR-0056's first increment: the alias table and the binding row at the registry
 
 **Status:** an implementer spec. Design only: nothing built, nothing run, nothing measured for this increment. Local
-branch, not merged. ADR-0056 is PROPOSED, with its five rulings signed by Chris 2026-11-07. This spec builds §1's
+branch, not merged. ADR-0056 is PROPOSED, with its five rulings signed 2026-11-07. Its two open items, the
+writer and the UII field, were ruled 2026-11-11 (§2.1, §2.2). This spec builds §1's
 bind-before-mint on the declaration path, §2's alias rows, §3's lookup key, §4's equivalence row and §6's binding row
 and era read, at the asset registry only. It stops before any id changes.
 **Builds on:** ADR-0056 §1-§4 and §6, and its checks 1, 3, 4, 5, 6 and 10; ADR-0047 (`asset_id` is opaque); ADR-0050
@@ -70,8 +71,8 @@ One Atlas migration, `<timestamp>_asset_identity.sql`, listed in `atlas.sum`. Th
   - `namespace` is the uuid5 namespace for that scheme's lookup keys (ADR-0056 §3). It is generated once, when the row
     is written, and never derived from the scheme's name.
   - Seeded by the migration with three rows: the deployment's `asset_id` scheme, `serial` as the declaration carries
-    it, and `identity`, which holds a merged identity as an alias of its survivor (§2.8). A `uii` row is seeded if the
-    UII field is in this increment (§2.1).
+    it, and `identity`, which holds a merged identity as an alias of its survivor (§2.8). A fourth row, `uii`, is
+    seeded too, since the UII field is in this increment (§2.1).
 - **`asset_identity`**: `identity uuid PK`, `minted_at timestamptz NOT NULL`, `minting_tier text NOT NULL`,
   `generator text NOT NULL`, `generator_version text NOT NULL`, `declaration text NOT NULL`.
   - Stored as `uuid`. It is written as `urn:uuid:<uuid>` only at a seam, and no seam carries it in this increment.
@@ -117,19 +118,19 @@ with labels (§6).
 ### 2.1 What the declaration carries
 
 - **Today:** `asset_id` (an alias under the deployment's scheme) and, when given, `serial`.
-- **Open for Chris: an optional `uii` field.** Check 10 is written against a UII. Without the field, the only
-  lookup that can resolve is `serial`, and check 10 is tested on `serial` instead.
-  - If it is in: `pep.py:1790-1806` accepts optional `uii` as text, never parsed. `declared_rec` carries it.
-    Intake's declaration schema accepts it. The projector ignores it.
-  - Recommended: in. It costs one optional field at three places and makes check 10 the check ADR-0056 states.
+- **Ruled 2026-11-11: an optional `uii` field is in.** Check 10 is written against a UII. Without the field, the only
+  lookup that can resolve is `serial`, and check 10 would be tested on `serial` instead.
+  - `pep.py:1790-1806` accepts optional `uii` as text, never parsed. `declared_rec` carries it. Intake's declaration
+    schema accepts it. The projector ignores it.
+  - It costs one optional field at three places and makes check 10 the check ADR-0056 states.
 
 ### 2.2 Who writes
 
-- **Open for Chris: the writer.** Recommended: the asset registry service. It already owns `asset_registry`, it holds
+- **Ruled 2026-11-11: the writer is the asset registry service.** It already owns `asset_registry`, it holds
   the store, and the declaration's subject is the registry's subject. It gains a second agent that consumes
   `asset-declarations` at its own tier. The projector's two handlers are unchanged.
-- The alternative is a third projector handler on the same topic. It is not recommended: the projector is a table
-  writer with no lookups, and lookup-before-mint is a decision.
+- The alternative, a third projector handler on the same topic, was not taken: the projector is a table writer with
+  no lookups, and lookup-before-mint is a decision.
 
 ### 2.3 Bind before mint
 
@@ -264,7 +265,7 @@ pattern: `ASSET_REGISTRY_TEST_PG_DSN`, skipped locally when unset, failing in CI
 | 4. No parsing | `asset-id-opaque.yml`, scope widened | The workflow's scan covers the registry package's alias code. A planted split of `value` in a fixture file fails it; the plant is in the test, never in the package. |
 | 5. No matching | `test_equivalence_single_writer` | No `INSERT INTO identity_equivalence` outside `declare_equivalence`, read from the source tree; and the function refuses an empty owner. |
 | 6. Rebinding is a row | `test_era_from_binding_row` | `asset_id_era` returns 1 before a binding, 1 for an episode first observed before `bound_at`, and 2 at or after it. |
-| 10. Lookup before mint | `test_lookup_before_mint` | An alias row for a UII (or `serial`, §2.1) bound to identity X; a declaration for a new `asset_id` carrying it binds to X, and the identity count is unchanged. |
+| 10. Lookup before mint | `test_lookup_before_mint` | An alias row for a UII (§2.1) bound to identity X; a declaration for a new `asset_id` carrying it binds to X, and the identity count is unchanged. |
 
 Also:
 
@@ -296,7 +297,7 @@ and check 9 is the vocabulary files.
 
 - Nothing is built, run or measured.
 - No identity has been minted, and no alias has been declared.
-- It does not choose the writer or the UII field. Both are open for Chris (§2.1, §2.2).
+- The writer and the UII field are ruled (2026-11-11, §2.1, §2.2). Neither is built.
 - It does not decide what a tier with no registry does with a declaration.
 
 ## Related

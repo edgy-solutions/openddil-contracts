@@ -2,7 +2,7 @@
 
 **Status:** a design, for a row in `FOLLOW-UPS.md`. Nothing built, nothing run. Line numbers are from a read of the chart
 at 0.1.161 and the Dockerfiles at their current tips, and move with them. `ADR-0057` lists image pinning as open; this
-is that item's design.
+is that item's design. Its two open items were ruled 2026-11-11 (see the last section).
 **Builds on:** the chart's render guards (`scripts/check-chart-render.sh`, `.github/workflows/chart-checks.yml`) and its
 include-only guard pattern (`templates/_algorithms.tpl:70`, `templates/algorithms-guard.yaml:3`).
 
@@ -161,10 +161,11 @@ holds where that can be read, so that adopting the lock is not itself an upgrade
 7. A Dockerfile with `pip install <name>` fails the Dockerfile check.
 8. A `uv.lock` out of step with `pyproject.toml` fails the build.
 
-## Open
+## Ruled 2026-11-11
 
-1. **Where the pins live for the git tree:** `values-pins.yaml` as here, or only in the packaged chart. Recommended: in
-   git, so a version's pins can be read and diffed.
-2. **Whether to pin Stage 1's third-party references to the deployments' running digests when deployments differ.** If
-   they differ, one of them changes at that roll. Recommended: take the digest that ran longest under load, and declare
-   the other's roll.
+Both items that were open here are ruled. Nothing is built.
+
+1. **Where the pins live for the git tree:** in git, as `values-pins.yaml`, so a version's pins can be read and diffed.
+   Pins kept only in the packaged chart were the alternative, not taken.
+2. **Which digest Stage 1 pins a third-party reference to when the deployments' running digests differ:** the digest
+   that ran longest under load. The other deployment changes at that roll, and its roll is declared before it.
