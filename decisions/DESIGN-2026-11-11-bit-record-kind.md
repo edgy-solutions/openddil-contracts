@@ -108,21 +108,22 @@ ADR-0059 §4.1's counts, per (region, variant, component), are read here as foll
 - Each tier keeps sums. Sums compose up the tiers. Rates do not compose, and HQ divides at read time (ADR-0051 §4).
 - The tier states counts. It never states that a test is adequate (ADR-0038 C7).
 
-## 6. Open, for a ruling
+## 6. Ruled, and still open
 
-- **`active_fault_codes` beside the kind.** Two options:
-  - keep it, and have the ingest fill both while sources are mapped one by one, with the kind authoritative where both
-    exist;
-  - retire it once a source is mapped, so one result is never two records.
-  This design proposes the first, until every source a deployment declares is mapped, and asks for the ruling.
+- **`active_fault_codes` stays beside the kind (ruled 2026-11-11).** The ingest fills both while sources are mapped
+  one by one, and the kind is authoritative where both exist. The field is retired once every source a deployment
+  declares is mapped. A FOLLOW-UPS row tracks the retirement. The other option, retiring it source by source so one
+  result is never two records, was not taken.
+
+Still open:
 - **The topic and the wire message.** Bound when built.
 - **Whether a record is released upward** through the gate (ADR-0046) as its own declared kind, or only as part of the
   episode it opens. This design proposes only the episode and its counts go up.
 
 ## 7. Rows
 
-In `FOLLOW-UPS.md`: the kind specified, not built, with the `active_fault_codes` ruling open and the counts waiting
-for confirmed outcomes.
+In `FOLLOW-UPS.md`: the kind specified, not built, with the counts waiting for confirmed outcomes; and a second row
+to retire `active_fault_codes` once every declared source is mapped.
 
 ## What this does not establish
 

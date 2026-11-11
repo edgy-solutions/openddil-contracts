@@ -90,11 +90,22 @@ confirmed failure.
 built-in test result: test type and result from declared vocabularies, a fault code from the catalog, the ambiguity
 group as ordered component identities, and a confidence with its kind or none. A `fail` opens or joins an episode;
 a `pass` never closes one. It describes the inputs and join for ADR-0059 §4.1's detection and isolation counts.
-Open for a ruling: whether `active_fault_codes` stays beside the kind while sources are mapped.
+Ruled 2026-11-11: `active_fault_codes` stays beside the kind until every declared source is mapped (the next row).
 
 Home: `DESIGN-2026-11-11-bit-record-kind.md`. Named by: ADR-0059 §5.
 
 Close when one deployment's source is mapped into the kind, and the counts are read from it at one tier.
+
+## OPEN 2026-11-11 — retire `active_fault_codes` once every source is mapped
+
+**Kept by ruling, for now.** Ruled 2026-11-11: `HealthFlags.active_fault_codes` stays beside the built-in test kind
+while sources are mapped one by one. The ingest fills both, and the kind is authoritative where both exist. Until the
+field is retired, one result can appear in two places, and a reader that counts both counts it twice.
+
+Home: `DESIGN-2026-11-11-bit-record-kind.md` §6. Named by: ADR-0059 §5.
+
+Close when every source a deployment declares is mapped into the kind, no reader is left on the field, and it is
+removed from the contract.
 
 ## OPEN 2026-11-11 — no collector at any tier; telemetry does not travel upward
 
