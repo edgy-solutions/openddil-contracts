@@ -103,7 +103,7 @@ try {
   const hash = (t) => createHash("sha256").update(t).digest("hex");
 
   // --- front, UAF ---
-  check(views.length === 28, "28 view sections", String(views.length));
+  check(views.length === 29, "29 view sections", String(views.length));
   check((await display("#front")) === "block", "front is visible on load");
   let pr = await pressed();
   check(pr.uaf === "true" && pr.dodaf202 === "false" && pr.naf4 === "false", "UAF button is pressed on load", JSON.stringify(pr));
@@ -117,7 +117,7 @@ try {
   check((await display("#view-Rs-Cn")) === "block" && (await display("#front")) === "none",
     "clicking a filled cell shows that view and hides the front");
   const provCount = await page.evaluate(() => document.querySelectorAll("[data-provenance]").length);
-  check(provCount === 30, "a provenance block on every page", String(provCount));
+  check(provCount === 31, "a provenance block on every page", String(provCount));
 
   const uafBody = await body("uaf");
   const uafH1 = await page.evaluate(() => document.querySelector("#view-Rs-Cn h1").textContent);
@@ -229,7 +229,7 @@ try {
   await go("#view-Op-Tx");
   await page.emulateMediaType("print");
   const shown = await page.evaluate(() => [...document.querySelectorAll(".page")].filter((e) => getComputedStyle(e).display !== "none").length);
-  check(shown === 30, "print: all 30 pages are displayed", String(shown));
+  check(shown === 31, "print: all 31 pages are displayed", String(shown));
   check((await display(".bar")) === "none", "print: the bar is hidden");
   check((await display("#results")) === "none", "print: the search panel is hidden");
   const gridsShown = await page.evaluate(() => [...document.querySelectorAll(".grid")].filter((e) => getComputedStyle(e).display !== "none").length);
@@ -409,7 +409,7 @@ try {
       names: bs.every((b) => names.includes(b.textContent)),
       minC: Math.min(...cs.map((c) => contrast(c.color, c.backgroundColor))) };
   `);
-  check(badges.n === 30 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 30 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
+  check(badges.n === 33 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 33 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
 
   const head = await inPage(`
     const hs = [...document.querySelectorAll("#view-Op-Tx thead th")].map((h) => getComputedStyle(h));

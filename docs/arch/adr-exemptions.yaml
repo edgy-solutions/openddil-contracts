@@ -1,0 +1,35 @@
+# Decision records that no view cites, each with the reason it is not a
+# capability, a rule, a standard or an information element in some view.
+# Am-Tr (the traceability view) lists these first. tools/derived.py fails the
+# render on an accepted or proposed record that no view cites and this file
+# does not name, and on an entry here for a record that a view does cite.
+#
+# Categories (a closed set):
+#   rule            a rule on how code is written, kept by review, with nothing
+#                   the running system does that Operational-Constraints could state
+#   infrastructure  a store or a setting under a capability that a view
+#                   already cites
+#   process         how the work is done and verified, not what the system does
+#   alignment       how the system is placed, restated by a record a view cites
+
+exempt:
+  ADR-0011:
+    category: alignment
+    reason: >-
+      Positions the system beside strategic sustainment tools. ADR-0039 restates the positioning, and
+      Strategic-Taxonomy cites ADR-0039 for TacticalSustainmentCorrelation.
+  ADR-0025:
+    category: process
+    reason: >-
+      A change is verified by its tests and by confirming the deployment runs the new code. It is how
+      work is checked, not something the system does.
+  ADR-0027:
+    category: infrastructure
+    reason: >-
+      One table for operator-tunable settings. Proposed, and its implementation is deferred. No
+      capability depends on it.
+  ADR-0028:
+    category: infrastructure
+    reason: >-
+      One table, with one writer, for which edge and region each asset belongs to. It is the lineage
+      store under HierarchicalAggregation, which Strategic-Taxonomy cites through ADR-0022.

@@ -334,6 +334,14 @@ class Perturbed(unittest.TestCase):
         (self.root.parent.parent / "ontology" / "new_terms.yaml").write_text("terms: []\n", encoding="utf-8")
         self.expect("derived", "ontology/new_terms.yaml has no dictionary row")
 
+    def test_14_derived_traceability_real_citation_removed(self):
+        import re
+        for rel in ("views/St-Tx.md", "capability-record.yaml"):
+            p = self.root / rel
+            p.write_text(re.sub(r"ADR-0057(?!\d)", "ADR-0000", p.read_text(encoding="utf-8")),
+                         encoding="utf-8", newline="\n")
+        self.expect("derived", "ADR-0057 (")
+
     def test_4_slots_inventory_line_removed(self):
         edit(self.root, "INVENTORY.md", "| `increment-dates` |", "| `not-a-slot-line` |")
         self.expect("slots", "increment-dates has no source and no line",

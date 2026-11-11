@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""derived.py - the three tables a view takes from a declared artefact instead of writing it.
+"""derived.py - the four tables a view takes from a declared artefact instead of writing it.
 
 Each marker below belongs in one view and becomes a markdown table when the
 view is rendered (render_profile.Renderer.view_text). check_views.py rule
@@ -13,12 +13,17 @@ on a table that cannot be built.
       model/openddil.sysml: what each type specialises, and where it is a part
   <!-- generated: ontology-dictionary -->      Am-If  ontology/*.yaml: each
       declared term with its entry count and field names, never an entry
+  <!-- generated: adr-traceability -->        Am-Tr  decisions/ADR-*.md: each
+      record with its status and the views that cite it, the accepted or
+      proposed records no view cites first, joined to adr-exemptions.yaml
 
 A depends-on cell has to name one increment, by its number or its name, and a
 fold-in has to name an increment and cite an ADR that some capability in the
 record cites. Anything else is a CheckError, so a roadmap edit cannot drop an
 edge without the render failing. The tables carry no links: they are inserted
-after links are rewritten. Stdlib and PyYAML only.
+after links are rewritten. An accepted or proposed record that no view cites
+and the exemptions file does not name is a CheckError, as is an exemption for
+a record that a view cites or that is not in scope. Stdlib and PyYAML only.
 """
 from __future__ import annotations
 
@@ -28,13 +33,15 @@ from pathlib import Path
 import yaml
 
 import capability_phases
+import marks
 from capability_phases import CheckError
 from data_exchange import InputError
 
 DEPENDENCIES_MARKER = "<!-- generated: capability-dependencies -->"
 TAXONOMY_MARKER = "<!-- generated: resource-taxonomy -->"
 DICTIONARY_MARKER = "<!-- generated: ontology-dictionary -->"
-HOMES = {DEPENDENCIES_MARKER: "St-Cn", TAXONOMY_MARKER: "Rs-Tx", DICTIONARY_MARKER: "Am-If"}
+TRACE_MARKER = "<!-- generated: adr-traceability -->"
+HOMES = {DEPENDENCIES_MARKER: "St-Cn", TAXONOMY_MARKER: "Rs-Tx", DICTIONARY_MARKER: "Am-If", TRACE_MARKER: "Am-Tr"}
 
 ROADMAP_HEADER = ["#", "increment", "what isolates", "home", "depends on"]
 FOLD_HEADER = ["row", "slice", "folds into", "why it costs the increment nothing"]
@@ -223,6 +230,134 @@ def dictionary(ontology_dir: Path) -> str:
     return "\n".join(out)
 
 
+EXEMPT_CATEGORIES = ("rule", "infrastructure", "process", "alignment")
+NOT_REQUIRED = ("superseded", "rejected", "deprecated", "withdrawn")
+VIEW_ADR_RE = re.compile(r"ADR-(\d{4})(?!\d)")
+
+
+def cell(text: str) -> str:
+    return re.sub(r"\s+", " ", str(text)).strip().replace("|", "\\|")
+
+
+def adr_class(adr: str, text: str) -> str:
+    status = marks.adr_status(text)
+    norm = (status or "").replace("*", "").strip().lower()
+    for word in ("accepted", "proposed") + NOT_REQUIRED:
+        if norm.startswith(word):
+            return word.capitalize()
+    raise CheckError(f"derived: {adr} has no status beginning accepted, proposed, "
+                     "superseded, rejected, deprecated or withdrawn\n")
+
+
+def traceability(decisions: Path, views: Path, record: dict, exemptions: Path) -> str:
+    try:
+        files = sorted(decisions.glob("ADR-*.md"))
+    except OSError as e:
+        raise InputError(f"cannot list {decisions}: {e}")
+    fails: list[str] = []
+    info: dict[str, tuple[str, str]] = {}
+    for p in files:
+        m = re.match(r"ADR-\d{4}", p.name)
+        if not m:
+            continue
+        adr = m.group(0)
+        try:
+            text = p.read_text(encoding="utf-8")
+        except OSError as e:
+            raise InputError(f"cannot read {p}: {e}")
+        line = next((l for l in text.split("\n") if l.startswith("# ")), None)
+        if line is None:
+            fails.append(f"derived: {adr} has no '# ' title line")
+            continue
+        title = re.sub(r"^ADR-\d{4}", "", line[2:].strip())
+        title = re.sub(r"^\s*[:—–-]\s*", "", title).strip()
+        # The framework's name appears only in the attribution line, which a
+        # deployment can drop, so a title prints it as "the framework".
+        title = re.sub(r"\bOpenDDIL\b", "the framework", title)
+        try:
+            info[adr] = (title, adr_class(adr, text))
+        except CheckError as e:
+            fails.append(str(e).rstrip("\n"))
+    cited: dict[str, set[str]] = {}
+    try:
+        view_files = sorted(views.glob("*.md"))
+    except OSError as e:
+        raise InputError(f"cannot list {views}: {e}")
+    for v in view_files:
+        if v.stem == "Am-Tr":
+            continue
+        try:
+            vt = v.read_text(encoding="utf-8")
+        except OSError as e:
+            raise InputError(f"cannot read {v}: {e}")
+        for n in VIEW_ADR_RE.findall(re.sub(r"<!--.*?-->", "", vt, flags=re.DOTALL)):
+            cited.setdefault(f"ADR-{n}", set()).add(v.stem)
+    for cap in (record.get("capabilities") or {}).values():
+        if not isinstance(cap, dict):
+            continue
+        for a in cap.get("adrs") or []:
+            cited.setdefault(str(a), set()).add("St-Rm-P")
+        for o in cap.get("still_open") or []:
+            if isinstance(o, dict) and o.get("adr"):
+                cited.setdefault(str(o["adr"]), set()).add("St-Rm-P")
+    try:
+        data = yaml.safe_load(exemptions.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as e:
+        raise InputError(f"cannot read {exemptions}: {e}")
+    if not isinstance(data, dict):
+        raise InputError(f"{exemptions}: expected a map")
+    for k in data:
+        if k != "exempt":
+            fails.append(f"derived: adr-exemptions.yaml has top-level key {k!r}, not 'exempt'")
+    exempt = data.get("exempt") or {}
+    if not isinstance(exempt, dict):
+        raise InputError(f"{exemptions}: 'exempt' is not a map")
+    for adr, ent in sorted(exempt.items(), key=lambda kv: str(kv[0])):
+        adr = str(adr)
+        if not isinstance(ent, dict):
+            fails.append(f"derived: exemption {adr} is not a map of category and reason")
+            continue
+        for k in ent:
+            if k not in ("category", "reason"):
+                fails.append(f"derived: exemption {adr} has key {k!r}, not category or reason")
+        if ent.get("category") not in EXEMPT_CATEGORIES:
+            fails.append(f"derived: exemption {adr} has category {ent.get('category')!r}, "
+                         f"not one of {', '.join(EXEMPT_CATEGORIES)}")
+        if not str(ent.get("reason") or "").strip():
+            fails.append(f"derived: exemption {adr} has no reason")
+        if adr not in info:
+            fails.append(f"derived: exemption {adr} names no decision record")
+            continue
+        if cited.get(adr):
+            fails.append(f"derived: exemption {adr} is stale: it is cited by {', '.join(sorted(cited[adr]))}")
+        if info[adr][1] not in ("Accepted", "Proposed"):
+            fails.append(f"derived: exemption {adr} is not in scope: its status is {info[adr][1].lower()}")
+    for adr, (_, status) in sorted(info.items()):
+        if status in ("Accepted", "Proposed") and not cited.get(adr) and adr not in exempt:
+            fails.append(f"derived: {adr} ({status}) is cited by no view and is not in adr-exemptions.yaml")
+    if fails:
+        raise CheckError("".join(f + "\n" for f in fails))
+    scope = [a for a, (_, s) in info.items() if s in ("Accepted", "Proposed")]
+    out_of = [a for a in sorted(info) if a not in scope]
+    n_cited = sum(1 for a in scope if cited.get(a))
+    n_ex = len(scope) - n_cited
+    out = [f"{len(info)} decision records. {len(scope)} accepted or proposed: {n_cited} cited by a view, "
+           f"{n_ex} exempt. {len(out_of)} not required.", "",
+           "| Not cited | Status | Category | Reason |", "|---|---|---|---|"]
+    for a in sorted(scope):
+        if not cited.get(a):
+            e = exempt[a]
+            out.append(f"| {cell(a + ' ' + info[a][0])} | {info[a][1]} | {cell(e['category'])} | {cell(e['reason'])} |")
+    if out_of:
+        out += ["", "| Not required | Status | Cited by |", "|---|---|---|"]
+        for a in out_of:
+            out.append(f"| {cell(a + ' ' + info[a][0])} | {info[a][1]} | {cell(', '.join(sorted(cited.get(a, ()))) or 'none')} |")
+    out += ["", "| ADR | Status | Cited by |", "|---|---|---|"]
+    for a in sorted(info):
+        out.append(f"| {a} | {info[a][1]} | {cell(', '.join(sorted(cited.get(a, ()))) or 'none')} |")
+    return "\n".join(out)
+
+
 def build(marker: str, root: Path, record_path: Path, sysml: str, masked: str) -> str:
     """The table for one marker. root is docs/arch."""
     repo = root.parent.parent
@@ -237,4 +372,7 @@ def build(marker: str, root: Path, record_path: Path, sysml: str, masked: str) -
         return taxonomy(sysml, masked)
     if marker == DICTIONARY_MARKER:
         return dictionary(repo / "ontology")
+    if marker == TRACE_MARKER:
+        return traceability(repo / "decisions", root / "views",
+                            capability_phases.load_record(record_path), root / "adr-exemptions.yaml")
     raise KeyError(marker)

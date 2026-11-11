@@ -6,17 +6,19 @@ From UAF 1.2 Strategic-Roadmap-Phasing (St-Rm-P).
 
 Where each capability in [Strategic-Taxonomy](../../views/St-Tx.md) stands, read from the record. Phase and evidence are computed at render from [capability-record.yaml](../../capability-record.yaml), and every citation in it has to resolve or the render fails. A capability with no phase also fails the render.
 
-Phases: 7 measured, 9 built unmeasured, 6 accepted design, 1 proposed, 2 row.
+Phases: 7 measured, 9 built unmeasured, 6 accepted design, 4 proposed, 2 row.
 
 | Capability | Lane | Phase | Evidence | Built | Decisions | Rows |
 |---|---|---|---|---|---|---|
-| DataAcquisition | Condition monitoring | measured | 2026-09-26, lab A, The pre-flight: advancing: exit 0 | templates/edge.yaml | ADR-0038 | - |
+| DataAcquisition | Condition monitoring | measured | 2026-09-26, lab A, The pre-flight: advancing: exit 0 | templates/edge.yaml | ADR-0038, ADR-0010 | - |
 | DataManipulation | Condition monitoring | measured | 2026-09-26, lab A, The pre-flight: tier feed: clean, 45 consumers, zero unfed / unentitled / null-keyed | templates/tier-node.yaml | ADR-0038 | - |
 | StateDetection | Condition monitoring | measured | 2026-09-26, lab A, The pre-flight: derive stage: COMPLETING — edge-01 +100/+16, edge-02 +80/+12, region-east +180/+56 | templates/tier-node.yaml | ADR-0038 | - |
 | HealthAssessment | Condition monitoring | built unmeasured | not measured | templates/tier-node.yaml | ADR-0038 | - |
 | PrognosticAssessment | Condition monitoring | built unmeasured | not measured | templates/tier-node.yaml | ADR-0038, ADR-0020 | AE-4 |
 | AdvisoryGeneration | Condition monitoring | built unmeasured | not measured | templates/tier-node.yaml | ADR-0038 | AE-2 |
 | InformationPresentation | Condition monitoring | measured | 2026-09-26, lab A, The pre-flight: shape sizes: TOTAL 85 KiB one client load; worst in-flight 194 KiB vs 256Mi limit | templates/tier-node.yaml | ADR-0038 | - |
+| DeclaredAnalyticUnits | Condition monitoring | proposed | not measured | - | ADR-0057 | - |
+| DeclaredCards | Condition monitoring | proposed | not measured | - | ADR-0058 | - |
 | HierarchicalAggregation | Hierarchy | measured | 2026-09-26, lab A, E. Severance, both dimensions: rollup 4 partials / 15 assets: was 3 / 14: ⚠ see FINDING-03 §3a | templates/regional.yaml | ADR-0022 | - |
 | TierLocalDecision | Isolation increments, done: PDP per tier | built unmeasured | not measured | templates/tier-node.yaml | ADR-0029 | - |
 | TierLocalSignIn | Isolation increments, 1: Identity per tier | built unmeasured | not measured | templates/tier-identity.yaml | ADR-0045 | - |
@@ -29,6 +31,7 @@ Phases: 7 measured, 9 built unmeasured, 6 accepted design, 1 proposed, 2 row.
 | LabelledReadEnforcement | Releasability | measured | 2026-09-26, lab A, The pre-flight: completeness: ALL 4 STORES PASS, 7 populated tables, zero unlabelled; 2026-09-19, lab A, C. Releasability: Gate passes on all four stores, zero unlabelled values anywhere. | templates/tier-node.yaml | ADR-0029 | - |
 | GatedRelease | Releasability | built unmeasured | not measured | templates/egress.yaml | ADR-0043 | - |
 | GatedIntake | Releasability | built unmeasured | not measured | templates/egress.yaml | ADR-0046 (record: accepted; index: proposed) | - |
+| DeclaredLabelDimensions | Releasability | proposed | not measured | - | ADR-0055 | - |
 | SustainmentFeasibility | Anticipated | row | not measured | - | - | AE-3, AE-5, GD-10 |
 | AdvisoryProvenance | Anticipated | row | not measured | - | - | AE-2 |
 | OfflineIntentReconciliation | Anticipated | accepted design | not measured | - | ADR-0040, ADR-0042 | - |
