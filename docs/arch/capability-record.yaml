@@ -14,6 +14,20 @@
 #
 # The highest one that applies is the phase. A capability with none has no phase,
 # and that fails the render.
+#
+# Every capability also carries:
+#
+#   description   two to four plain sentences for a reviewer: what it lets a user
+#                 do, and what its decision records say about a severed tier. It is
+#                 derived from the records in `derived_from`, and the capability
+#                 page says so.
+#   derived_from  the decisions the description is written from, when they are
+#                 not exactly `adrs` (default: `adrs`)
+#
+# Every decision is cited to its deciding section, as `ADR-NNNN §LABEL`. LABEL is
+# the section's leading number (§6, §2a) or, for an unnumbered heading, its slug
+# (§decision). It must name exactly one heading in the record, or the render
+# fails. `tools/adr_sections.py ADR-NNNN` lists the labels.
 
 lanes:
   ConditionMonitoring: Condition monitoring
@@ -47,99 +61,249 @@ entries:
 
 capabilities:
   DataAcquisition:
-    adrs: [ADR-0038, ADR-0010]
+    description: >-
+      Each outside feed comes in through its own small intake program, which turns that source into the
+      framework's one common record shape. A new source is a definition and a mapping rather than a change to
+      the framework, and one protocol's quirks stay inside its intake. Its decision records do not say how
+      intake behaves on a severed tier.
+    adrs: [ADR-0038 §1, ADR-0010 §decision]
     built: [{template: edge.yaml, contains: sensor-ingest}]
     measured: [{entry: preflight-51, line: "| 1 | advancing | exit 0 |"}]
   DataManipulation:
-    adrs: [ADR-0038]
+    description: >-
+      Raw readings from different feeds are turned into comparable values: each source's vocabulary is mapped
+      onto one common set of condition axes, and quantities are put into shared units. That lets an operator
+      read data from different feeds side by side. Its decision record does not say how it behaves on a
+      severed tier.
+    adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: tier-projector}]
     measured: [{entry: preflight-51, line: "| 3 | tier feed | clean"}]
   StateDetection:
-    adrs: [ADR-0038]
+    description: >-
+      Each asset's readings are checked for parts in a non-nominal state, each named as a constraining factor,
+      and the asset's configuration is checked against its baseline. That lets an operator see that something
+      is wrong, and where, before asking why. Its decision record does not say how it behaves on a severed
+      tier.
+    adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: cm-service}]
     measured: [{entry: preflight-51, line: "| 2 | derive stage | **COMPLETING**"}]
   HealthAssessment:
-    adrs: [ADR-0038]
+    description: >-
+      Individual findings are rolled up into an assessed condition for an asset or a group, so an operator
+      sees how serious the situation is. It says what is wrong, not why: diagnosis is outside it. Its decision
+      record does not say how it behaves on a severed tier.
+    adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
   PrognosticAssessment:
-    adrs: [ADR-0038, ADR-0020]
+    description: >-
+      From an asset's use history, a derivation stage estimates how much working life is left, for example the
+      share of a part's wear limit already used. It is a mechanism for estimates, each stamped as derived, and
+      not a validated forecast: a time-to-limit with an uncertainty band is anticipated, not decided. Its
+      decision records do not say how it behaves on a severed tier.
+    adrs: [ADR-0038 §3, ADR-0020 §decision]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
     rows: [AE-4]
   AdvisoryGeneration:
-    adrs: [ADR-0038]
+    description: >-
+      A recommended action is attached to an assessed condition, with the reasoning behind it, so an operator
+      sees what is advised and on what basis. It proposes only: work orders stay in the external system of
+      record, which decides. Its decision record does not say how it behaves on a severed tier.
+    adrs: [ADR-0038 §3]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
     rows: [AE-2]
   InformationPresentation:
-    adrs: [ADR-0038]
+    description: >-
+      Operators see the common operating picture on screen, and what each claim on it may say is governed by
+      declared claim classes. The decision record cited here gives it one line, and does not say what a
+      severed tier shows.
+    adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: tier-electric}]
     measured: [{entry: preflight-51, line: "| 4 | shape sizes | **TOTAL 85 KiB**"}]
   DeclaredAnalyticUnits:
-    adrs: [ADR-0057]
+    description: >-
+      A deployment adds an analysis to a tier by declaring it in a short file, instead of writing framework
+      code. One runner loads the units the deployment enables, and each output names the unit, version,
+      parameters and tier that produced it. Its decision record does not say how units behave on a severed
+      tier.
+    adrs: [ADR-0057 §1]
   HierarchicalAggregation:
-    adrs: [ADR-0022]
+    description: >-
+      The framework is a tree of tiers, edge to regional to headquarters: each tier rolls up what the tiers
+      below it send and passes the result to the tier above. That lets an operator at any tier see a summary
+      of everything beneath it. Its decision record does not say what a tier shows while severed from those
+      above or below it.
+    adrs: [ADR-0022 §decision]
     built: [{template: regional.yaml, contains: regions}]
     measured: [{entry: severance-51, line: "| 1.4 | rollup **4 partials / 15 assets**"}]
   TierLocalDecision:
+    description: >-
+      Each tier decides for itself who may see which records, against its own copy of the release policy. A
+      severed link stops policy updates, not decisions, so a cut-off tier still decides who may read what; the
+      decision record calls running yesterday's policy through a severance a correct posture.
     increment: "**PDP per tier**"
-    adrs: [ADR-0029]
+    adrs: [ADR-0029 §6]
     built: [{template: tier-node.yaml, contains: tier-topaz}]
   TierLocalSignIn:
+    description: >-
+      Each tier runs its own sign-in service, with its own signing keys, so people can sign in at a tier that
+      has lost its link upward. A key compromised at one edge then compromises that edge only.
     increment: "**Identity per tier**"
-    adrs: [ADR-0045]
+    adrs: [ADR-0045 §1]
     built: [{template: tier-identity.yaml, contains: identity.replica}]
   TierLocalMaintenanceChain:
+    description: >-
+      A maintenance record is assembled, checked at one gate and forwarded to its destination, with
+      destinations listed as configuration rather than deployed one by one. The roadmap's increment puts that
+      chain at every tier, so a severed tier assembles, gates and forwards its own records; the decision
+      record notes the per-tier assembler for later and does not decide it.
+    derived_from: [ADR-0046 §2, ADR-0046 §noted-for-later-not-built]
     increment: "**Maintenance chain per tier**"
-    adrs: [ADR-0046]
+    adrs: [ADR-0046 §2]
   TierLocalWorkflow:
+    description: >-
+      A tier runs its own operational procedures, such as inspection or sign-off, defined by the people who
+      own each procedure rather than by data engineers, and fed by the detections beneath them. The roadmap's
+      increment puts the workflow engine at every tier so that a severed tier keeps its timers and state; the
+      decision record names the procedure layer as a future arc.
     increment: "**Workflow per tier**"
-    adrs: [ADR-0034]
+    derived_from: [ADR-0034 §the-two-planes--substrate-and-process]
+    adrs: [ADR-0034 §decision]
     built: [{template: tier-node.yaml, contains: tier-restate}]
   OneSession:
+    description: >-
+      A person who moves between tiers is recognised without signing in again, because each tier trusts the
+      tier above it as a source of identity, and no credential crosses a tier. That holds down the tree while
+      the link is up; moving up the tree means a fresh sign-in, and a severed tier refuses someone whose home
+      is elsewhere, which the decision record names as still open.
+    derived_from: [ADR-0045 §6, ADR-0045 §still-open-and-why]
     increment: "**One session**"
-    still_open: [{adr: ADR-0045, says: "Federation across tiers, partly closed."}]
+    still_open: [{adr: ADR-0045 §still-open-and-why, says: "Federation across tiers, partly closed."}]
   EdgeWorkflow:
-    adrs: [ADR-0031]
+    description: >-
+      An edge node can run a reasoning plane beside its data, answering an operator's questions from the
+      site's own rows and pointing back to the row behind each answer. It shares the edge's data, access rules
+      and record of what each answer was built from, and the decision record states that all three keep
+      working when the link to higher tiers is cut.
+    derived_from: [ADR-0031 §the-converged-edge-node-rests-on-three-shared-elements]
+    adrs: [ADR-0031 §decision]
   TacticalSustainmentCorrelation:
-    adrs: [ADR-0039]
+    description: >-
+      An operator sees whether a unit can sustain an operation by setting what the tactical systems know
+      beside what the supply and maintenance systems know. The framework correlates and advises while the
+      systems of record transact, and each side keeps its own source and time rather than being fused into one
+      number. Its decision record does not say how it behaves on a severed tier.
+    adrs: [ADR-0039 §1, ADR-0039 §2]
   ConfigurationStatusAccounting:
-    adrs: [ADR-0009]
+    description: >-
+      A maintainer records the hardware and modifications installed on each asset and sees how they differ
+      from the authorized baseline. Software and firmware are deferred, and documentation and operational
+      configuration are owned elsewhere. Its decision record does not say how it behaves on a severed tier.
+    adrs: [ADR-0009 §decision]
     built: [{template: tier-node.yaml, contains: cm-service}]
     measured: [{entry: cm-reseed, line: "the first roll on the new image): through the Restate"}]
   ArrivalDeclaration:
-    adrs: [ADR-0050]
+    description: >-
+      An operator at a site sees what the tier hears that nobody has vouched for, and what was expected but
+      has not arrived, and turns either into a fleet asset only by a person's declaration. Nothing is matched
+      automatically, and an expected arrival that never appears stays expected rather than being dropped. Its
+      decision record does not say how it behaves on a severed tier.
+    adrs: [ADR-0050 §1]
     built: [{template: hub.yaml, contains: declaration-intake}]
   LabelledReadEnforcement:
-    adrs: [ADR-0029]
+    description: >-
+      Who may read each record is decided by checking the record's release label against what the reader is
+      entitled to, with one source of decisions and every read path applying its answer. Each tier decides
+      against its own copy of the policy, so a severed link stops policy updates, not decisions.
+    adrs: [ADR-0029 §1, ADR-0029 §6]
     built: [{template: tier-node.yaml, contains: tier-pep}]
     measured:
       - {entry: preflight-51, line: "| 5 | completeness | **ALL 4 STORES PASS**"}
       - {entry: releasability-0919, line: "* **Gate passes on all four stores**"}
   GatedRelease:
-    adrs: [ADR-0043]
+    description: >-
+      Every record leaving for an outside system is checked against the same release rule used for people
+      reading on screen, with the destination standing where the person would. A record either crosses
+      unchanged or is refused with a recorded reason, so an operator can tell a policy refusal from a broken
+      checker. Its decision record does not say how the gate behaves on a severed tier.
+    adrs: [ADR-0043 §1, ADR-0043 §7]
     built: [{template: egress.yaml, contains: egress-gate}]
   GatedIntake:
-    adrs: [ADR-0046]
+    description: >-
+      An answer from an outside system is taken in only if it is of a declared kind, carries the same label as
+      the record it answers, and was approved by people entitled to that label. Each acceptance or refusal is
+      logged with who approved it; the decision record keeps that log at the owning tier as the design, and
+      says that until it is, a severed tier does not hold its own decisions.
+    adrs: [ADR-0046 §5]
     built: [{template: egress.yaml, contains: intake}]
   DeclaredLabelDimensions:
-    adrs: [ADR-0055]
+    description: >-
+      A deployment declares what its release labels are made of, such as nations or caveats, each with a
+      stated vocabulary and owner, and a reader sees a record only when every dimension admits them. A record
+      missing a declared dimension, or carrying an undeclared one, is served to nobody. Two tiers that stamp
+      labels while severed agree on the same key without talking to each other.
+    adrs: [ADR-0055 §1, ADR-0055 §2]
   OneIdentityPerThing:
-    adrs: [ADR-0056]
+    description: >-
+      Every thing the framework tracks has one lasting identity, and every other identifier for it, such as a
+      serial number or another system's id, is an alias that resolves to it. An identity is minted only by a
+      person's declaration, never by observation, and a severed tier holding a declaration can still mint one;
+      two identities are merged only when someone declares them the same.
+    adrs: [ADR-0056 §1, ADR-0056 §4]
   DeclaredCards:
-    adrs: [ADR-0058]
+    description: >-
+      Each card on an operator screen is a declaration that names the reads it draws from, with one grammar
+      across both operator interfaces, so every field on screen traces to a filtered read. An input the viewer
+      may not see shows as withheld, never as an empty value that could be read as zero. Its decision record
+      does not say how cards behave on a severed tier.
+    adrs: [ADR-0058 §1, ADR-0058 §2a]
   SustainmentFeasibility:
+    description: >-
+      Given a proposed operation described as demand (units, platforms, duration, tempo, locations), it
+      answers whether the operation can be supported, naming the margin and the constraint that binds. It is
+      anticipated: the decision record names the missing demand model, deliberately does not design it, and
+      says nothing about a severed tier.
+    derived_from: [ADR-0038 §4]
     rows: [AE-3, AE-5, GD-10]
   AdvisoryProvenance:
+    description: >-
+      When the system recommends an action, this records which model, configuration and inputs produced it, at
+      what confidence, and what the advice does not claim, so a reviewer can later answer why it was advised.
+      The decision record fixes this shape before the first advisory exists, and says nothing about a severed
+      tier.
+    derived_from: [ADR-0038 §5]
     rows: [AE-2]
   OfflineIntentReconciliation:
-    adrs: [ADR-0040, ADR-0042]
+    description: >-
+      A maintainer at a cut-off site records what they did, for example drawing down stock, as an action kept
+      locally and shown as not yet confirmed. When the link returns, the actions are replayed against the
+      authoritative record, so most apparent conflicts disappear and the rest become named exceptions for a
+      person; an unconfirmed action is never aged out.
+    derived_from: [ADR-0040 §4, ADR-0042 §1, ADR-0042 §2]
+    adrs: [ADR-0040 §4, ADR-0042 §1]
   FailureReporting:
-    adrs: [ADR-0051]
+    description: >-
+      When a failure episode closes, its record is kept with the configuration, condition and usage the asset
+      had when it opened, so failures can be analysed later. A closed record can go out once as a failure
+      report, and a corrective action comes back as a declaration that changes nothing until a person applies
+      it. Its decision record does not say how it behaves on a severed tier.
+    derived_from: [ADR-0051 §1, ADR-0051 §2, ADR-0051 §6]
+    adrs: [ADR-0051 §1, ADR-0051 §6]
     rows: [GD-15]
   SafetyInterlockRefusal:
-    adrs: [ADR-0052]
+    description: >-
+      A request to release maintenance work is refused when the asset's stored record shows a declared
+      conflicting state, and the refusal names the state, its value, its source and when it was last seen. An
+      unknown state refuses too, and the interlock is a procedural check on a record, not a hazard control.
+      Its decision record does not say how it behaves on a severed tier.
+    adrs: [ADR-0052 §2, ADR-0052 §6]
     rows: [GD-16]
   DisagreementDetection:
-    adrs: [ADR-0053]
+    description: >-
+      An operator sees where two records that should agree do not, such as what an asset reports about its
+      readiness against what people declared, with both sides and their sources side by side. A detector never
+      decides which side is right and never enforces: it only raises an indicator. Its decision record does
+      not say how it behaves on a severed tier.
+    adrs: [ADR-0053 §1, ADR-0053 §4]
     rows: [GD-17]
 
 # What the chart renders, and what each item serves. tools/capability_floor.py
