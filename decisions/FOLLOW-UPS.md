@@ -75,13 +75,12 @@ Close when the harness runs over a recording with confirmed failures and reports
 
 **A design, not built.** Nothing emits OpenTelemetry, and no collector is deployed. The proposal is a collector per
 tier: it exports locally, and forwards upward over OTLP through a persistent queue with a bound and a counted drop.
-Metrics have two named upward paths, remote write (ADR-0059 §7.6) and OTLP. The record proposes remote write for
-metrics and asks for the ruling.
+Ruled 2026-11-11: metrics go upward by remote write (ADR-0059 §7.6), and traces and logs over OTLP.
 
 Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 2, 3. Named by: the architecture order of 2026-11-11.
 
-Close when the ruling on metrics' path is recorded, and a cut tier's queued telemetry arrives upward after the link
-returns, with the drop counter at zero.
+Close when a cut tier's queued telemetry arrives upward after the link returns, with the drop counter at zero, and
+metrics arrive once, by remote write.
 
 ## OPEN 2026-11-11 — no trace context crosses the egress or intake doors
 
@@ -100,11 +99,12 @@ if iagent propagates.
 carry the releasability label, and its details can quote a record value or name a classification marking. Intake's
 lines carry free-text details and subject names. The proposal is the rule, a redaction processor in each collector that
 keeps an allow list of id fields, and a test that plants a label, a marking and a record value and fails if any reaches
-an exporter. Open: whether a subject name counts as an opaque id.
+an exporter. Ruled 2026-11-11: a subject is carried by the token's subject identifier only, never a subject name.
 
 Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 5. Named by: the architecture order of 2026-11-11.
 
-Close when the test runs in CI against the collector's configuration and the three lines log ids only.
+Close when the test runs in CI against the collector's configuration, and the three lines log ids and subject
+identifiers only.
 
 ## OPEN 2026-11-11 — decision records ride the log stream
 

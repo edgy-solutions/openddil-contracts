@@ -4,6 +4,9 @@
 
 **PROPOSED — 2026-11-11. Design only. Nothing here is built.** Ordered 2026-11-11. Aligns by concept only: no
 configuration, attribute or field is named from a specification as binding.
+**Ruled 2026-11-11:** metrics go upward by remote write, and traces and logs by OTLP (Decision 3); spans and logs
+carry the token's subject identifier only, never a subject name (Decision 5); the processor is named a redaction
+processor (Decision 5).
 **Builds on:** ADR-0059 §7 (the exporters, per-tier alerting, remote write upward); ADR-0053 (provenance on every
 side of a disagreement); ADR-0029 (the releasability label); ADR-0046 (the maintenance doors, events out and actions
 in).
@@ -46,9 +49,8 @@ in).
    dropped, and the drop is counted.
 3. **Alertmanager is unchanged.** Alerting stays per tier, as ADR-0059 §7.6 sets it out, with link-severed inhibition.
    No collector replaces it.
-   - **Open: one upward path for metrics.** ADR-0059 §7.6 sends metrics up by remote write, and this record forwards
-     telemetry up over OTLP. This record proposes remote write for metrics, and OTLP for traces and logs, and asks for
-     the ruling.
+   - **One upward path per signal (ruled 2026-11-11).** Metrics go up by remote write, as ADR-0059 §7.6 sets out.
+     Traces and logs go up over OTLP. The collector does not forward metrics upward a second time.
 4. **One trace per journey, by W3C Trace Context.** That is a W3C Recommendation of 2021-11-23, read. It defines two
    headers: `traceparent`, the request's position in its trace, and `tracestate`, vendor data beside it.
    - A filing at the discrepancy door continues as one trace through to its release at the egress gate. Across the
@@ -66,7 +68,9 @@ in).
      - the forwarder's rejection body;
      - the gate's label and detail;
      - intake's detail and subject names.
-   - **Open:** whether a subject name is an opaque id, or must be the token's subject identifier.
+   - **Subjects (ruled 2026-11-11).** A subject is carried by the token's subject identifier only. A subject name
+     is not an opaque id, and never reaches a span or a log line. Intake's approvers and on-behalf-of, and the
+     discrepancy door's subject, change to the identifier.
 6. **Decision records stay records.** A decision record keeps its label and detail. It is the audit, and moves off
    the log stream to its own sink. The log line names the decision id only.
 7. **Trace ids are correlated from decision records, and are never provenance.** A decision record may carry the trace
@@ -76,7 +80,7 @@ in).
 ## Rows
 
 In `FOLLOW-UPS.md`:
-- a collector per tier with a persistent upward queue, and the ruling on metrics' upward path;
+- a collector per tier with a persistent upward queue, metrics upward by remote write;
 - trace context through the doors and the broker, with iagent's propagation;
 - the opaque-ids rule: the redaction processor, its test, and the three lines that break it;
 - decision records off the log stream, carrying the trace id.
