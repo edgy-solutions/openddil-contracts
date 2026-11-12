@@ -3,16 +3,16 @@
 ## Status
 
 **PROPOSED — 2026-11-07. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
-- **Read by Chris on 2026-11-07 and accepted as PROPOSED, with four edits.** They are lookup before mint (§1),
+- **Read by the project owner on 2026-11-07 and accepted as PROPOSED, with four edits.** They are lookup before mint (§1),
   "observation never mints" (§1), the v7 timestamp as an accepted cost (§1), and two corrections (§5, §8). Check 10 was
   added with them.
 - The number is provisional until the record is accepted.
-- **One text, two citations.** The base text is iagent's architect's, delivered by Chris on 2026-11-07. Lane 02 drafted
+- **One text, two citations.** The base text is iagent's architect's, delivered by the project owner on 2026-11-07. Lane 02 drafted
   this record from it. iagent aligns to this text under its own number, which its architect calls ADR-0067. Both sides
   cite this one text, and neither keeps a second copy.
 - **What iagent has on disk today (read 2026-11-07).** There is no ADR-0067 and no ADR-0065 on any iagent branch, and
   no `graph_mapping`. This record names all three as forthcoming. It does not cite them as records until they exist.
-- **The five items lane 02 left open are ruled by Chris, 2026-11-07** (see Rulings).
+- **The five items lane 02 left open are ruled by the project owner, 2026-11-07** (see Rulings).
 
 ## Findings first
 
@@ -28,7 +28,7 @@ none of them carries an identity for the physical thing.
 
 - **The two episode ids differ for the same fault.** The CM seed has no kind and no owning tier. The egress seed has
   both, and nothing maps one to the other.
-  - **Ruled (Chris, 2026-11-07): CM's id is the right one, and the egress id carrying kind and tier is a bug.** Egress
+  - **Ruled (the project owner, 2026-11-07): CM's id is the right one, and the egress id carrying kind and tier is a bug.** Egress
     adopts CM's id. The fix belongs to the occurrence work (§5).
 
 **2. The 2026-11-06 collision was a record id borrowing an entity-scoped key.**
@@ -69,7 +69,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 - **Each thing has exactly one identity.** It is a UUID version 7 (RFC 9562), written as the IRI `urn:uuid:<uuid>`.
 - **"Thing" is any object, not only an asset.** That covers a physical asset, a component, a vocabulary term, a data
   product and a BOM item. The scope comes from DMRA 2.6 as iagent's architect read it (§8).
-- **A declaration binds before it mints (Chris, 2026-11-07).**
+- **A declaration binds before it mints (the project owner, 2026-11-07).**
   - **Most things already have an identity elsewhere.** A tank has a UII and a serial number in the maintenance system
     of record. A tier that minted a fresh identity on arrival would make OpenDDIL a second system of record for
     identity. That sidestep is ruled out.
@@ -81,7 +81,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   - **A tier-minted identity is provisional against the system of record.** When the link to the system of record
     returns, the two are reconciled by declared equivalence (§4), never by matching.
   - **A vocabulary term or a data product is minted by the authority that owns the vocabulary or the catalog (ruled by
-    Chris, 2026-11-07).**
+    the project owner, 2026-11-07).**
     - Each authority has one generator.
     - The generator is recorded in the vocabulary file itself, at release.
     - For OpenDDIL's own vocabularies, the authority is the contracts repo.
@@ -92,7 +92,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   - Nobody reads a site, nation, kind, tier or time from it. ADR-0047's opacity rule covers it as it covers `asset_id`.
   - Version 7's leading bits are a timestamp. That makes the identity sortable within one generator. They are never
     read as a fact about the thing.
-  - **The timestamp is a stated cost, and it is accepted (Chris, 2026-11-07).** An identity that crosses the seam
+  - **The timestamp is a stated cost, and it is accepted (the project owner, 2026-11-07).** An identity that crosses the seam
     carries the minute it was declared, whether anyone reads it or not. A sortable index is worth that. The rule
     against reading it stands, and v4 for identities was considered and not taken.
 - **Minting while severed.**
@@ -111,7 +111,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
     URN.
   - **`asset_id` is an alias too.** Its scheme is the deployment's own, and its authority is the deployment.
 - **Aliases are rows, not columns.** A new connected system adds rows and never a column. One asset's aliases, read
-  together, are the mapping table Chris described: `asset_id`, the identity, the UII or serial number, and the URN
+  together, are the mapping table the project owner described: `asset_id`, the identity, the UII or serial number, and the URN
   each connected system uses. Each entry is a declaration with an owner and a date.
 - **Schemes are registered.**
   - Each scheme has one row naming its owner and its value form, in the manner of an ISO/IEC 11179 registry.
@@ -135,7 +135,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 - **Two identities are the same thing only when someone declares it.** The equivalence is a row with the two
   identities, an owner, a date and a reason. In SKOS terms it is `skos:exactMatch` with an owner.
 - **Never by string similarity.** No rule matches names, serial numbers or URNs to propose or apply an equivalence.
-- **Two identities declared for one thing: neither wins by rule (ruled by Chris, 2026-11-07).**
+- **Two identities declared for one thing: neither wins by rule (ruled by the project owner, 2026-11-07).**
   - The parent that sees both raises a named exception to both owners. This is the same path as two conflicting site
     declarations (the site-declaration design, §6).
   - A declared equivalence with an owner merges them.
@@ -150,7 +150,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 - **Label key:** a content hash of the label (ADR-0055 §2).
 - **The rule.** A record id is never an entity-scoped key reused as it is. An id that names one event carries what
   makes that event distinct. Finding 2 is what breaking this rule looks like.
-- **Kind and owning tier are not in the episode id (ruled by Chris, 2026-11-07).**
+- **Kind and owning tier are not in the episode id (ruled by the project owner, 2026-11-07).**
   - An episode is the fault on the thing: entity, component and fault code.
   - Which kind carried a fault and which tier owns the record are attributes of the record. They are not attributes of
     the fault.
@@ -167,7 +167,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   renumbered silently.
 - **The first-occurrence rule holds.**
   - Every id already issued stays as issued, and the October test (finding 3) keeps passing unchanged.
-  - **An episode open at the binding keeps its old id until it closes (ruled by Chris, 2026-11-07).** The rebinding
+  - **An episode open at the binding keeps its old id until it closes (ruled by the project owner, 2026-11-07).** The rebinding
     row records the date. The next occurrence opens under the entity-scoped id.
 - **The era is read from the binding row, never from the id.** A reader compares an episode's first-observed time with
   `bound_at`. The id itself encodes nothing (§1).
@@ -199,7 +199,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   - `program` as an access dimension is in the label, and the PEP reads it.
   - "Sustained-under" is a routing relation, and egress reads it.
   - **The relation never writes the stored label.** If it did, a routing default would become an access grant.
-  - **`program` goes on outbound records at that boundary only (ruled by Chris, 2026-11-07).** It is a relation
+  - **`program` goes on outbound records at that boundary only (ruled by the project owner, 2026-11-07).** It is a relation
     declared at the funnel. No tier's stored label ever carries it.
 
 ### 9. `required` and `empty_means`, per deployment and per boundary
@@ -257,7 +257,7 @@ Each check is a test or a script that a named workflow runs. A check that nothin
 10. **Lookup before mint.** A declaration carrying a UII that already resolves never mints. The failing case is a
     second identity row for a UII that the registry already binds.
 
-## Rulings (were open items; Chris, 2026-11-07)
+## Rulings (were open items; the project owner, 2026-11-07)
 
 1. **Kind and owning tier come out of the episode id.** An episode is the fault on the thing. CM's id is the right
    one, and egress adopts it under the two-eras rule (§5, §6).

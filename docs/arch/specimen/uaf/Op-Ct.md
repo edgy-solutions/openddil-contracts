@@ -13,6 +13,8 @@ The rules this architecture keeps. The first table holds rules about what the ru
 | R3 | Nothing crosses a boundary ungated, and nothing that crosses is described as integrated until a conformance suite says so. |
 | R4 | Nothing in the analytics or process plane asserts that a course of action is supportable, advisable or executable. It may compute sufficiency against a stated demand and report the margin and the binding constraint. |
 | R5 | An arrival is never matched automatically. A person ends every arrival state. |
+| R6 | Every primary physical quantity in the common schema carries its unit, as a quantity or a unit-tagged vector. |
+| R7 | A UI surface that shows data not read from the pipeline says so on screen, with what it stands in for. |
 
 ## Rules for work on the tier hierarchy
 
@@ -49,4 +51,6 @@ The capabilities are anticipated and not committed. These constraints are what i
 | R3 | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
 | R4, and C1 to C7 | [ADR-0038](../../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
 | R5 | [ADR-0050](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| R6 | [ADR-0013](../../../../decisions/ADR-0013-physical-quantity-consistency.md) | Accepted | Not stated |
+| R7 | [ADR-0017](../../../../decisions/ADR-0017-ui-mock-components-self-identify.md) | Accepted | Not stated |
 | H1 to H5 | [ADR-0033](../../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Pending |

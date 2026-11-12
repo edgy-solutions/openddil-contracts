@@ -3,7 +3,7 @@
 ## Status
 
 **PROPOSED — 2026-11-08. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
-- Drafted on Chris's order of 2026-11-08 from the brief of 2026-11-06 ("cards as declarations"). The brief was
+- Drafted on the project owner's order of 2026-11-08 from the brief of 2026-11-06 ("cards as declarations"). The brief was
   addressed to the UI owner. This record proposes answers. The four questions it put stay the UI owner's until they
   are answered there (see Questions).
 - The number is provisional until the record is accepted.

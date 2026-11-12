@@ -189,13 +189,43 @@ Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.3; ADR-0053
 Close when ADR-0053's detector table carries the row and the disagreement view shows a link-state entry from a recorded
 disagreement.
 
+## OPEN 2026-11-10 — the intake reads kinds only at start
+
+A changed kind schema reaches the intake only through a chart upgrade. The kinds checksum rolls four workloads
+(assembler, forwarder, gate and intake), with the upgrade's hooks, so correcting one schema is a full roll. Home: the
+worked example in `docs/arch/views/Op-Cn.md`, finding O1. Named by: the operations card, entry of 2026-11-10.
+
+Close when a kind change is loaded without a roll, or when the roll is the documented step for it.
+
+## OPEN 2026-11-10 — a final `schema_invalid` refusal is not re-decided after its kind is corrected
+
+The intake skips a final refusal whose body hash is unchanged, so an action refused against a wrong kind stays refused
+after the kind is corrected. A fix is written and held for the next roll, on the local branch
+`fix/intake-redecide-schema-invalid`: a same-hash `schema_invalid` row whose body now passes the loaded schema is decided
+again, the new decision replaces the stored row, and `schema_redecided` counts it. Every other same-hash row is still
+skipped. ADR-0046's amendment of 2026-11-10 records the rule. Home: the worked example in
+`docs/arch/views/Op-Cn.md`, finding O2. Named by: the operations card, entry of 2026-11-10.
+
+Close when the fix is deployed and the walk's action reads admitted with `schema_redecided` 1.
+
+## OPEN 2026-11-10 — the stand-in answers `task_refs` as strings
+
+The stand-in that answers in place of the maintenance system in tests sends `task_refs` as strings. Under the kind
+changed to the object shape, its answers would be refused `schema_invalid`. Nothing polls it today. Decided
+2026-11-10: the stand-in changes its answer to the object shape, in the deployment's overlay, at the next roll.
+Owner: operations. Home: the worked example in
+`docs/arch/views/Op-Cn.md`, finding O4. Named by: the operations card, entry of 2026-11-10.
+
+Close when the stand-in's answer passes the deployed kind.
+
 ## OPEN 2026-11-07 — every image in the chart by digest, and every Dockerfile from its lock
 
 **A design, not built.** Of the chart's 33 default image blocks, 3 render by digest; 14 owned images resolve to `:latest`
 and 16 third-party images to tags. No Dockerfile takes its dependencies from a `uv.lock`, though five have one in their
 build context, and a `uv pip compile` during the build re-resolves on every build. The design adds a pin table that
 fails when a tag changes without its digest, a render guard and an in-template guard that fail on a tag, the locks, and a
-Dockerfile check, in five stages.
+Dockerfile check, in five stages. Its two design calls were ruled 2026-11-11: the pins live in git as `values-pins.yaml`, and
+where deployments run different digests, Stage 1 pins the one that ran longest under load and declares the other's roll.
 
 Two neighbours are tracked here. The `fix/ci-latest-master-only` workflow row is held until after the walk, because CI's
 `:latest` moved to an unmerged branch's image once; both clusters pin by digest, so nothing was harmed. The contracts CI
@@ -1223,7 +1253,8 @@ documented as ignored; it should be deleted once the callers are cleaned up.
 `dis_ingress_kind_dropped`, on Redpanda Connect's Prometheus endpoint, which is
 on by default at `:4196/metrics`. **Nothing scrapes it.** There is no
 `ServiceMonitor` and no `prometheus.io/scrape` annotation anywhere in the
-chart; `openddil-demo/values.yaml:418` carries `httpPort: 4196` and nothing
+chart; `openddil-demo/values.yaml:723` (openddil-helm 8bbcb9a; the line was
+:418 when this row was written) carries `httpPort: 4196` and nothing
 collects from it.
 
 So the drop count is real, per-kind, and reachable only by hand:
@@ -2344,6 +2375,29 @@ correct on 2026-09-19.
 ---
 
 ## OPEN 2026-09-19 — hq_link_severed tracks the simulator, not reachability
+
+**Restated 2026-11-11 against the code; the heading is kept so links hold.**
+The probe this row describes is gone. On 2026-10-05 (openddil-projector
+556d4ec) the flag became a reachability reading, which is the semantics
+decision below, taken: `LinkReachability`
+(`openddil-projector/src/edge_buffer_monitor.py:196`) counts an exchange when
+the relay group's committed offsets advance (the relay commits only after its
+parent acks) or when its lag reads 0. With no exchange for longer than
+`LINK_SEVER_AFTER_S` (`:100`, by default 2 x (exchange period + probe
+interval)) it reads severed, and it needs `LINK_RESTORE_EXCHANGES` (2)
+exchanges in a row to read up again. The column keeps its name for schema
+compatibility. Unit tests: `src/tests/test_edge_buffer_reachability.py`.
+
+What stays open, from the code read and not from a run:
+
+- No severance rehearsal is cited here that read the new flag under a
+  NetworkPolicy cut. Close this row when one does.
+- Lag 0 counts as an exchange. A tier that produces nothing during a cut has
+  lag 0, so it reads up. Whether the link heartbeat
+  (`LINK_HEARTBEAT_ENABLED`, default false) keeps lag above 0 under a cut
+  where it is on was not read here.
+
+The original record follows.
 
 Found by the severance rehearsal. edge-01 severed with sever-tier.sh (a
 NetworkPolicy), and its edge_buffer_status row reported truthfully on two

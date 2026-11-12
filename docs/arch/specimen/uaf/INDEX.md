@@ -6,6 +6,7 @@ built on OpenDDIL 0.1.161
 |---|---|
 | [Sm-Ov](Sm-Ov.md) | Summary-Overview |
 | [Am-If](Am-If.md) | Information-Dictionary |
+| [Am-Tr](Am-Tr.md) | Architecture-Traceability |
 | [St-Tx](St-Tx.md) | Strategic-Taxonomy |
 | [St-Pr](St-Pr.md) | Strategic-Processes |
 | [St-Cn](St-Cn.md) | Strategic-Connectivity |

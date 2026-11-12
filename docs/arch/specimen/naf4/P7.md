@@ -17,6 +17,8 @@ The information as it exists on the wire: proto contracts, ontology files, and t
 | Routes | Deployment overlay | Source topic, destination, sink topic and kind. {{slot:routes}} |
 | Destinations | Deployment overlay | Display name, nations, accepts, asserted by and on. {{slot:destinations}} |
 
+One topic is not protobuf: `asset-cm-state` stays JSON on the wire, and the projector is configured to decode it as JSON.
+
 Two changes are designed and not built. Each alias becomes a row naming its scheme, value, authority and validity, bound to one identity; the lookup key is an index, never the identity. In the store, every table that carries the two label columns also carries `label_key` and `label`, computed from them at every write. The label is not on the wire: provenance field 11 stays reserved.
 
 ## Sources
@@ -27,4 +29,5 @@ Two changes are designed and not built. Each alias becomes a row naming its sche
 | Kinds, routes and destinations live in the overlay | [ADR-0046](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Declared |
 | Aliases are rows bound to one identity; the lookup key is an index | [ADR-0056](../../../../decisions/ADR-0056-one-identity-per-thing-every-other-id-is-an-alias.md) | Proposed | Design only |
 | `label_key` and `label` beside the two columns, computed in the store | [Compatibility slice](../../../../decisions/DESIGN-2026-11-06-adr0055-compatibility-slice.md) | Design note | Design only |
+| `asset-cm-state` stays JSON | [ADR-0018](../../../../decisions/ADR-0018-asset-cm-state-wire-format-inconsistency.md) | Accepted | Not stated |
 | Contract B's catalog shape | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
