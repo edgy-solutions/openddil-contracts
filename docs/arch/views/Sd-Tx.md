@@ -41,6 +41,10 @@ This view is also the Standards-Profile: its StdV-1 export lists the same rows.
 | ISO 13381-1 | Prognosis, remaining useful life, predictive horizon; the 2015 edition, withdrawn, and the 2025 edition unread | Concept aligned, terms read | ADR-0059 |
 | PHM prognostic metrics (IJPHM 2010) | Scoring remaining-life predictions | Concept aligned | ADR-0059 |
 | UCUM | Unit codes on quantities and usage meters | Concept aligned | ADR-0013, ADR-0059 |
+| FCAPS (ITU-T M.3400) | The frame for network state as an input: fault and performance only | Declared intent, unread | ADR-0059 |
+| Prometheus exposition format | The outbound format for the system's own health | Concept aligned, documentation read | ADR-0059 |
+| Alertmanager webhook and inhibition | One supported input format for a network management system; muting symptoms below a severed link | Concept aligned, documentation read | ADR-0059 |
+| Prometheus Remote-Write 1.0 | Upward catch-up of a tier's metrics after a cut | Concept aligned, specification read in part | ADR-0059 |
 | Cursor on Target | Bridge shape | Not in the citations note | CoT design |
 | BFO, CCO, IOF maintenance, W3C SOSA/SSN, PROV-O, OGC GeoSPARQL | Ontology alignment | Citation verified | Citations note, ADR-0059 |
 | ROMAIN, ISO 15926 | Maintenance and lifecycle ontologies | Declared intent, unread | ADR-0059 |
@@ -62,6 +66,6 @@ Editions the citations note could not verify: the JC3IEDM edition, the date of G
 | The hazard row | [ADR-0052](../../../decisions/ADR-0052-safety-states-and-release-interlocks.md) | Accepted | Status line |
 | The detection rows | [ADR-0053](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
 | The ISO 13374 reading | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
-| The condition-monitoring, built-in test and usage rows | [ADR-0059](../../../decisions/ADR-0059-condition-monitoring-bit-and-usage-alignment.md) | Proposed | Status line |
+| The condition-monitoring, built-in test, usage and network-state rows | [ADR-0059](../../../decisions/ADR-0059-condition-monitoring-bit-and-usage-alignment.md) | Proposed | Status line |
 | Arrival alignment | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | Munition signal alignment | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md) | Accepted | Not stated |

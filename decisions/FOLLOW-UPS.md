@@ -71,6 +71,41 @@ Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.3. Named by
 
 Close when the harness runs over a recording with confirmed failures and reports each metric, citing the paper.
 
+## OPEN 2026-11-11 — no observed link-state kind for a network management system's input
+
+**A design, not built.** OpenDDIL's link state is derived from its own heartbeats only. Nothing reads a network
+management system (NMS), SNMP or an alert. The proposal is an observed kind: observed, provenance (which NMS, which
+probe or rule), link or device, state, cause if given, `observed_at`. A receiver takes an Alertmanager-compatible
+webhook first, and turns each alert into this kind and nothing else: an alert never opens a finding directly.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.3. Named by: the architecture order of 2026-11-11.
+
+Close when the kind is declared, a receiver writes it from a recorded webhook payload, and a severed tier's screen shows
+the NMS's state beside the heartbeat-derived state.
+
+## OPEN 2026-11-11 — OpenDDIL's exporters are not listed in any document
+
+**A design, not built.** Seven services expose Prometheus metrics, and nothing scrapes them. No document names them, so
+a deployment's monitoring cannot find them. The chart sets no metrics port for the configuration management service or
+fusion, which listen on their default. The list as read is in ADR-0059 §7.5.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.5. Named by: the architecture order of 2026-11-11.
+
+Close when the operator documentation lists each exporter's endpoint and metrics, and a check fails when a metrics
+module changes without the list.
+
+## OPEN 2026-11-11 — no disagreement entry for link state
+
+**A design, not built.** When an NMS and the heartbeats disagree about a link, ADR-0053 has no detector for it. The
+proposal is a detector row: the heartbeat-derived `link_status` or `hq_link_severed` (derived) against the NMS
+observation (observed), shown and never resolved.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.3; ADR-0053 §1. Named by: the architecture order of
+2026-11-11.
+
+Close when ADR-0053's detector table carries the row and the disagreement view shows a link-state entry from a recorded
+disagreement.
+
 ## OPEN 2026-11-10 — the intake reads kinds only at start
 
 A changed kind schema reaches the intake only through a chart upgrade. The kinds checksum rolls four workloads

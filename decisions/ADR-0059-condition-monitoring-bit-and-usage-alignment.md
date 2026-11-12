@@ -9,7 +9,7 @@ a conformance claim. Each standard is marked with how much of its text was read 
 was not read is never used to decide anything here.
 **Reviewed 2026-11-11: accepted as proposed**, with four rulings:
 - where closure reasons come from (§4.4), with the field list put to iagent's architect as a question;
-- network state as an observed input (§7, stacked separately);
+- network state as an observed input (§7), with the alerting path added the same day;
 - ADR-0038 §1 and St-Tx corrected so the analyzer sits under configuration status accounting;
 - ADR-0057's output kinds open when the remaining-life kind is specified.
 **Builds on:** ADR-0038 §1 (the ISO 13374 reading) and C1, C2 and C7; ADR-0051 (failure records, usage meters,
@@ -282,6 +282,136 @@ already has it, such as `cm-service` or `asset_cm_state`, and there it always me
 
 The Information-Dictionary view gains a short terms section that says this, with the other terms this record uses.
 
+## 7. Network state as an observed input
+
+Ordered 2026-11-11 with the review, and extended the same day with the alerting path. Design only.
+
+### 7.1 The rule
+
+OpenDDIL treats network state as an input with provenance. It never manages the network. It never reconfigures a
+route, radio, terminal or switch.
+
+The sever-and-heal tooling is test equipment, not a feature:
+- the network screen's link toggles and toxics reach the link proxy only when `linkControl.enabled` is set
+  (`openddil:openddil-helm/openddil-demo/values.yaml:280-281`, default `false`;
+  `openddil-demo/templates/tier-node.yaml:1304-1310`). Unset, their routes answer 404
+  (`openddil:openddil-demo/gateway/pep.py:3158-3163`);
+- the scripts that cut and heal a tier (`openddil:openddil-helm/scripts/sever-tier.sh`,
+  `check-severance-acceptance.sh`) are rehearsal tools.
+
+Nothing in a deployment depends on either. A commanded link state never feeds a figure. The maintainer screen already
+holds this: it takes no link state, because a flipped toggle once turned a silent asset into a COMM_LOST with no data
+behind it (`openddil:openddil-demo/frontend/src/MaintainerApp.tsx:231-237`).
+
+### 7.2 What OpenDDIL measures today
+
+- **Heartbeats.** Each tier's projector sends a heartbeat every 2 s on `link-heartbeat`, keyed by link id
+  (`openddil:openddil-projector/src/edge_buffer_monitor.py:377`, `:459`). The contract calls it "per-tier proof that the
+  path toward HQ is reachable" (`openddil:openddil-contracts/proto/openddil/link/v1/link_heartbeat.proto:7-20`).
+- **Link status.** `link_monitor.py` derives `link_status` and `link_state` rows (`schema.hcl:933`, `:943`). A link is
+  down after 15 s without a heartbeat, and is restored after 3 arrivals, with a 10 s traffic hold
+  (`openddil:openddil-projector/src/link_monitor.py:50`, `:51`, `:60`).
+- **A tier's own uplink.** `LinkReachability` writes `edge_buffer_status.hq_link_severed` (`edge_buffer_monitor.py:196`;
+  `schema.hcl:879`, `:899`). It reads severed after twice the sum of its exchange and hold periods
+  (`edge_buffer_monitor.py:100`).
+- **Figures.** The screens show data age (`openddil:openddil-demo/frontend/src/lib/linkStatus.ts:78`, `:84`). An asset
+  reads COMM_LOST, STALE or LOST by its own sample age and its edge link (`lib/assetTier.ts`). Link staleness enters at
+  30 s and exits at 10 s (`lib/linkIndicator.ts:57-58`).
+- **No network management input.** Nothing reads a network management system, SNMP or an alert. Nothing scrapes
+  OpenDDIL's exporters: the chart has no scrape configuration. It deploys no Prometheus and no Alertmanager.
+
+### 7.3 In: a network management system as an observed source
+
+Where a deployment has a network management system (NMS), its link and device state arrive as an **observed** source.
+Each arrival carries its provenance: which NMS, which probe or rule, and when. It sits beside OpenDDIL's
+heartbeat-derived link state. It does not replace that state.
+
+- **A disagreement is shown, not resolved.** When the NMS and the heartbeats disagree about a link, that is an ADR-0053
+  disagreement. The left side is the heartbeat-derived `link_status` or `hq_link_severed`, which is derived. The right
+  side is the NMS observation, which is observed. Detection never enforces (ADR-0053 §4).
+- **Without an NMS,** the heartbeats are the source, as today.
+- **At a severed edge, the screen shows both.** The NMS says why the link is down: a local terminal fault, or the far
+  end. OpenDDIL says what the cut is costing:
+  - the age of what each tier last heard;
+  - the releases queued behind the cut. These are the bridge's lag in the broker (`bridge_group_lag`,
+    `schema.hcl:891`) and the egress forwarder's retries. The forwarder retries for up to
+    `OPENDDIL_FORWARD_RETRY_MAX_S` (default one day, `openddil:openddil-demo/egress/forwarder.py:105`), then holds;
+  - the steps delegated to the severed tier. None are built. The local authorizer decides while severed
+    (`openddil-demo/templates/tier-node.yaml:2033-2036`). ADR-0033's lateral peers and ADR-0036 §4 are design only.
+
+**An Alertmanager-compatible webhook is one supported input format.** It is a format, not a product requirement. As
+the receiver's documentation describes it, each notification carries:
+- alerts that are firing or resolved;
+- each alert's labels and annotations;
+- its start and end times;
+- a link to what generated it;
+- a fingerprint.
+
+The payload is versioned. A receiver turns each alert into the observed link-state kind (§7.6). No field is bound here.
+
+**Alerts are operational signals.** A receiver converts them into the observed NMS-input kind, and only that. An alert
+never opens an episode, a disagreement or any other finding directly. Findings come only from OpenDDIL's own detectors,
+which read the observed record like any other source.
+
+### 7.4 Use: what link quality feeds
+
+Link quality feeds what OpenDDIL already does with it. The NMS input is one more input to these, beside the
+heartbeats:
+- **Debounce.** Three layers exist: the projector's restore arrivals and traffic hold, the screens' stale enter and
+  exit, and the link row's own staleness.
+- **Per-destination priority.** None was found. Today a release has no per-destination priority. That is a gap, and
+  not part of this section.
+- **Queueing.** The bridge, the egress forwarder and the ingest spool queue on their own. None is gated by link state.
+- **Delegation.** Not built (§7.3).
+- **Staleness on figures,** as in §7.2.
+
+### 7.5 Out: OpenDDIL's own health for a deployment's monitoring
+
+A deployment's NMS monitors OpenDDIL as a service through OpenDDIL's existing exporters. The outbound format is
+Prometheus exposition, by concept. The format's documentation names a text format (`text/plain; version=0.0.4`) and
+OpenMetrics as the effort built from it. Read 2026-11-11.
+
+| Service | Endpoint | Metrics | Source |
+|---|---|---|---|
+| Projector | `:8084` (the chart sets it) | messages consumed and upserts; decode and database errors; topic lag; rows pruned; link heartbeats produced, received and rejected; element changes, evictions, refusals and restamps; effector and track counters | `openddil:openddil-projector/src/metrics.py:8-172`, served `:181` |
+| Configuration management service | `:9464` by default | unknown-asset removals dropped | `openddil:openddil-cm-service/src/metrics.py:22` |
+| Fusion | `:9464` by default | unknown-asset removals dropped; effector refusals, replays and detonations seen; publishes suppressed | `openddil:openddil-logistics-fusion-service/src/metrics.py:17-54` |
+| DIS ingest | `:8080` `/metrics`, `/healthz/live`, `/healthz/ready` | PDUs received, decoded, filtered and dropped; decode errors; publish errors and latency; spool depth, oldest age and drops; condition claims; sidecar readiness | `openddil:openddil-sensor-ingest/dis_ingestor.py:157`, `:363-432`, `:1376-1396`; `spool.py:43`; `condition.py:58-69`; `ready.py:54` |
+| Gateway (PEP) | `:9464` `/metrics` | viewer shape refusals, element views and their deletes; deliveries per destination and class; merges | `openddil:openddil-demo/gateway/pep.py:495`, `:625-676` |
+| Edge stream processor | `:4196`, the processor's defaults | defaults, plus routed, dropped and forwarded counters on the DIS mappings | `openddil:openddil-demo/openddil-base-connect.yaml:6-8` |
+| Regional stream processor | `:4195` | defaults | `openddil:openddil-regional-stack/connect/redpanda-connect.yaml:98-103` |
+
+- The chart sets no metrics port for the configuration management service or fusion. They listen on their default.
+- The broker, the durable-execution server, the sync service, the authorizer, the identity provider and the database
+  declare no metrics in the chart. Their upstream endpoints were not read.
+- Today only exercise control reads any of these, as rate sources
+  (`openddil-demo/templates/exercise-control.yaml:266-281`).
+- No document publishes this list. Publishing it is a row.
+
+### 7.6 Alerting across tiers, by concept
+
+These describe how a deployment's alerting should sit across DDIL links. OpenDDIL deploys none of it (§7.2).
+- **Each tier alerts on its own.** Alertmanager can form a high-availability cluster whose peers share silence and
+  notification state. Such a cluster is never stretched across a DDIL link: a cut would split it. Each tier runs and
+  evaluates its own alerting, so a severed tier still alerts.
+- **Upward catch-up by remote write.** Prometheus Remote-Write 1.0 is for propagating samples "reliably ... without
+  loss". Its senders must retry with backoff, should buffer persistently through a receiver's outage, and must send each
+  series in timestamp order. A tier writes upward. After a cut, it catches up from its buffer.
+- **A link-severed alert inhibits the symptoms below it.** Inhibition mutes target alerts while a source alert exists,
+  where the labels named as equal match. A link-severed alert for a tier mutes that tier's downstream staleness and
+  queue alerts at its parent. The cause pages once.
+- **Alerts stay signals** (§7.3).
+
+**Rows** (in `FOLLOW-UPS.md`):
+- the observed link-state kind for NMS input: observed, provenance, link or device, state, cause if given, `observed_at`.
+  Its receiver takes the webhook format first;
+- the exporter list in the operator documentation;
+- the link-state entry in the disagreement view.
+
+**Alignment, by concept.** FCAPS is the frame: fault, configuration, accounting, performance and security management.
+OpenDDIL touches fault and performance only, and only as inputs. FCAPS's text (ITU-T M.3400) was not read. No product
+is named as required.
+
 ## Decision
 
 1. This record is the alignment of condition monitoring, built-in test and usage, by concept only, with every standard
@@ -301,6 +431,9 @@ The Information-Dictionary view gains a short terms section that says this, with
    architect.
 6. The analyzer is configuration status accounting. It is not state detection, and its advice is not condition advice.
 7. ADR-0057's output kinds open when the remaining-life kind is specified (§4.2).
+8. Network state is an observed input with provenance, never managed (§7). An NMS disagreement with the heartbeats is
+   shown, not resolved. Alerts become the observed link-state kind through a receiver, never findings. OpenDDIL's
+   health goes out by its exporters. The rows are the link-state kind, the exporter list and the disagreement entry.
 
 ## Consequences
 
@@ -320,6 +453,8 @@ The Information-Dictionary view gains a short terms section that says this, with
 - That ISO 13381-1:2025 keeps the 2015 terms.
 - Which fields the maintenance action record's outcome carries, and whether every work order returns a closure reason
   and a confirmed component. That is the question to iagent's architect (§4.4).
+- What any network management system reports, or how often. None was read, and FCAPS's text was not read (§7).
+- The upstream metrics of the third-party services (§7.5).
 
 ## Related
 
@@ -327,5 +462,6 @@ The Information-Dictionary view gains a short terms section that says this, with
 - [ADR-0051](ADR-0051-failure-records-for-fracas.md): episodes, meters, rollups, the seam.
 - [ADR-0057](ADR-0057-declared-analytic-units-adr0034-first-engine-slice.md): the declared unit and its kinds.
 - [ADR-0020](ADR-0020-prognostics-derivation-stage.md): derived values, confidence and its kind.
+- [ADR-0053](ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md): the disagreement shape (§7.3).
 - [ADR-0056](ADR-0056-one-identity-per-thing-every-other-id-is-an-alias.md): identities for components.
 - [Citations note](CITATIONS-2026-09-08-standard-ontologies.md): the earlier verification of the ontologies.
