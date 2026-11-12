@@ -198,7 +198,7 @@ the real binary. A real declaration was read with the store up.
 
 ## Amendment 2026-11-06 (ruled): a default is not a declaration
 
-**Ruled by Chris, 2026-11-06, with ADR-0055 §1a signed the same date.** It takes effect on each deployment only in the order below.
+**Ruled by the project owner, 2026-11-06, with ADR-0055 §1a signed the same date.** It takes effect on each deployment only in the order below.
 
 **Why.** Item 2.6 step 3 lets a deployment default label a record. The 2026-11-04 amendment refuses a default only
 after a failed lookup. Both sit against this record's own summary of ADR-0029 §3, "labels propagate, never default"

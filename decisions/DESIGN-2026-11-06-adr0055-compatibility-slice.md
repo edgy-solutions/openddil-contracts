@@ -1,7 +1,7 @@
 # DESIGN 2026-11-06 — ADR-0055's compatibility slice: `label_key` beside the two columns
 
 **Status:** an implementer spec. Design only: nothing built, nothing run, nothing measured for this slice. Local
-branch, not merged. ADR-0055 is PROPOSED except §1a, signed by Chris 2026-11-06. This spec builds ADR-0055 §4 steps
+branch, not merged. ADR-0055 is PROPOSED except §1a, signed by the project owner 2026-11-06. This spec builds ADR-0055 §4 steps
 1, 2 and 4 for nation only, and stops before step 3.
 **Builds on:** ADR-0055 §2 (the key, the label table, the PEP's one predicate) and §4 (nation first, acceptance to
 the row); ADR-0029 (the two columns, the reserved `policy_label`, the current predicate).
@@ -41,7 +41,7 @@ PDP computing keys, moving the egress gate onto the key, and any vocabulary beyo
 5. **One case is not value-neutral, by ADR-0055 §2's ruling.** A row with `originator_nation` NULL and a non-empty
    `releasable_to` is served today by the second clause. Under the key it is unlabelled, so it compiles to no key and
    is served to nobody. `releasability_from` never writes that shape (no originator gives both columns omitted), but
-   the writers in Finding 2 that set the columns themselves might. **Ruled by Chris, 2026-11-07:** serving these
+   the writers in Finding 2 that set the columns themselves might. **Ruled by the project owner, 2026-11-07:** serving these
    rows today is the defect, so the slice withholds them. The acceptance script lists them as a declared exception
    with the reason `no_originator`, and the row-match is "to the row, except these N, listed". Each listed row is
    owed a declaration (ADR-0055 §4). It is not a permanent exception. It is the only difference the slice is allowed.
@@ -248,7 +248,7 @@ after` will run. A refusal at any step halts the run, with the state named.
 
 - **The bundle owner:** the declared `policy_id`, and what writes the `label_policy` row (§1.1).
 - **The helm owner:** the chart value for `OPENDDIL_LABEL_KEY_FILTER`, default `false`, per PEP.
-- **Chris:** when the backfill runs, and when each PEP's switch is flipped. The acceptance run's before phase comes
+- **The project owner:** when the backfill runs, and when each PEP's switch is flipped. The acceptance run's before phase comes
   first each time.
 
 ## What this does not establish

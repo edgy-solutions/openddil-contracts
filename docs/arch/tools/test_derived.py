@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""Tests for derived.py: the three tables a view takes from a declared artefact.
+"""Tests for derived.py: the four tables a view takes from a declared artefact.
 
 Each table is built from the real tree and its rows counted, then each failure
 the module names is planted in a small input and has to be refused.
 """
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 import tempfile
 import unittest
 from pathlib import Path
+
+import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -187,6 +190,125 @@ class Dictionary(unittest.TestCase):
         table = derived.dictionary(self.onto)
         self.assertIn("| platform_reference.yaml | platforms | records | 1 | code, name |", table)
         self.assertNotIn("PLANTED-ENTRY-VALUE", table)
+
+
+class Traceability(unittest.TestCase):
+    """The real tree builds; then one real thing is changed per case on a temp copy."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.dec = self.tmp / "decisions"
+        self.views = self.tmp / "views"
+        self.record = self.tmp / "capability-record.yaml"
+        self.ex = self.tmp / "adr-exemptions.yaml"
+        shutil.copytree(REPO / "decisions", self.dec)
+        shutil.copytree(ARCH / "views", self.views)
+        shutil.copy(ARCH / "capability-record.yaml", self.record)
+        shutil.copy(ARCH / "adr-exemptions.yaml", self.ex)
+
+    def tearDown(self):
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def build(self) -> str:
+        return derived.traceability(self.dec, self.views, cp.load_record(self.record), self.ex)
+
+    def refused(self, *needles: str) -> str:
+        with self.assertRaises(cp.CheckError) as c:
+            self.build()
+        for n in needles:
+            self.assertIn(n, str(c.exception))
+        return str(c.exception)
+
+    def set_exempt(self, change) -> None:
+        data = yaml.safe_load(self.ex.read_text(encoding="utf-8"))
+        change(data["exempt"])
+        self.ex.write_text(yaml.safe_dump(data), encoding="utf-8")
+
+    def new_adr(self, status: str) -> None:
+        (self.dec / "ADR-0099-x.md").write_text(f"# ADR-0099: Planted\n\n## Status\n\n{status}\n", encoding="utf-8")
+
+    def test_real_tree_builds(self):
+        out = self.build()
+        blocks = out.split("\n\n")
+        self.assertRegex(blocks[0], r"^\d+ decision records\. \d+ accepted or proposed: \d+ cited by a view, 4 exempt\. \d+ not required\.$")
+        self.assertTrue(blocks[1].startswith("| Not cited |"))
+        findings = [r.split(" ")[1] for r in blocks[1].split("\n")[2:]]
+        self.assertEqual([r[2:10] for r in blocks[1].split("\n")[2:]], ["ADR-0011", "ADR-0025", "ADR-0027", "ADR-0028"])
+        self.assertTrue(blocks[2].startswith("| Not required |"))
+        self.assertIn("| ADR-0015 ", blocks[2])
+        files = list(self.dec.glob("ADR-*.md"))
+        matrix = blocks[3].split("\n")
+        self.assertEqual(matrix[0], "| ADR | Status | Cited by |")
+        self.assertEqual(len(matrix) - 2, len(files))
+        row = next(r for r in matrix if r.startswith("| ADR-0057 |"))
+        self.assertIn("St-Rm-P", row)
+        self.assertIn("St-Tx", row)
+
+    def test_real_citation_removed_is_named(self):
+        p = self.views / "St-Tx.md"
+        p.write_text(re.sub(r"ADR-0057(?!\d)", "the decision", p.read_text(encoding="utf-8")), encoding="utf-8")
+        rec = yaml.safe_load(self.record.read_text(encoding="utf-8"))
+        for cap in rec["capabilities"].values():
+            if "adrs" in cap:
+                cap["adrs"] = [a for a in cap["adrs"] if a != "ADR-0057"]
+            if "still_open" in cap:
+                cap["still_open"] = [o for o in cap["still_open"] if o.get("adr") != "ADR-0057"]
+        self.record.write_text(yaml.safe_dump(rec, sort_keys=False), encoding="utf-8")
+        self.refused("ADR-0057")
+
+    def test_real_exemption_removed_is_named(self):
+        self.set_exempt(lambda e: e.pop("ADR-0011"))
+        self.refused("ADR-0011", "is cited by no view")
+
+    def test_stale_exemption_is_named(self):
+        self.set_exempt(lambda e: e.update({"ADR-0029": {"category": "rule", "reason": "planted"}}))
+        self.refused("ADR-0029", "cited by")
+
+    def test_unknown_category_fails(self):
+        self.set_exempt(lambda e: e["ADR-0011"].update({"category": "planted"}))
+        self.refused("ADR-0011", "category")
+
+    def test_empty_and_missing_reason_fail(self):
+        self.set_exempt(lambda e: e["ADR-0011"].update({"reason": ""}))
+        self.refused("ADR-0011", "no reason")
+        self.set_exempt(lambda e: e["ADR-0011"].pop("reason"))
+        self.refused("ADR-0011", "no reason")
+
+    def test_unknown_key_fails(self):
+        self.set_exempt(lambda e: e["ADR-0011"].update({"note": "x"}))
+        self.refused("ADR-0011", "'note'")
+
+    def test_out_of_scope_and_fileless_exemptions_fail(self):
+        self.set_exempt(lambda e: e.update({"ADR-0015": {"category": "rule", "reason": "planted"}}))
+        self.refused("ADR-0015", "superseded")
+        self.set_exempt(lambda e: (e.pop("ADR-0015"), e.update({"ADR-9999": {"category": "rule", "reason": "planted"}})))
+        self.refused("ADR-9999", "no decision record")
+
+    def test_new_decision_files(self):
+        self.new_adr("Accepted")
+        self.refused("ADR-0099", "is cited by no view")
+        self.new_adr("Superseded by ADR-0010")
+        out = self.build()
+        not_required = out.split("\n\n")[2]
+        self.assertTrue(not_required.startswith("| Not required |"))
+        self.assertIn("| ADR-0099 ", not_required)
+        self.new_adr("Draft")
+        self.refused("ADR-0099 has no status beginning")
+
+    def test_missing_exemptions_file_is_an_input_error(self):
+        self.ex.unlink()
+        with self.assertRaises(derived.InputError):
+            self.build()
+
+    def test_pipe_in_a_title_is_escaped(self):
+        (self.dec / "ADR-0099-x.md").write_text("# ADR-0099: A | B\n\nStatus: Rejected\n", encoding="utf-8")
+        self.assertIn("A \| B", self.build())
+
+    def test_the_framework_name_in_a_title_is_not_printed(self):
+        (self.dec / "ADR-0099-x.md").write_text("# ADR-0099: OpenDDIL Is Planted\n\nStatus: Rejected\n", encoding="utf-8")
+        out = self.build()
+        self.assertIn("ADR-0099 the framework Is Planted", out)
+        self.assertNotIn("OpenDDIL", out)
 
 
 if __name__ == "__main__":
