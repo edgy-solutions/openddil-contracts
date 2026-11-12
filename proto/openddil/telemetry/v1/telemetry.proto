@@ -471,6 +471,46 @@ message Provenance {
   //
   // See decisions/DESIGN-2026-09-07-two-hop-freshness.md.
   repeated RelayHop relay_chain = 12;
+
+  // ---------------------------------------------------------------------
+  // PRODUCER STAMP -- which declared analytic unit made this value.
+  // ---------------------------------------------------------------------
+  // Set by the runner that executes a declared unit (ADR-0034, Provenance:
+  // "analytics must explain themselves"), never by the unit itself. Unset
+  // on any message that no declared unit produced: raw telemetry, relays,
+  // hand-written producers.
+  //
+  // WHY ON THE MESSAGE AND NOT IN A LOG. A derived value at the root tier is
+  // unexplainable unless it says which unit, which version, which resolved
+  // parameters and which tier produced it, and only the message travels
+  // with the value. It is also how a replay of history is told apart from
+  // current output: a consumer that sees an older version, or a different
+  // config_hash, is reading something the current configuration did not
+  // produce (ADR-0034 addendum 2026-09-08).
+  ProducerStamp producer_stamp = 13;
+}
+
+// The ADR-0034 stamp: {unit, version, config_hash, tier}, plus the model
+// artifact hash for ML units. See Provenance.producer_stamp.
+message ProducerStamp {
+  // The declared unit's name, e.g. "wear".
+  string unit = 1;
+
+  // The unit's declared version, as written in its declaration.
+  string version = 2;
+
+  // sha256 (lowercase hex) of the canonical JSON of the RESOLVED parameters:
+  // declaration defaults with the deployment's overrides applied, keys
+  // sorted, no whitespace. Two tiers running the same unit with the same
+  // effective parameters carry the same hash, whichever file set them.
+  string config_hash = 3;
+
+  // The tier the unit ran at, e.g. "edge-01".
+  string tier = 4;
+
+  // Mandatory for ML units, empty for every other unit: the hash of the
+  // weights that produced this value.
+  string model_artifact_hash = 5;
 }
 
 // One hop of a message's path up the tier tree. See Provenance.relay_chain.

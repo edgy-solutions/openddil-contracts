@@ -18,6 +18,7 @@ package openddil.common.v1;
 // Examples: "Cel" (Celsius), "[degF]" (Fahrenheit), "K" (Kelvin),
 //           "m/s", "[kn_i]" (knots), "kPa", "V", "A", "%", "1" (dimensionless).
 // Algorithms MUST convert to their preferred unit using pint or equivalent.
+// The UCUM->pint table for Python consumers is openddil.common.v1.ucum.
 message Quantity {
   double value = 1;
   string unit = 2;
