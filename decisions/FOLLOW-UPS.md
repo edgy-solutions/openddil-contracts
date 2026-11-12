@@ -4,6 +4,22 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
+
+**Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
+
+**The same run answers the backlog.** Intake resumes at the group offset; there is no replay. First position at or past it on all 9 held keys, about 378 records per key never handled, and a planted Fire nobody had handled was never counted. So waiting for handlers to drain saves the backlog and does not save the counts.
+
+**Not shown:** a backlog in the shape a slow handler leaves, rather than a hold; in-flight journals at the wipe; `cm-events`.
+
+**A real defect for a customer, decided 2026-11-04: ledger counts belong in the store, not only in Restate state.** A roll on a lab with one launcher, an empty count and a last launch days old goes ahead with the wipe and loses nothing; that is the reason for that roll, not for this design.
+
+Close when a count survives an upgrade, from the store.
+
+**Seen again 2026-11-11, moved to the top of the open rows:** a failed roll on the rehearsal cluster and its rollback wiped Restate twice in one evening, and the Fire counts cleared at every tier both times. Every lab roll wipes Restate, so until this closes, each roll loses the counts.
+
+Separate from "a Fire record has two defects": that row loses a record at a store, this one loses a count held in Restate state. Neither fix closes the other.
+
 ## OPEN 2026-11-11 — built-in test arrives as free strings, with no test type, result, isolated unit or confidence
 
 **A proposed seam, not built.** `HealthFlags.active_fault_codes` is a list of strings, and nothing records which test
@@ -622,20 +638,6 @@ Close when a connection error in custom mode retries as the other modes do while
 partition, with a test that drops the store under a Fire and sees the row arrive after it returns.
 
 Separate from "a launcher's Fire count resets": that row loses a count held in Restate state, this one loses a record at a store. Neither fix closes the other.
-
-## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
-
-**Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
-
-**The same run answers the backlog.** Intake resumes at the group offset; there is no replay. First position at or past it on all 9 held keys, about 378 records per key never handled, and a planted Fire nobody had handled was never counted. So waiting for handlers to drain saves the backlog and does not save the counts.
-
-**Not shown:** a backlog in the shape a slow handler leaves, rather than a hold; in-flight journals at the wipe; `cm-events`.
-
-**A real defect for a customer, decided 2026-11-04: ledger counts belong in the store, not only in Restate state.** A roll on a lab with one launcher, an empty count and a last launch days old goes ahead with the wipe and loses nothing; that is the reason for that roll, not for this design.
-
-Close when a count survives an upgrade, from the store.
-
-Separate from "a Fire record has two defects": that row loses a record at a store, this one loses a count held in Restate state. Neither fix closes the other.
 
 ## OPEN 2026-11-04 — a file row added after a declaration wins through a restart in a store outage
 
