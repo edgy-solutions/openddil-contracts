@@ -7,6 +7,7 @@ The real tree is checked once. Each rule is then proved by copying docs/arch
 and decisions into a temp tree (keeping their relative distance), breaking
 one thing for real, and asserting that rule's FAIL line appears.
 """
+import re
 import shutil
 import subprocess
 import sys
@@ -48,7 +49,7 @@ class RealTree(unittest.TestCase):
     def test_real_tree_passes(self):
         rc, out, err = run(ARCH)
         self.assertEqual(rc, 0, err)
-        self.assertTrue(out.startswith("ok: 14 rules"), out)
+        self.assertTrue(out.startswith("ok: 15 rules, 29 views"), out)
         self.assertIn("not run: quotes, floor (test)", out)
 
     def test_bare_invocation_is_bad_input_and_names_the_flags(self):
@@ -301,12 +302,15 @@ class Perturbed(unittest.TestCase):
         self.expect("generated", "0 times")
 
     def test_13_phases_capability_missing_from_the_record(self):
-        edit(self.root, "capability-record.yaml", "  TacticalSustainmentCorrelation:\n    adrs: [ADR-0039]\n", "")
+        p = self.root / "capability-record.yaml"
+        text = p.read_text(encoding="utf-8")
+        block = re.search(r"^  TacticalSustainmentCorrelation:\n(?:    .*\n)+", text, re.M)
+        assert block, "TacticalSustainmentCorrelation block not found"
+        p.write_text(text.replace(block.group(0), ""), encoding="utf-8", newline="\n")
         self.expect("phases", "TacticalSustainmentCorrelation")
 
     def test_13_phases_capability_with_no_citation(self):
-        edit(self.root, "capability-record.yaml", "  TacticalSustainmentCorrelation:\n    adrs: [ADR-0039]\n",
-             "  TacticalSustainmentCorrelation: {}\n")
+        edit(self.root, "capability-record.yaml", "    adrs: [ADR-0039 §1, ADR-0039 §2]\n    severed: not stated\n    rows: [SV-11]\n", "")
         self.expect("phases", "TacticalSustainmentCorrelation has no phase")
 
     def test_13_phases_marker_twice(self):
@@ -354,6 +358,42 @@ class Perturbed(unittest.TestCase):
     def test_4_slots_inventory_table_missing(self):
         edit(self.root, "INVENTORY.md", "| Slot | Declaration that would fill it | Artefact |", "| Slot | Fill | Artefact |")
         self.expect("slots", "0 slot tables")
+
+
+class DecisionLinks(unittest.TestCase):
+    """rule_decision_links, on a tree whose St-Tx links carry a section (the stub the author's content will match)."""
+
+    def setUp(self):
+        sys.path.insert(0, str(HERE / "testdata"))
+        import stub_content
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        stub_content.stub_tree(self.tmp, repo=False)
+        self.root = self.tmp / "docs" / "arch"
+        self.tx = (self.root / "views" / "St-Tx.md").read_text(encoding="utf-8")
+
+    def lines(self):
+        rc, out, err = run(self.root)
+        return rc, [l for l in err.splitlines() if l.startswith("FAIL: decision-links:")]
+
+    def test_the_stub_passes_the_rule(self):
+        self.assertEqual(self.lines()[1], [])
+
+    def test_a_link_without_a_section_fails(self):
+        import re
+        m = re.search(r"\[(ADR-\d{4}) §[^\]]+\]", self.tx)
+        edit(self.root, "views/St-Tx.md", m.group(0), f"[{m.group(1)}]")
+        rc, got = self.lines()
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("St-Tx" in l and m.group(1) in l for l in got), got)
+
+    def test_a_section_the_record_lacks_fails(self):
+        import re
+        m = re.search(r"\[(ADR-\d{4}) §[^\]]+\]", self.tx)
+        edit(self.root, "views/St-Tx.md", m.group(0), f"[{m.group(1)} §99]")
+        rc, got = self.lines()
+        self.assertEqual(rc, 1)
+        self.assertTrue(any("99" in l for l in got), got)
 
 
 if __name__ == "__main__":

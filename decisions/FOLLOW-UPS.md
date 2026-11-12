@@ -3389,6 +3389,33 @@ heading, where nothing can be split. Verified by diffing: the change is
 | AE-5 | GD-10 is a prerequisite here too | open |
 | AE-6 | Diagnosis absent, deliberately not listed | open |
 
+### SV — severed behaviour not stated by a decision record (CV-2)
+
+Every capability of a framework for disconnected, intermittent and limited links should say how it behaves on a severed tier. These are the capabilities whose decision records do not. A row closes when a decision record states it, and the capability's `severed` entry then cites that section.
+
+| ID | Subject | Status |
+|---|---|---|
+| SV-1 | DataAcquisition: severed behaviour not stated | open |
+| SV-2 | DataManipulation: severed behaviour not stated | open |
+| SV-3 | StateDetection: severed behaviour not stated | open |
+| SV-4 | HealthAssessment: severed behaviour not stated | open |
+| SV-5 | PrognosticAssessment: severed behaviour not stated | open |
+| SV-6 | AdvisoryGeneration: severed behaviour not stated | open |
+| SV-7 | HierarchicalAggregation: severed behaviour not stated | open |
+| SV-8 | TierLocalMaintenanceChain: severed behaviour not stated; the roadmap plans it per tier | open |
+| SV-9 | TierLocalWorkflow: severed behaviour not stated; the roadmap plans it per tier | open |
+| SV-10 | EdgeWorkflow: severed behaviour not stated; a proposed spec covers it | open |
+| SV-11 | TacticalSustainmentCorrelation: severed behaviour not stated | open |
+| SV-12 | ConfigurationStatusAccounting: severed behaviour not stated | open |
+| SV-13 | ArrivalDeclaration: severed behaviour not stated | open |
+| SV-14 | GatedRelease: severed behaviour not stated; never severed mid-stream | open |
+| SV-15 | DeclaredCards: severed behaviour not stated | open |
+| SV-16 | SustainmentFeasibility: severed behaviour not stated | open |
+| SV-17 | AdvisoryProvenance: severed behaviour not stated | open |
+| SV-18 | FailureReporting: severed behaviour not stated | open |
+| SV-19 | SafetyInterlockRefusal: severed behaviour not stated | open |
+| SV-20 | DisagreementDetection: severed behaviour not stated | open |
+
 ### C — do-not-harden constraints (`ADR-0038` §6)
 
 Not follow-ups: **standing constraints on present work**. Listed so they are
