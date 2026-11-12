@@ -92,6 +92,13 @@ views:
     name: Information-Dictionary
     file: views/Am-If.md
     exports: {dodaf202: [AV-2], naf4: [A1]}
+  Am-Tr:
+    name: Architecture-Traceability
+    file: views/Am-Tr.md
+    exports: {}
+    no_target:
+      dodaf202: "Table 2:1 gives Architecture Traceability no DoDAF 2.02 view."
+      naf4: "Table 2:3 gives Architecture Traceability no NAF 4.0 view."
   St-Tx:
     name: Strategic-Taxonomy
     file: views/St-Tx.md

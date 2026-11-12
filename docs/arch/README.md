@@ -10,7 +10,7 @@ This is a framework description. A deployment fills the `{{slot:name}}` placehol
 
 | | Taxonomy | Structure | Connectivity | Processes | States | Sequences | Information | Constraints | Roadmap | Traceability | Summary |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **Architecture management** | | | | | | | [Am-If](views/Am-If.md) | | | | |
+| **Architecture management** | | | | | | | [Am-If](views/Am-If.md) | | | [Am-Tr](views/Am-Tr.md) | |
 | **Summary** | | | | | | | | | | | [Sm-Ov](views/Sm-Ov.md) |
 | **Strategic** | [St-Tx](views/St-Tx.md) | | [St-Cn](views/St-Cn.md) | [St-Pr](views/St-Pr.md) | | | | | [St-Rm-P](views/St-Rm-P.md) | | |
 | **Operational** | [Op-Tx](views/Op-Tx.md) | [Op-Sr](views/Op-Sr.md) | [Op-Cn](views/Op-Cn.md) | [Op-Pr](views/Op-Pr.md) | [Op-St](views/Op-St.md) | [Op-Sq](views/Op-Sq.md) | [Op-If](views/Op-If.md) | [Op-Ct](views/Op-Ct.md) | | | |
