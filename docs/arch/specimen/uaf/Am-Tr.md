@@ -6,7 +6,7 @@ Every decision record against the views that cite it, generated from [`decisions
 
 The findings come first: each accepted or proposed record that no view cites, with its category and the reason, read from [adr-exemptions.yaml](../../adr-exemptions.yaml). A record that is neither cited nor listed there fails the render. So does an entry for a record that a view now cites, an entry with no reason, or a category outside the four. A record whose status is neither accepted nor proposed, such as a superseded one, is listed and is not required.
 
-49 decision records. 48 accepted or proposed: 44 cited by a view, 4 exempt. 1 not required.
+51 decision records. 50 accepted or proposed: 46 cited by a view, 4 exempt. 1 not required.
 
 | Not cited | Status | Category | Reason |
 |---|---|---|---|
@@ -24,7 +24,7 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0009 | Accepted | Op-If, Op-Pr, Rs-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0010 | Accepted | St-Rm-P, St-Tx |
 | ADR-0011 | Accepted | none |
-| ADR-0013 | Accepted | Op-Ct |
+| ADR-0013 | Accepted | Op-Ct, Sd-Tx |
 | ADR-0014 | Accepted | Rs-Sr |
 | ADR-0015 | Superseded | none |
 | ADR-0016 | Accepted | Rs-Sr |
@@ -62,7 +62,7 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0048 | Accepted | Op-If, Op-Pr, Sd-Tx |
 | ADR-0049 | Accepted | Op-If, Op-Pr |
 | ADR-0050 | Proposed | Op-Cn, Op-Ct, Op-If, Op-Pr, Op-St, Sd-Tx, St-Rm-P, St-Tx |
-| ADR-0051 | Accepted | Op-If, Rs-Pr, Sd-Tx, St-Rm-P, St-Tx |
+| ADR-0051 | Accepted | Am-If, Op-If, Rs-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0052 | Accepted | Op-Pr, Rs-Tr, Sc-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0053 | Accepted | Op-Pr, Rs-Pr, Sc-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0054 | Accepted | Rs-Cn, Rs-Sr |
@@ -70,6 +70,8 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0056 | Proposed | Op-If, Rs-If, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0057 | Proposed | St-Rm-P, St-Tx |
 | ADR-0058 | Proposed | St-Rm-P, St-Tx |
+| ADR-0059 | Proposed | Am-If, Sd-Tx, St-Tx |
+| ADR-0060 | Proposed | Sd-Tx |
 
 The categories: a rule is a rule on how code is written, kept by review, with nothing the running system does that [Operational-Constraints](../../views/Op-Ct.md) could state; infrastructure is a store or a setting under a capability that a view already cites; process is how the work is done and checked; alignment is how the system is placed, restated by a record that a view cites.
 
