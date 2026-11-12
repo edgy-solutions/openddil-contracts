@@ -4,7 +4,11 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
-## OPEN 2026-11-03 — a launcher's Fire count resets on every upgrade that wipes Restate
+## OPEN 2026-11-03 — durable records that live only in Restate state are erased by every upgrade that wipes Restate (first seen: a launcher's Fire count)
+
+**Widened 2026-11-12 to a rule: no durable record lives only in Restate state.** A record that has to outlast an upgrade gets a home in the store, and Restate state holds at most a working copy of it. This row started with the launcher counts. The review of the ADR-0058 first-increment spec found a second case: **closed manual-discrepancy episodes** (ADR-0051, "the fault cleared and the record stayed"). They live only in `AssetCM` state (`am_state`, `closed_episodes`, on the edge tiers), with no topic, no table and no reader, so every roll that wipes Restate deletes the FRACAS record of every closed fault. The `failure_episodes` projection (its topic, the projector handler, the migration and a backfill) is ordered ahead of the rest of slice 3a. Until it lands, a lab roll that wipes Restate first exports the closed episodes from the state table to a file and reads that file back. The backfill loads those exports together with whatever is still held.
+
+**What the rule covers, so far:** launcher Fire counts (`AssetLogistics`), closed episodes (`AssetCM`), and anything else a wipe would erase. That means every Restate state key has to be sorted as either a working copy (rebuilt from a topic or the store after a wipe) or a record (needs a store home). The keys seen on a lab tier on 2026-11-12: `AssetCM`: `am_state`, `cm_state_emit_sig`, `next_recheck_ns`; `AssetLogistics`: `cm_state_dict`, `origin_node`, `registry_platform_variant`, `releasability`, `last_emitted_severity`, `latest_derived_telemetry_dict`, `latest_windows_dict`, `next_timer_ns`, `status_revision`. `effector_expended_dict` and its dedup list, named below, were absent on that tier, which had no launches since its last wipe.
 
 **Measured once, on a held tier and the real wipe hook.** `effector_expended_dict` and its dedup list live only in `AssetLogistics` Restate state, separately on each tier, and read absent after the wipe. Rows in `effector_launch` stand, so the table says a launcher fired and its count says it did not. From code, not seen on a screen: the launcher reads its full declared load and any constraint from `expended` lifts (`rules.py`).
 
@@ -14,7 +18,7 @@ and this file is the thing that is wrong.
 
 **A real defect for a customer, decided 2026-11-04: ledger counts belong in the store, not only in Restate state.** A roll on a lab with one launcher, an empty count and a last launch days old goes ahead with the wipe and loses nothing; that is the reason for that roll, not for this design.
 
-Close when a count survives an upgrade, from the store.
+Close when every record the sort names survives an upgrade that wipes Restate, read from the store (the launcher count and the closed episodes first). A check must also refuse a new Restate state key that is not sorted.
 
 **Seen again 2026-11-11, moved to the top of the open rows:** a failed roll on the rehearsal cluster and its rollback wiped Restate twice in one evening, and the Fire counts cleared at every tier both times. Every lab roll wipes Restate, so until this closes, each roll loses the counts.
 
