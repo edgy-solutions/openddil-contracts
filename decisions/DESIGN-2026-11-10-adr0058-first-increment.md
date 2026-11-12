@@ -12,7 +12,7 @@ tier); ADR-0042 §3 (custody is recursive, and a parent never merges); ADR-0040 
 reasoning plane).
 
 **Read at:** OpenDDIL working trees of 2026-11-10, and `openddil-cm-service` at `a7a87f9` for closed episodes; iagent
-`b4b41ad1`, iagent's two reports of 2026-11-11 on its task routes and task events, and its ADR-0068 draft at `a6efbabe`
+`b4b41ad1`, iagent's two reports of 2026-11-11 on its task routes and task events, and its ADR-0068 draft PR at `e2ae0272`
 (Proposed); cortex-ui `c51f932`. Line numbers move with them. These are reads, not runs. One is an inference from code
 and is marked as one.
 
