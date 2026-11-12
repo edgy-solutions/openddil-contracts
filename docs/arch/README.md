@@ -130,6 +130,8 @@ Check it with `check_export.py --export FILE --barred FILE`: the view count equa
 
 CI builds the export from the public twin, checks it and attaches it to the check-views run as the `architecture-export` artifact. The file is not committed. CI runs the check on the public sample list, so a green check is not evidence that any private scan ran.
 
+To build it for a deployment, from the deployment's own bundle, values and capability record, follow [RUNBOOK-generate-for-a-deployment.md](RUNBOOK-generate-for-a-deployment.md).
+
 ## Naming a deployment
 
 Two bundle values set how the generated documents present a deployment. Both sit under `system` in the values files passed with `--values`, and later files win per key, as in Helm.

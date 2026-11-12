@@ -56,7 +56,7 @@ capabilities:
     measured: [{entry: preflight-51, line: "| 3 | tier feed | clean"}]
   StateDetection:
     adrs: [ADR-0038]
-    built: [{template: tier-node.yaml, contains: cm-service}]
+    built: [{template: tier-node.yaml, contains: logistics-fusion}]
     measured: [{entry: preflight-51, line: "| 2 | derive stage | **COMPLETING**"}]
   HealthAssessment:
     adrs: [ADR-0038]
@@ -150,7 +150,7 @@ capabilities:
 rendered:
   workload:
     asset-registry-service: [HierarchicalAggregation]
-    cm-service: [StateDetection, ConfigurationStatusAccounting]
+    cm-service: [ConfigurationStatusAccounting]
     cm-service-bootstrap: {infrastructure: "registers the service with the workflow engine"}
     edge-hq-bridge: [HierarchicalAggregation]
     egress-assembler: [GatedRelease]
@@ -165,7 +165,7 @@ rendered:
     frontend: [InformationPresentation]
     images-pullable-1: {infrastructure: "pre-install hook that proves every image can be pulled"}
     logistics-fusion-bootstrap: {infrastructure: "registers the service with the workflow engine"}
-    logistics-fusion-service: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    logistics-fusion-service: [StateDetection, HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
     logistics-sim: {infrastructure: "a simulated source of sustainment telemetry, not a capability"}
     pep: [LabelledReadEnforcement]
     postgres: {infrastructure: "store"}
@@ -177,11 +177,11 @@ rendered:
     restate-hub: {infrastructure: "workflow engine at the hub"}
     restate-server: {infrastructure: "workflow engine at the edge"}
     sensor-ingest: [DataAcquisition]
-    tier-cm: [StateDetection, ConfigurationStatusAccounting]
+    tier-cm: [ConfigurationStatusAccounting]
     tier-declaration-intake: [ArrivalDeclaration]
     tier-electric: [InformationPresentation]
     tier-frontend: [InformationPresentation]
-    tier-fusion: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    tier-fusion: [StateDetection, HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
     tier-pep: [LabelledReadEnforcement]
     tier-pg: {infrastructure: "store at the tier"}
     tier-projector: [DataManipulation]
