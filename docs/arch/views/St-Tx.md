@@ -16,7 +16,7 @@ A capability here is something a deployment can be phased on and shown working. 
 | DataAcquisition: each external feed is its own ingestion sidecar, onto one common schema | [ADR-0010 §decision](../../../decisions/ADR-0010-feed-integration-strategy.md) | Accepted | Not stated |
 | HealthAssessment (block 4) | [ADR-0038 §1](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
 | PrognosticAssessment (block 5): the mechanism, not a prediction | [ADR-0038 §3](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
-| AdvisoryGeneration (block 6): rule-based | [ADR-0038 §3](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
+| AdvisoryGeneration (block 6): constraining factors only, no condition advice; the configuration analyzer is under ConfigurationStatusAccounting | [ADR-0038 §3](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
 | InformationPresentation: each tier serves its own screen, which reports the tier's own uplink while severed; each claim on it is held to a declared claim class | [ADR-0032 §decision](../../../decisions/ADR-0032-tier-local-presentation-reachback-finding.md), [ADR-0035 §decision](../../../decisions/ADR-0035-information-honesty-operator-surfaces.md) | Accepted | Built |
 | DeclaredAnalyticUnits: ADR-0034's first engine slice, a runner that loads the units a deployment declares | [ADR-0057 §1](../../../decisions/ADR-0057-declared-analytic-units-adr0034-first-engine-slice.md) | Proposed | Partial |
 | HierarchicalAggregation | [ADR-0022 §decision](../../../decisions/ADR-0022-hierarchical-aggregation-is-the-architecture.md) | Accepted | Declared |
@@ -28,6 +28,7 @@ A capability here is something a deployment can be phased on and shown working. 
 | EdgeWorkflow: tasks and approvals run by a workflow service at the edge itself | ADR-0058's first-increment spec (PR #16, not merged); iagent's ADR-0068, the edge tier (draft, proposed); open row [SV-10](../../../decisions/FOLLOW-UPS.md) | Decision pending | Not stated |
 | TacticalSustainmentCorrelation | [ADR-0039 §1](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
 | ConfigurationStatusAccounting | [ADR-0009 §decision](../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
+| ConfigurationStatusAccounting holds the configuration analyzer, not StateDetection or AdvisoryGeneration | [ADR-0059 §2](../../../decisions/ADR-0059-condition-monitoring-bit-and-usage-alignment.md) | Proposed | Status line |
 | ArrivalDeclaration | [ADR-0050 §1](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
 | LabelledReadEnforcement | [ADR-0029 §1](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | GatedRelease | [ADR-0043 §1](../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |

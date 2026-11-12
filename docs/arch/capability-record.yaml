@@ -89,12 +89,13 @@ capabilities:
     rows: [SV-2]
   StateDetection:
     description: >-
-      Each asset's readings are checked for parts in a non-nominal state, each named as a constraining factor,
-      and the asset's configuration is checked against its baseline. That lets an operator see that something
-      is wrong, and where, before asking why. Its decision record does not say how it behaves on a severed
-      tier.
+      Each asset's readings are checked against declared thresholds and bands, and each part found in a
+      non-nominal state is named as a constraining factor. That lets an operator see that something is wrong,
+      and where, before asking why. Comparing an asset's configuration with its baseline is configuration
+      status accounting, not this. Its decision records do not say how it behaves on a severed tier.
+    derived_from: [ADR-0038 §1, ADR-0059 §2]
     adrs: [ADR-0038 §1]
-    built: [{template: tier-node.yaml, contains: cm-service}]
+    built: [{template: tier-node.yaml, contains: logistics-fusion}]
     measured: [{entry: preflight-51, line: "| 2 | derive stage | **COMPLETING**"}]
     severed: not stated
     rows: [SV-3]
@@ -121,7 +122,10 @@ capabilities:
     description: >-
       A recommended action is attached to an assessed condition, with the reasoning behind it, so an operator
       sees what is advised and on what basis. It proposes only: work orders stay in the external system of
-      record, which decides. Its decision record does not say how it behaves on a severed tier.
+      record, which decides. Today it names constraining factors only and gives no condition advice; the
+      configuration analyzer's actions are configuration advice, under configuration status accounting. Its
+      decision records do not say how it behaves on a severed tier.
+    derived_from: [ADR-0038 §3, ADR-0059 §2]
     adrs: [ADR-0038 §3]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
     rows: [AE-2, SV-6]
@@ -242,7 +246,10 @@ capabilities:
     description: >-
       A maintainer records the hardware and modifications installed on each asset and sees how they differ
       from the authorized baseline. Software and firmware are deferred, and documentation and operational
-      configuration are owned elsewhere. Its decision record does not say how it behaves on a severed tier.
+      configuration are owned elsewhere. The configuration analyzer, which compares the installed items with
+      the baseline and gives the asset's overall configuration status, sits here. Its decision records do not
+      say how it behaves on a severed tier.
+    derived_from: [ADR-0009 §decision, ADR-0059 §2]
     adrs: [ADR-0009 §decision]
     built: [{template: tier-node.yaml, contains: cm-service}]
     measured: [{entry: cm-reseed, line: "the first roll on the new image): through the Restate"}]
@@ -377,7 +384,7 @@ capabilities:
 rendered:
   workload:
     asset-registry-service: [HierarchicalAggregation]
-    cm-service: [StateDetection, ConfigurationStatusAccounting]
+    cm-service: [ConfigurationStatusAccounting]
     cm-service-bootstrap: {infrastructure: "registers the service with the workflow engine"}
     edge-hq-bridge: [HierarchicalAggregation]
     egress-assembler: [GatedRelease]
@@ -392,7 +399,7 @@ rendered:
     frontend: [InformationPresentation]
     images-pullable-1: {infrastructure: "pre-install hook that proves every image can be pulled"}
     logistics-fusion-bootstrap: {infrastructure: "registers the service with the workflow engine"}
-    logistics-fusion-service: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    logistics-fusion-service: [StateDetection, HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
     logistics-sim: {infrastructure: "a simulated source of sustainment telemetry, not a capability"}
     pep: [LabelledReadEnforcement]
     postgres: {infrastructure: "store"}
@@ -404,11 +411,11 @@ rendered:
     restate-hub: {infrastructure: "workflow engine at the hub"}
     restate-server: {infrastructure: "workflow engine at the edge"}
     sensor-ingest: [DataAcquisition]
-    tier-cm: [StateDetection, ConfigurationStatusAccounting]
+    tier-cm: [ConfigurationStatusAccounting]
     tier-declaration-intake: [ArrivalDeclaration]
     tier-electric: [InformationPresentation]
     tier-frontend: [InformationPresentation]
-    tier-fusion: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    tier-fusion: [StateDetection, HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
     tier-pep: [LabelledReadEnforcement]
     tier-pg: {infrastructure: "store at the tier"}
     tier-projector: [DataManipulation]
