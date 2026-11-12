@@ -17,14 +17,15 @@ A capability here is something a deployment can be phased on and shown working. 
 | HealthAssessment (block 4) | [ADR-0038 §1](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
 | PrognosticAssessment (block 5): the mechanism, not a prediction | [ADR-0038 §3](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
 | AdvisoryGeneration (block 6): rule-based | [ADR-0038 §3](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Partial |
-| InformationPresentation | [ADR-0038 §1](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Built |
+| InformationPresentation: each tier serves its own screen, which reports the tier's own uplink while severed; each claim on it is held to a declared claim class | [ADR-0032 §decision](../../../decisions/ADR-0032-tier-local-presentation-reachback-finding.md), [ADR-0035 §decision](../../../decisions/ADR-0035-information-honesty-operator-surfaces.md) | Accepted | Built |
 | DeclaredAnalyticUnits: ADR-0034's first engine slice, a runner that loads the units a deployment declares | [ADR-0057 §1](../../../decisions/ADR-0057-declared-analytic-units-adr0034-first-engine-slice.md) | Proposed | Partial |
 | HierarchicalAggregation | [ADR-0022 §decision](../../../decisions/ADR-0022-hierarchical-aggregation-is-the-architecture.md) | Accepted | Declared |
 | TierLocalDecision | [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md), [ADR-0029 §6](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | TierLocalSignIn, OneSession | [ADR-0045 §1](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md), [ADR-0045 §6](../../../decisions/ADR-0045-per-tier-identity-realm-replicas.md) | Accepted | Status line |
 | TierLocalMaintenanceChain | [ADR-0046 §2](../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md), [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Not stated |
 | TierLocalWorkflow | [ADR-0034 §decision](../../../decisions/ADR-0034-tier-analytics-are-deployment-configuration.md), [Roadmap note](../../../decisions/ROADMAP-2026-10-29-isolation-increments.md) | Roadmap note | Not stated |
-| EdgeWorkflow: a reasoning plane on the edge node, grounded on the edge's own rows, keeps working while the link is severed | [ADR-0031 §decision](../../../decisions/ADR-0031-converged-edge-node-reasoning-plane-seams.md) | Accepted | Not stated |
+| EdgeReasoning: a reasoning plane on the edge node, grounded on the edge's own rows, keeps working while the link is severed | [ADR-0031 §decision](../../../decisions/ADR-0031-converged-edge-node-reasoning-plane-seams.md) | Accepted | Not stated |
+| EdgeWorkflow: tasks and approvals run by a workflow service at the edge itself | ADR-0058's first-increment spec (PR #16, not merged); iagent's ADR-0068, the edge tier (draft, proposed); open row [SV-10](../../../decisions/FOLLOW-UPS.md) | Decision pending | Not stated |
 | TacticalSustainmentCorrelation | [ADR-0039 §1](../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Status line |
 | ConfigurationStatusAccounting | [ADR-0009 §decision](../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
 | ArrivalDeclaration | [ADR-0050 §1](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
@@ -41,3 +42,11 @@ A capability here is something a deployment can be phased on and shown working. 
 | DisagreementDetection | [ADR-0053 §1](../../../decisions/ADR-0053-logistics-cyber-detection-as-surfaced-disagreement.md) | Accepted | Status line |
 
 ADR-0042 is Proposed where ADR-0040 is Accepted. The row carries the stronger mark because ADR-0040 is the decision and ADR-0042 extends it.
+
+No decision record decides EdgeWorkflow yet, so its row cites what the decision waits on, and its capability page says "decision pending". EdgeReasoning is what ADR-0031 decides.
+
+## Severed behaviour
+
+A framework for disconnected, intermittent and limited links should say how every capability behaves on a severed tier. This table is generated from the record's `severed` entries. A capability whose decision record states it cites that section. One whose record does not reads "not stated", and cites its open row in the SV register of `decisions/FOLLOW-UPS.md`.
+
+<!-- generated: severed-behaviour -->

@@ -23,6 +23,11 @@
 #                 page says so.
 #   derived_from  the decisions the description is written from, when they are
 #                 not exactly `adrs` (default: `adrs`)
+#   severed       where a decision record states how the capability behaves on a
+#                 severed tier, as `ADR-NNNN §LABEL`, or `not stated`. A capability
+#                 that is `not stated` cites its open SV- row in `rows`.
+#   pending       the sources a decision waits on, when no decision record decides
+#                 the capability yet. It makes the phase proposed.
 #
 # Every decision is cited to its deciding section, as `ADR-NNNN §LABEL`. LABEL is
 # the section's leading number (§6, §2a) or, for an unnumbered heading, its slug
@@ -69,6 +74,8 @@ capabilities:
     adrs: [ADR-0038 §1, ADR-0010 §decision]
     built: [{template: edge.yaml, contains: sensor-ingest}]
     measured: [{entry: preflight-51, line: "| 1 | advancing | exit 0 |"}]
+    severed: not stated
+    rows: [SV-1]
   DataManipulation:
     description: >-
       Raw readings from different feeds are turned into comparable values: each source's vocabulary is mapped
@@ -78,6 +85,8 @@ capabilities:
     adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: tier-projector}]
     measured: [{entry: preflight-51, line: "| 3 | tier feed | clean"}]
+    severed: not stated
+    rows: [SV-2]
   StateDetection:
     description: >-
       Each asset's readings are checked for parts in a non-nominal state, each named as a constraining factor,
@@ -87,6 +96,8 @@ capabilities:
     adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: cm-service}]
     measured: [{entry: preflight-51, line: "| 2 | derive stage | **COMPLETING**"}]
+    severed: not stated
+    rows: [SV-3]
   HealthAssessment:
     description: >-
       Individual findings are rolled up into an assessed condition for an asset or a group, so an operator
@@ -94,6 +105,8 @@ capabilities:
       record does not say how it behaves on a severed tier.
     adrs: [ADR-0038 §1]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
+    severed: not stated
+    rows: [SV-4]
   PrognosticAssessment:
     description: >-
       From an asset's use history, a derivation stage estimates how much working life is left, for example the
@@ -102,7 +115,8 @@ capabilities:
       decision records do not say how it behaves on a severed tier.
     adrs: [ADR-0038 §3, ADR-0020 §decision]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
-    rows: [AE-4]
+    rows: [AE-4, SV-5]
+    severed: not stated
   AdvisoryGeneration:
     description: >-
       A recommended action is attached to an assessed condition, with the reasoning behind it, so an operator
@@ -110,22 +124,29 @@ capabilities:
       record, which decides. Its decision record does not say how it behaves on a severed tier.
     adrs: [ADR-0038 §3]
     built: [{template: tier-node.yaml, contains: logistics-fusion}]
-    rows: [AE-2]
+    rows: [AE-2, SV-6]
+    severed: not stated
   InformationPresentation:
     description: >-
-      Operators see the common operating picture on screen, and what each claim on it may say is governed by
-      declared claim classes. The decision record cited here gives it one line, and does not say what a
-      severed tier shows.
-    adrs: [ADR-0038 §1]
+      Operators see the picture on a screen served by their own tier, so it still loads while that tier is
+      severed from the tiers above it; a screen loaded from a parent tier would not. While severed, the
+      indicator reports the tier's own uplink and how much it has buffered, rather than a parent's view of
+      it. Each claim on the screen is held to a declared claim class that limits what it may say.
+    derived_from: [ADR-0032 §e-frontend-serving--the-edge-serves-its-own-ui,
+      ADR-0032 §f-severance-ux-inversion--the-edge-reports-its-own-uplink, ADR-0035 §the-six-claim-classes]
+    adrs: [ADR-0032 §decision, ADR-0035 §decision]
     built: [{template: tier-node.yaml, contains: tier-electric}]
     measured: [{entry: preflight-51, line: "| 4 | shape sizes | **TOTAL 85 KiB**"}]
+    severed: ADR-0032 §decision
   DeclaredAnalyticUnits:
     description: >-
       A deployment adds an analysis to a tier by declaring it in a short file, instead of writing framework
       code. One runner loads the units the deployment enables, and each output names the unit, version,
-      parameters and tier that produced it. Its decision record does not say how units behave on a severed
-      tier.
+      parameters and tier that produced it. Everything a tier runs is pinned in its image and its bundle, and
+      the decision record says that is what lets a severed tier start.
+    derived_from: [ADR-0057 §1, ADR-0057 §7]
     adrs: [ADR-0057 §1]
+    severed: ADR-0057 §7
   HierarchicalAggregation:
     description: >-
       The framework is a tree of tiers, edge to regional to headquarters: each tier rolls up what the tiers
@@ -135,6 +156,8 @@ capabilities:
     adrs: [ADR-0022 §decision]
     built: [{template: regional.yaml, contains: regions}]
     measured: [{entry: severance-51, line: "| 1.4 | rollup **4 partials / 15 assets**"}]
+    severed: not stated
+    rows: [SV-7]
   TierLocalDecision:
     description: >-
       Each tier decides for itself who may see which records, against its own copy of the release policy. A
@@ -143,6 +166,7 @@ capabilities:
     increment: "**PDP per tier**"
     adrs: [ADR-0029 §6]
     built: [{template: tier-node.yaml, contains: tier-topaz}]
+    severed: ADR-0029 §6
   TierLocalSignIn:
     description: >-
       Each tier runs its own sign-in service, with its own signing keys, so people can sign in at a tier that
@@ -150,6 +174,7 @@ capabilities:
     increment: "**Identity per tier**"
     adrs: [ADR-0045 §1]
     built: [{template: tier-identity.yaml, contains: identity.replica}]
+    severed: ADR-0045 §6
   TierLocalMaintenanceChain:
     description: >-
       A maintenance record is assembled, checked at one gate and forwarded to its destination, with
@@ -159,16 +184,20 @@ capabilities:
     derived_from: [ADR-0046 §2, ADR-0046 §noted-for-later-not-built]
     increment: "**Maintenance chain per tier**"
     adrs: [ADR-0046 §2]
+    severed: not stated
+    rows: [SV-8]
   TierLocalWorkflow:
     description: >-
       A tier runs its own operational procedures, such as inspection or sign-off, defined by the people who
       own each procedure rather than by data engineers, and fed by the detections beneath them. The roadmap's
       increment puts the workflow engine at every tier so that a severed tier keeps its timers and state; the
-      decision record names the procedure layer as a future arc.
+      decision record names the procedure layer as a future arc and does not say how it behaves severed.
     increment: "**Workflow per tier**"
     derived_from: [ADR-0034 §the-two-planes--substrate-and-process]
     adrs: [ADR-0034 §decision]
     built: [{template: tier-node.yaml, contains: tier-restate}]
+    severed: not stated
+    rows: [SV-9]
   OneSession:
     description: >-
       A person who moves between tiers is recognised without signing in again, because each tier trusts the
@@ -178,7 +207,8 @@ capabilities:
     derived_from: [ADR-0045 §6, ADR-0045 §still-open-and-why]
     increment: "**One session**"
     still_open: [{adr: ADR-0045 §still-open-and-why, says: "Federation across tiers, partly closed."}]
-  EdgeWorkflow:
+    severed: ADR-0045 §6
+  EdgeReasoning:
     description: >-
       An edge node can run a reasoning plane beside its data, answering an operator's questions from the
       site's own rows and pointing back to the row behind each answer. It shares the edge's data, access rules
@@ -186,6 +216,19 @@ capabilities:
       working when the link to higher tiers is cut.
     derived_from: [ADR-0031 §the-converged-edge-node-rests-on-three-shared-elements]
     adrs: [ADR-0031 §decision]
+    severed: ADR-0031 §decision
+  EdgeWorkflow:
+    description: >-
+      An operator at the edge works through tasks and approvals, such as approving a maintenance action, with
+      a workflow service at that edge rather than one reached across the link. No decision record decides this
+      yet. ADR-0058's first-increment spec (PR #16, not merged) proposes that local workflows run severed and
+      that a cross-tier workflow waits at the first step another tier owns; iagent's ADR-0068, its record for
+      the edge tier, is a proposed draft.
+    pending:
+      - "ADR-0058's first-increment spec, PR #16, not merged: its section 6 proposes the workflow scope"
+      - "iagent's ADR-0068, the edge tier: a draft, proposed, not yet accepted"
+    severed: not stated
+    rows: [SV-10]
   TacticalSustainmentCorrelation:
     description: >-
       An operator sees whether a unit can sustain an operation by setting what the tactical systems know
@@ -193,6 +236,8 @@ capabilities:
       systems of record transact, and each side keeps its own source and time rather than being fused into one
       number. Its decision record does not say how it behaves on a severed tier.
     adrs: [ADR-0039 §1, ADR-0039 §2]
+    severed: not stated
+    rows: [SV-11]
   ConfigurationStatusAccounting:
     description: >-
       A maintainer records the hardware and modifications installed on each asset and sees how they differ
@@ -201,6 +246,8 @@ capabilities:
     adrs: [ADR-0009 §decision]
     built: [{template: tier-node.yaml, contains: cm-service}]
     measured: [{entry: cm-reseed, line: "the first roll on the new image): through the Restate"}]
+    severed: not stated
+    rows: [SV-12]
   ArrivalDeclaration:
     description: >-
       An operator at a site sees what the tier hears that nobody has vouched for, and what was expected but
@@ -209,6 +256,8 @@ capabilities:
       decision record does not say how it behaves on a severed tier.
     adrs: [ADR-0050 §1]
     built: [{template: hub.yaml, contains: declaration-intake}]
+    severed: not stated
+    rows: [SV-13]
   LabelledReadEnforcement:
     description: >-
       Who may read each record is decided by checking the record's release label against what the reader is
@@ -219,6 +268,7 @@ capabilities:
     measured:
       - {entry: preflight-51, line: "| 5 | completeness | **ALL 4 STORES PASS**"}
       - {entry: releasability-0919, line: "* **Gate passes on all four stores**"}
+    severed: ADR-0029 §6
   GatedRelease:
     description: >-
       Every record leaving for an outside system is checked against the same release rule used for people
@@ -227,6 +277,8 @@ capabilities:
       checker. Its decision record does not say how the gate behaves on a severed tier.
     adrs: [ADR-0043 §1, ADR-0043 §7]
     built: [{template: egress.yaml, contains: egress-gate}]
+    severed: not stated
+    rows: [SV-14]
   GatedIntake:
     description: >-
       An answer from an outside system is taken in only if it is of a declared kind, carries the same label as
@@ -235,6 +287,7 @@ capabilities:
       says that until it is, a severed tier does not hold its own decisions.
     adrs: [ADR-0046 §5]
     built: [{template: egress.yaml, contains: intake}]
+    severed: ADR-0046 §5
   DeclaredLabelDimensions:
     description: >-
       A deployment declares what its release labels are made of, such as nations or caveats, each with a
@@ -242,6 +295,7 @@ capabilities:
       missing a declared dimension, or carrying an undeclared one, is served to nobody. Two tiers that stamp
       labels while severed agree on the same key without talking to each other.
     adrs: [ADR-0055 §1, ADR-0055 §2]
+    severed: ADR-0055 §2
   OneIdentityPerThing:
     description: >-
       Every thing the framework tracks has one lasting identity, and every other identifier for it, such as a
@@ -249,6 +303,7 @@ capabilities:
       person's declaration, never by observation, and a severed tier holding a declaration can still mint one;
       two identities are merged only when someone declares them the same.
     adrs: [ADR-0056 §1, ADR-0056 §4]
+    severed: ADR-0056 §1
   DeclaredCards:
     description: >-
       Each card on an operator screen is a declaration that names the reads it draws from, with one grammar
@@ -256,6 +311,8 @@ capabilities:
       may not see shows as withheld, never as an empty value that could be read as zero. Its decision record
       does not say how cards behave on a severed tier.
     adrs: [ADR-0058 §1, ADR-0058 §2a]
+    severed: not stated
+    rows: [SV-15]
   SustainmentFeasibility:
     description: >-
       Given a proposed operation described as demand (units, platforms, duration, tempo, locations), it
@@ -263,7 +320,8 @@ capabilities:
       anticipated: the decision record names the missing demand model, deliberately does not design it, and
       says nothing about a severed tier.
     derived_from: [ADR-0038 §4]
-    rows: [AE-3, AE-5, GD-10]
+    rows: [AE-3, AE-5, GD-10, SV-16]
+    severed: not stated
   AdvisoryProvenance:
     description: >-
       When the system recommends an action, this records which model, configuration and inputs produced it, at
@@ -271,7 +329,8 @@ capabilities:
       The decision record fixes this shape before the first advisory exists, and says nothing about a severed
       tier.
     derived_from: [ADR-0038 §5]
-    rows: [AE-2]
+    rows: [AE-2, SV-17]
+    severed: not stated
   OfflineIntentReconciliation:
     description: >-
       A maintainer at a cut-off site records what they did, for example drawing down stock, as an action kept
@@ -280,6 +339,7 @@ capabilities:
       person; an unconfirmed action is never aged out.
     derived_from: [ADR-0040 §4, ADR-0042 §1, ADR-0042 §2]
     adrs: [ADR-0040 §4, ADR-0042 §1]
+    severed: ADR-0040 §7
   FailureReporting:
     description: >-
       When a failure episode closes, its record is kept with the configuration, condition and usage the asset
@@ -288,7 +348,8 @@ capabilities:
       it. Its decision record does not say how it behaves on a severed tier.
     derived_from: [ADR-0051 §1, ADR-0051 §2, ADR-0051 §6]
     adrs: [ADR-0051 §1, ADR-0051 §6]
-    rows: [GD-15]
+    rows: [GD-15, SV-18]
+    severed: not stated
   SafetyInterlockRefusal:
     description: >-
       A request to release maintenance work is refused when the asset's stored record shows a declared
@@ -296,7 +357,8 @@ capabilities:
       unknown state refuses too, and the interlock is a procedural check on a record, not a hazard control.
       Its decision record does not say how it behaves on a severed tier.
     adrs: [ADR-0052 §2, ADR-0052 §6]
-    rows: [GD-16]
+    rows: [GD-16, SV-19]
+    severed: not stated
   DisagreementDetection:
     description: >-
       An operator sees where two records that should agree do not, such as what an asset reports about its
@@ -304,7 +366,8 @@ capabilities:
       decides which side is right and never enforces: it only raises an indicator. Its decision record does
       not say how it behaves on a severed tier.
     adrs: [ADR-0053 §1, ADR-0053 §4]
-    rows: [GD-17]
+    rows: [GD-17, SV-20]
+    severed: not stated
 
 # What the chart renders, and what each item serves. tools/capability_floor.py
 # lists the render and compares: an item nothing claims fails, a claim the render
