@@ -13,6 +13,7 @@ Usage:
         --chart PATH --values FILE [--values FILE ...] --release NAME
         [--readiness FILE] [--record FILE] [--slots FILE]
         [--date YYYY-MM-DD] [--mmdc PATH] [--puppeteer-config FILE]
+        [--relabel FILE ...]
 
 --chart, --values and --release are required: there is no partial export.
 Mermaid diagrams are rendered to inline SVG at build time by mermaid-cli
@@ -62,6 +63,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import adr_sections  # noqa: E402
 import capability_phases  # noqa: E402
 import check_views  # noqa: E402
+import relabel  # noqa: E402
 import render_profile as rp  # noqa: E402
 from capability_phases import PHASES, CheckError  # noqa: E402
 from data_exchange import InputError  # noqa: E402
@@ -334,8 +336,10 @@ ROADMAP_PAGE = "decision-roadmap"
 class Decisions:
     """The decision records the export holds a page for: every decisions/ADR-*.md, then the roadmap note."""
 
-    def __init__(self, directory: Path):
+    def __init__(self, directory: Path, rules=()):
         self.dir = Path(directory)
+        self.rules = list(rules)
+        self.replaced = 0
         self.files: dict[str, Path] = {}
         for f in sorted(self.dir.glob("ADR-*.md")):
             m = re.match(r"ADR-\d{4}", f.name)
@@ -349,9 +353,32 @@ class Decisions:
             raise InputError(f"decisions/{capability_phases.ROADMAP} does not exist")
         self.files[ROADMAP_KEY] = road
         self.resolved = {k: f.resolve() for k, f in self.files.items()}
-        self.texts = {k: f.read_text(encoding="utf-8").replace("\r\n", "\n") for k, f in self.files.items()}
+        self.raw = {k: f.read_text(encoding="utf-8").replace("\r\n", "\n") for k, f in self.files.items()}
+        self.texts = {}
+        for k, t in self.raw.items():
+            self.texts[k], n = relabel.apply(t, self.rules)
+            self.replaced += n
         self.heads = {k: adr_sections.headings(t) for k, t in self.texts.items()}
 
+    def relabelled(self, text: str, count: bool = False) -> str:
+        """Text read from decisions/, with the relabel rules applied; `count` adds the replacements to the total."""
+        text, n = relabel.apply(text, self.rules)
+        if count:
+            self.replaced += n
+        return text
+
+    def pick(self, key: str, label: str) -> "adr_sections.Heading":
+        """The heading LABEL names in the record as written, as it reads after relabelling."""
+        try:
+            raw = adr_sections.resolve(self.raw[key], label)
+        except LookupError:
+            return adr_sections.resolve(self.texts[key], label)  # a label already relabelled
+        return self.heads[key][adr_sections.headings(self.raw[key]).index(raw)]
+
+    def shown(self, adr: str, label: str) -> str:
+        """The label as the export prints it: a number as it is, a slug as it reads after relabelling."""
+        h = self.pick(adr, label)
+        return label if label == h.number else h.slug
     def keys(self) -> list[str]:
         return list(self.files)
 
@@ -372,10 +399,10 @@ class Decisions:
         """The anchor id `ADR-NNNN §LABEL` names. LookupError when the record or the section is not there."""
         if adr not in self.files:
             raise LookupError(f"{adr} is not a decision record")
-        return self.anchor(adr, adr_sections.resolve(self.texts[adr], label))
+        return self.anchor(adr, self.pick(adr, label))
 
     def heading(self, adr: str, label: str) -> "adr_sections.Heading":
-        return adr_sections.resolve(self.texts[adr], label)
+        return self.pick(adr, label)
 
     def target(self, key: str, fragment: str) -> str:
         """A link's anchor: the heading its fragment names, else the page. The roadmap note is the page."""
@@ -444,7 +471,7 @@ class Page:
                 anchor = self.dec.cite(m.group(1), m.group(2))
             except LookupError as e:
                 raise CheckError(f"{self.vid}: {m.group(0)}: {e.args[0]}\n") from None
-            out.append(f'<a href="#{esc(anchor)}">{esc(m.group(0))}</a>')
+            out.append(f'<a href="#{esc(anchor)}">{esc(m.group(1))} §{esc(self.dec.shown(m.group(1), m.group(2)))}</a>')
             at = m.end()
         out.append(esc(text[at:]))
         return "".join(out)
@@ -863,6 +890,7 @@ thead th{background:var(--head);color:#fff}
 tbody th{background:var(--soft)}
 tbody tr:nth-child(even)>*{background:var(--zebra)}
 tr.lane-start>*{border-top:2px solid var(--head)}
+.pending{display:inline-block;margin-left:8px;padding:0 8px;border:1px dashed currentColor;border-radius:10px;font-size:13px;font-weight:600}
 .badge{display:inline-block;white-space:nowrap;padding:0 8px;border-radius:10px;font-size:13px;font-weight:600}
 .phase-measured{background:var(--m-bg);color:var(--m-fg)}
 .phase-built-unmeasured{background:var(--b-bg);color:var(--b-fg)}
@@ -893,7 +921,7 @@ html[data-profile="dodaf202"] .profile-only[data-for="dodaf202"],html[data-profi
 .provenance p{margin:2px 0}
 .provenance .note{display:block}
 nav.views ul,nav.capabilities ul,nav.decisions ul{columns:2 280px;padding-left:1.2em}
-.stamp,.derived,.cap-group,.cap-increment{color:var(--muted);margin:4px 0}
+.stamp,.derived,.cap-group,.cap-increment,.relabel{color:var(--muted);margin:4px 0}
 .stamp{font-size:13px}
 @page{size:landscape}
 @media (max-width:600px){h1{font-size:1.3rem}.bar{gap:6px 8px}}
@@ -1111,16 +1139,17 @@ def capability_pages(a: argparse.Namespace, uaf: "rp.Renderer", views: dict, nam
         raise InputError(f"cannot read the readiness doc {rpath}: {e.strerror or e}; pass --readiness")
     evidence = capability_phases.evidence_cells(record, readiness)
     statuses = capability_phases.statuses_of(record, ddir)
-    road_rows = capability_phases.roadmap_rows(capability_phases.read_text(ddir / capability_phases.ROADMAP) or "")
+    road_rows = capability_phases.roadmap_rows(dec.relabelled(capability_phases.read_text(ddir / capability_phases.ROADMAP) or ""))
     register: dict[str, tuple[str, str]] = {}
     for f in (capability_phases.FOLLOW_UPS, capability_phases.DEBT):
-        for k, v in capability_phases.register_subjects(capability_phases.read_text(ddir / f) or "").items():
+        text = dec.relabelled(capability_phases.read_text(ddir / f) or "", count=True)
+        for k, v in capability_phases.register_subjects(text).items():
             register.setdefault(k, v)
     sources = {vid: strip_comments((ROOT / e["file"]).read_text(encoding="utf-8")) for vid, e in views.items()}
 
     def link(name: str, adr: str, label: str) -> str:
         try:
-            return f'<a href="#{esc(dec.cite(adr, label))}">{esc(adr)} §{esc(label)}</a>'
+            return f'<a href="#{esc(dec.cite(adr, label))}">{esc(adr)} §{esc(dec.shown(adr, label))}</a>'
         except LookupError as e:
             raise CheckError(f"{name}: {adr} §{label}: {e.args[0]}\n") from None
 
@@ -1137,14 +1166,19 @@ def capability_pages(a: argparse.Namespace, uaf: "rp.Renderer", views: dict, nam
             head += f'<p class="cap-increment">Increment: {esc(label)}</p>'
         source = capability_phases.derived_citations(cap) or capability_phases.record_citations(cap)
         written = ", ".join(link(name, adr, lab) for adr, lab in source)
+        if source:
+            line = f"Written from {written}. The decision records are the authority; this description is not their text."
+        else:
+            line = ("Written from the pending sources below. No decision record decides it yet; "
+                    "this description is not their text.")
         what = (f'<h2>What it is</h2><p data-what>{esc(" ".join(str(cap.get("description") or "").split()))}</p>'
-                f'<p class="derived" data-derived>Written from {written}. The decision records are the authority; '
-                f'this description is not their text.</p>')
+                f'<p class="derived" data-derived>{line}</p>')
         ev = evidence.get(name)
         ev_html = ("<ul>" + "".join(f"<li>{esc(x)}</li>" for x in ev) + "</ul>" if ev else
                    "<p>Not measured: the readiness doc has no entry for this capability.</p>")
         built = list(dict.fromkeys(f"templates/{b['template']}" for b in cap.get("built") or []))
-        evid = (f'<h2>Phase</h2><p><span class="badge phase-{phase.replace(" ", "-")}">{esc(phase)}</span></p>'
+        pend = ' <span class="pending" data-pending>decision pending</span>' if cap.get("pending") else ""
+        evid = (f'<h2>Phase</h2><p><span class="badge phase-{phase.replace(" ", "-")}">{esc(phase)}</span>{pend}</p>'
                 f'<h2>Evidence</h2>{ev_html}<p>Built: {esc(", ".join(built) or "-")}</p>')
         items = []
         for adr, lab in capability_phases.record_citations(cap):
@@ -1153,7 +1187,19 @@ def capability_pages(a: argparse.Namespace, uaf: "rp.Renderer", views: dict, nam
         for s in capability_phases.still_open(cap):
             adr, lab = adr_sections.parse_citation(s["adr"])
             items.append(f"<li>{link(name, adr, lab)} names it still open: {esc(str(s['says']))}</li>")
+        for text in cap.get("pending") or []:
+            items.append(f"<li>Decision pending: {esc(str(text))}</li>")
         decs = f'<h2>Decisions</h2><ul>{"".join(items) or "<li>-</li>"}</ul>'
+        sev = cap.get("severed")
+        if sev and sev != capability_phases.NOT_STATED:
+            sadr, slab = adr_sections.parse_citation(sev)
+            sev_html = (f'<p data-severed>Stated in {link(name, sadr, slab)} '
+                        f'{esc(dec.heading(sadr, slab).text)}.</p>')
+        else:
+            sv = [r for r in cap.get("rows") or [] if str(r).startswith("SV-")]
+            subj = register.get(sv[0], ("", ""))[0] if sv else ""
+            sev_html = ('<p data-severed>Not stated by a decision record. Open row: '
+                        f'{esc(sv[0]) if sv else "-"}{f" ({esc(subj)})" if subj else ""}.</p>')
         pat = re.compile(rf"\b{re.escape(name)}\b")
         cited = sorted({v for v, t in sources.items() if pat.search(t)} | {"St-Rm-P"} & set(views))
         cites = "".join(f'<li><a href="#view-{esc(v)}">{esc(names[v])} ({esc(v)})</a></li>' for v in cited)
@@ -1163,7 +1209,7 @@ def capability_pages(a: argparse.Namespace, uaf: "rp.Renderer", views: dict, nam
             rows.append(f"<li>{esc(rid)}: {esc(subject)} ({esc(status)})</li>" if subject else f"<li>{esc(rid)}</li>")
         sections.append(
             f'<section id="cap-{esc(name)}" class="page capability" data-capability="{esc(name)}">{head}'
-            f'<p><a href="#front">Front page</a></p>{what}{evid}{decs}'
+            f'<p><a href="#front">Front page</a></p>{what}{evid}<h2>Severed behaviour</h2>{sev_html}{decs}'
             f'<h2>Cited by</h2><ul>{cites}</ul>'
             f'<h2>Open rows</h2>{"<ul>" + "".join(rows) + "</ul>" if rows else "<p>-</p>"}{prov}</section>')
         nav.append(f'<li><a href="#cap-{esc(name)}">{esc(name)}</a></li>')
@@ -1203,7 +1249,8 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
     pre = f"{system}: " if system else ""
     rows = appendix_ids(ROOT)
     prov = provenance(a, date)
-    dec = Decisions(REPO / "decisions")
+    rules = relabel.load(getattr(a, "relabel", None) or [])
+    dec = Decisions(REPO / "decisions", rules)
 
     dx_text, dx_cells = dx_variants({p: r.dx_content() for p, r in renderers.items()})
 
@@ -1259,6 +1306,9 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
     dec_sections, dec_nav = decision_pages(views, dec, prov)
     sections += cap_sections + dec_sections
 
+    shown = (f"Decision records are shown with {dec.replaced} names replaced by neutral labels at export "
+             f"({len(rules)} rules). The records in the repository are unchanged." if rules
+             else "Decision records are shown verbatim.")
     grids = [grid_uaf(rows, views, names, uaf.uaf_label),
              grid_selected(renderers["dodaf202"], rows, names),
              grid_selected(renderers["naf4"], rows, names)]
@@ -1268,7 +1318,7 @@ def build(a: argparse.Namespace, diagram: Diagram, date: str) -> str:
         f'<button type="button" data-profile-btn="{p}" aria-pressed="{"true" if p == "uaf" else "false"}">'
         f"{esc(renderers[p].label)}</button>" for p in PROFILE_NAMES)
     front = (f'<section id="front" class="page" data-front><h1>{esc(pre)}architecture views</h1>'
-             f'{"".join(grids)}<nav class="views"><h2>Views</h2><ul>{"".join(nav)}</ul></nav>'
+             f'{"".join(grids)}<p class="relabel" data-relabel>{esc(shown)}</p><nav class="views"><h2>Views</h2><ul>{"".join(nav)}</ul></nav>'
              f'<nav class="capabilities"><h2>Capabilities</h2><ul>{"".join(cap_nav)}</ul></nav>'
              f'<nav class="decisions"><h2>Decision records</h2><ul>{"".join(dec_nav)}</ul></nav>'
              f'<nav class="declarations"><h2>For a deployment</h2><ul><li><a href="#declarations">'
@@ -1293,6 +1343,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--readiness", help="the readiness doc (default: <chart>/../scripts/RECORDING-READINESS.md)")
     ap.add_argument("--record", default=str(ROOT / "capability-record.yaml"))
     ap.add_argument("--slots")
+    ap.add_argument("--relabel", action="append", default=[],
+                    help="a list of PATTERN<TAB>REPLACEMENT lines applied to the decision records at export")
     ap.add_argument("--date", help="YYYY-MM-DD (default: today, UTC)")
     ap.add_argument("--mmdc", help="the mermaid-cli binary (default: docs/arch/tools/export/node_modules/.bin/mmdc)")
     ap.add_argument("--puppeteer-config", help="a puppeteer config file for mermaid-cli")

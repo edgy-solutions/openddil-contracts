@@ -35,10 +35,10 @@ mkdirSync(shots, { recursive: true });
 const PROFILES = ["uaf", "dodaf202", "naf4"];
 // Hard-coded counts, and how they are made up. Change them with the thing they count.
 //   29 views, plus the front page and the declarations page                  = 31
-//   30 capability pages: one per capability in model/openddil.sysml CapabilityTaxonomy
+//   31 capability pages: one per capability in model/openddil.sysml CapabilityTaxonomy
 //   50 decision pages: one per decisions/ADR-*.md (49) plus the roadmap note (1)
 const BASE_PAGES = 31;
-const CAPABILITY_PAGES = 30;
+const CAPABILITY_PAGES = 31;
 const DECISION_PAGES = 50;
 const TOTAL_PAGES = BASE_PAGES + CAPABILITY_PAGES + DECISION_PAGES;
 let failed = 0;
@@ -464,7 +464,7 @@ try {
       names: bs.every((b) => names.includes(b.textContent)),
       minC: Math.min(...cs.map((c) => contrast(c.color, c.backgroundColor))) };
   `);
-  check(badges.n === 35 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 35 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
+  check(badges.n === 36 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 36 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
 
   const head = await inPage(`
     const hs = [...document.querySelectorAll("#view-Op-Tx thead th")].map((h) => getComputedStyle(h));

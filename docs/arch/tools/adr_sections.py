@@ -89,6 +89,8 @@ def anchor_id(adr_id: str, heading: Heading) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1:
         print("usage: adr_sections.py ADR-NNNN", file=sys.stderr)

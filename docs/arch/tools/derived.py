@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""derived.py - the four tables a view takes from a declared artefact instead of writing it.
+"""derived.py - the five tables a view takes from a declared artefact instead of writing it.
 
 Each marker below belongs in one view and becomes a markdown table when the
 view is rendered (render_profile.Renderer.view_text). check_views.py rule
@@ -16,6 +16,10 @@ on a table that cannot be built.
   <!-- generated: adr-traceability -->        Am-Tr  decisions/ADR-*.md: each
       record with its status and the views that cite it, the accepted or
       proposed records no view cites first, joined to adr-exemptions.yaml
+  <!-- generated: severed-behaviour -->        St-Tx  each capability in model
+      order, with the decision record that says how it behaves when its link
+      is severed, or `not stated` and its SV- row; the `severed` key of
+      capability-record.yaml
 
 A depends-on cell has to name one increment, by its number or its name, and a
 fold-in has to name an increment and cite an ADR that some capability in the
@@ -41,7 +45,9 @@ DEPENDENCIES_MARKER = "<!-- generated: capability-dependencies -->"
 TAXONOMY_MARKER = "<!-- generated: resource-taxonomy -->"
 DICTIONARY_MARKER = "<!-- generated: ontology-dictionary -->"
 TRACE_MARKER = "<!-- generated: adr-traceability -->"
-HOMES = {DEPENDENCIES_MARKER: "St-Cn", TAXONOMY_MARKER: "Rs-Tx", DICTIONARY_MARKER: "Am-If", TRACE_MARKER: "Am-Tr"}
+SEVERED_MARKER = "<!-- generated: severed-behaviour -->"
+HOMES = {DEPENDENCIES_MARKER: "St-Cn", TAXONOMY_MARKER: "Rs-Tx", DICTIONARY_MARKER: "Am-If", TRACE_MARKER: "Am-Tr",
+         SEVERED_MARKER: "St-Tx"}
 
 ROADMAP_HEADER = ["#", "increment", "what isolates", "home", "depends on"]
 FOLD_HEADER = ["row", "slice", "folds into", "why it costs the increment nothing"]
@@ -150,6 +156,32 @@ def dependencies(record: dict, roadmap: str) -> str:
     if fails:
         raise CheckError("".join(f + "\n" for f in fails))
     return "\n".join(out)
+
+
+# --- St-Tx ---------------------------------------------------------------------
+
+def severed(record: dict, sysml: str) -> str:
+    """Each capability, in model order, with where its severed behaviour is stated, or its SV- row."""
+    caps = {k: (v or {}) for k, v in record["capabilities"].items()}
+    rows, stated, fails = [], 0, []
+    for name in capability_phases.model_capabilities(sysml):
+        cap = caps.get(name)
+        if cap is None or not cap.get("severed"):
+            fails.append(f"derived: {name} has no severed entry in the record")
+            continue
+        value = str(cap["severed"])
+        sv = [r for r in cap.get("rows") or [] if str(r).startswith("SV-")]
+        if value == capability_phases.NOT_STATED:
+            says = "not stated"
+        else:
+            says = f"stated in {value}"
+            stated += 1
+        rows.append(f"| {name} | {says} | {', '.join(sv) or '-'} |")
+    if fails:
+        raise CheckError("".join(f + "\n" for f in fails))
+    head = (f"Severed behaviour: {stated} of {len(rows)} capabilities have it stated in a decision "
+            f"record; {len(rows) - stated} do not.")
+    return "\n".join([head, "", "| Capability | Severed behaviour | Row |", "|---|---|---|", *rows])
 
 
 # --- Rs-Tx ---------------------------------------------------------------------
@@ -368,6 +400,8 @@ def build(marker: str, root: Path, record_path: Path, sysml: str, masked: str) -
         except OSError as e:
             raise InputError(f"cannot read the roadmap note: {e.strerror or e}")
         return dependencies(record, roadmap)
+    if marker == SEVERED_MARKER:
+        return severed(capability_phases.load_record(record_path), sysml)
     if marker == TAXONOMY_MARKER:
         return taxonomy(sysml, masked)
     if marker == DICTIONARY_MARKER:

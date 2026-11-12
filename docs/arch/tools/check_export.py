@@ -3,7 +3,7 @@
 
 Usage:
     python docs/arch/tools/check_export.py --export FILE [--root docs/arch]
-        --barred FILE [--barred FILE ...]
+        --barred FILE [--barred FILE ...] [--relabel FILE ...]
 
 Reads the file written by render_html.py and docs/arch (through
 check_views.Tree) and writes one `FAIL: <check>: <what>` line per finding on
@@ -22,6 +22,10 @@ diagrams (no Mermaid source left; one SVG per Mermaid fence in the views),
 exceptions (at least one details.exceptions), declarations (one declarations
 page, listing the slots of INVENTORY.md's slot table, in its order).
 
+relabel (given --relabel: no pattern of the relabel lists matches the export or
+its unescaped text, and the front page has its data-relabel line; a finding names
+the rule's number and line and never the pattern or the match).
+
 Exit codes: 0 ok, 1 a check failed, 2 bad input. Stdlib and PyYAML only.
 """
 from __future__ import annotations
@@ -35,6 +39,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import capability_phases  # noqa: E402
 import check_views  # noqa: E402
+from data_exchange import InputError as DataInputError  # noqa: E402
+import relabel  # noqa: E402
 import render_profile as rp  # noqa: E402
 from capability_phases import CheckError, load_barred, scan_barred  # noqa: E402
 
@@ -91,6 +97,21 @@ def check_barred(raw: str, barred) -> list[str]:
     spaced = re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]*>", " ", raw)))
     fails = scan_barred({"the export": [raw, text, spaced, re.sub(r"\s+", "", text)]}, barred)
     return [f.replace("quotes: ", "barred: ", 1) for f in fails]
+
+
+def check_relabel(raw: str, rules) -> list[str]:
+    """No relabel pattern survives in the export, and the front page says the pass ran."""
+    fails = []
+    text = html.unescape(raw)
+    for i, rule in enumerate(rules):
+        hits = max(sum(h[2] for h in relabel.survivors(raw, [rule])),
+                   sum(h[2] for h in relabel.survivors(text, [rule])))
+        if hits:
+            fails.append(f"relabel: rule {i + 1} (line {rule.line} of {rule.file}) survives {hits} time(s)")
+    front = [body for pid, body in PAGE_RE.findall(raw) if pid == "front"]
+    if not front or "data-relabel" not in front[0]:
+        fails.append("relabel: the front page has no data-relabel line")
+    return fails
 
 
 def check_provenance(raw: str) -> list[str]:
@@ -230,6 +251,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--export", required=True)
     ap.add_argument("--root", default=str(rp.ROOT))
     ap.add_argument("--barred", action="append", default=[], required=True)
+    ap.add_argument("--relabel", action="append", default=[], help="a relabel list the export was rendered with")
     a = ap.parse_args(argv)
     try:
         try:
@@ -242,13 +264,15 @@ def main(argv: list[str] | None = None) -> int:
             barred = load_barred(a.barred)
         except CheckError as e:
             raise InputError(e.args[0])
-    except (InputError, check_views.InputError, KeyError) as e:
+        rules = relabel.load(a.relabel) if a.relabel else []
+    except (InputError, DataInputError, check_views.InputError, KeyError) as e:
         print(f"error: {e}", file=sys.stderr)
         return EXIT_INPUT
     fails = (check_views_equal(raw, tree) + check_barred(raw, barred) + check_provenance(raw)
              + check_network(raw) + check_size(len(data)) + check_links(raw)
              + check_diagrams(raw, tree) + check_exceptions(raw) + check_declarations(raw, tree)
-             + check_capabilities(raw, tree) + check_decisions(raw, tree))
+             + check_capabilities(raw, tree) + check_decisions(raw, tree)
+             + (check_relabel(raw, rules) if a.relabel else []))
     for f in fails:
         print(f"FAIL: {f}", file=sys.stderr)
     if fails:
@@ -256,7 +280,8 @@ def main(argv: list[str] | None = None) -> int:
     print(f"ok: export: {len(PAGE_RE.findall(raw))} pages, {len(tree.views)} views, equal to check_views; "
           f"{diagram_count(raw)} diagrams; "
           f"{len(data)} bytes; barred: 0 on {len(barred)} entries of "
-          f"{', '.join(Path(p).name for p in a.barred)}")
+          f"{', '.join(Path(p).name for p in a.barred)}"
+          + (f"; relabel: 0 survivors on {len(rules)} rules" if a.relabel else ""))
     return EXIT_OK
 
 

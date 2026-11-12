@@ -54,6 +54,11 @@ package ResourceKit {
 """
 
 
+def body_after_head(text: str) -> str:
+    """The table of a text that opens with a line and a blank line."""
+    return text.split("\n\n", 1)[1]
+
+
 def body(table: str) -> list[str]:
     return table.split("\n")[2:]
 
@@ -73,9 +78,53 @@ class RealTree(unittest.TestCase):
         self.assertGreater(len(rows), 0)
         self.assertTrue(any("| KitMember | abstract |" in r for r in rows), rows)
 
+    def test_severed_behaviour_has_one_row_per_capability_in_model_order(self):
+        sysml = (ARCH / "model" / "openddil.sysml").read_text(encoding="utf-8")
+        record = cp.load_record(ARCH / "capability-record.yaml")
+        out = derived.severed(record, sysml)
+        names = list(cp.model_capabilities(sysml))
+        rows = body(body_after_head(out))
+        self.assertEqual([r.split(" | ")[0].lstrip("| ") for r in rows], names)
+        stated = sum(1 for n in names if record["capabilities"][n]["severed"] != "not stated")
+        self.assertTrue(out.startswith(f"Severed behaviour: {stated} of {len(names)} capabilities have it stated "
+                                       f"in a decision record; {len(names) - stated} do not.\n\n"
+                                       "| Capability |"))
+
     def test_dictionary_has_one_row_per_declared_term(self):
         rows = body(derived.dictionary(REPO / "ontology"))
         self.assertEqual(len(rows), len(derived.DICTIONARY))
+
+
+SEVERED_MODEL = """\
+package CapabilityTaxonomy {
+    abstract occurrence def Capability;
+    occurrence def Alpha :> Capability;
+    occurrence def Beta :> Capability;
+}
+"""
+
+
+class Severed(unittest.TestCase):
+    def rec(self, **caps):
+        return {"capabilities": {k: dict(v) for k, v in caps.items()}}
+
+    def test_the_table_the_spec_shows(self):
+        out = derived.severed(self.rec(Alpha={"severed": "ADR-0029 §6"},
+                                       Beta={"severed": "not stated", "rows": ["AE-1", "SV-1", "SV-3"]}),
+                              SEVERED_MODEL)
+        self.assertEqual(out, "Severed behaviour: 1 of 2 capabilities have it stated in a decision record; 1 do not.\n\n"
+                              "| Capability | Severed behaviour | Row |\n|---|---|---|\n"
+                              "| Alpha | stated in ADR-0029 §6 | - |\n"
+                              "| Beta | not stated | SV-1, SV-3 |")
+
+    def test_a_capability_without_the_key_is_refused(self):
+        with self.assertRaises(cp.CheckError) as cm:
+            derived.severed(self.rec(Alpha={"severed": "not stated", "rows": ["SV-1"]}, Beta={}), SEVERED_MODEL)
+        self.assertIn("Beta has no severed entry", cm.exception.args[0])
+
+    def test_the_marker_belongs_to_st_tx(self):
+        self.assertEqual(derived.HOMES[derived.SEVERED_MARKER], "St-Tx")
+        self.assertEqual(derived.SEVERED_MARKER, "<!-- generated: severed-behaviour -->")
 
 
 class Dependencies(unittest.TestCase):

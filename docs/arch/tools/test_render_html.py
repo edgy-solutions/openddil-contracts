@@ -518,7 +518,7 @@ class BuiltStub(unittest.TestCase):
             (self.root / "model" / "openddil.sysml").read_text(encoding="utf-8")))
         got = re.findall(r'<section id="cap-([^"]+)" class="page capability"', self.doc)
         self.assertEqual(got, caps)
-        self.assertEqual(len(got), 30)
+        self.assertEqual(len(got), 31)
 
     def test_one_decision_page_per_record_and_the_roadmap(self):
         files = sorted((self.tmp / "decisions").glob("ADR-*.md"))
@@ -553,7 +553,7 @@ class BuiltStub(unittest.TestCase):
 
     def test_the_front_page_lists_every_capability_and_decision(self):
         front = re.search(r'<section id="front"[^>]*>(.*?)</section>', self.doc, re.S).group(1)
-        self.assertEqual(len(re.findall(r'href="#cap-', re.search(r'<nav class="capabilities">.*?</nav>', front, re.S).group(0))), 30)
+        self.assertEqual(len(re.findall(r'href="#cap-', re.search(r'<nav class="capabilities">.*?</nav>', front, re.S).group(0))), 31)
         self.assertEqual(len(re.findall(r'href="#(adr-\d{4}|decision-roadmap)"', re.search(r'<nav class="decisions">.*?</nav>', front, re.S).group(0))), 50)
 
     def test_a_section_the_record_lacks_fails_the_render(self):
@@ -567,6 +567,128 @@ class BuiltStub(unittest.TestCase):
         with self.assertRaises(CheckError) as cm:
             self.build(tmp / "docs" / "arch")
         self.assertIn("99", cm.exception.args[0])
+
+
+@unittest.skipUnless(HAVE_BUILD, SKIP_WHY)
+class BuiltRelabel(unittest.TestCase):
+    """The relabel pass, the severed section and the pending marks, on a stub tree with planted values."""
+
+    PLANT = "zebra-host-9"
+
+    def make(self, mutate_record=None, relabel_text=None):
+        sys.path.insert(0, str(HERE / "testdata"))
+        import stub_content
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        stub_content.stub_tree(tmp, repo=False)
+        root = tmp / "docs" / "arch"
+        adr = sorted((tmp / "decisions").glob("ADR-*.md"))[0]
+        with adr.open("a", encoding="utf-8", newline="\n") as f:
+            f.write(f"\n## Notes on {self.PLANT}\n\n{self.PLANT} is where it ran. See `{self.PLANT}` and "
+                    f"{self.PLANT.upper()}.\n")
+        stub_content.make_repo(tmp)
+        rec = root / "capability-record.yaml"
+        record = yaml.safe_load(rec.read_text(encoding="utf-8"))
+        self.adr = adr.name[:8]
+        self.first = next(iter(record["capabilities"]))
+        record["capabilities"][self.first]["derived_from"] = [f"{self.adr} §notes-on-{self.PLANT}"]
+        if mutate_record:
+            mutate_record(record)
+        rec.write_text(yaml.safe_dump(record, sort_keys=False, allow_unicode=True), encoding="utf-8")
+        a = args()
+        a.record = str(rec)
+        if relabel_text is not None:
+            lst = tmp / "relabel.txt"
+            lst.write_text(relabel_text, encoding="utf-8", newline="\n")
+            a.relabel = [str(lst)]
+        with mock.patch.object(rp, "ROOT", root), mock.patch.object(render_html, "ROOT", root), \
+                mock.patch.object(render_html, "REPO", tmp):
+            return render_html.build(a, fake, DATE), record
+
+    def test_no_survivor_anchors_resolve_and_the_front_page_says_so(self):
+        doc, _ = self.make(relabel_text=f"\\b{self.PLANT}\\b\tthe lab\n")
+        self.assertIsNone(re.search(self.PLANT, html.unescape(doc), re.I))
+        self.assertEqual(check_export.check_links(doc), [])
+        want = f"{self.adr.lower()}-notes-on-the-lab"
+        self.assertIn(f'id="{want}"', doc)
+        page = re.search(rf'<section id="cap-{self.first}".*?</section>', doc, re.S).group(0)
+        self.assertIn(f'href="#{want}"', page)
+        line = re.search(r'<p class="relabel" data-relabel>(.*?)</p>', doc, re.S).group(1)
+        m = re.fullmatch(r"Decision records are shown with (\d+) names replaced by neutral labels at export "
+                         r"\(1 rules\)\. The records in the repository are unchanged\.", line)
+        self.assertTrue(m, line)
+        self.assertGreaterEqual(int(m.group(1)), 4)
+
+    def test_without_a_list_the_records_are_verbatim(self):
+        doc, _ = self.make()
+        self.assertIn('<p class="relabel" data-relabel>Decision records are shown verbatim.</p>', doc)
+        self.assertIsNotNone(re.search(self.PLANT, doc))
+
+    def test_check_export_relabel_passes_on_the_relabelled_export_and_fails_on_the_other(self):
+        import relabel
+        lst = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, lst, True)
+        p = lst / "list.txt"
+        p.write_text(f"\\b{self.PLANT}\\b\tthe lab\n", encoding="utf-8")
+        rules = relabel.load([p])
+        done, _ = self.make(relabel_text=p.read_text(encoding="utf-8"))
+        self.assertEqual(check_export.check_relabel(done, rules), [])
+        raw, _ = self.make()
+        fails = check_export.check_relabel(raw, rules)
+        self.assertTrue(any(f.startswith("relabel: rule 1 (line 1 of list.txt) survives") for f in fails), fails)
+        self.assertFalse(any(self.PLANT in f for f in fails))
+
+    def test_every_capability_page_has_a_severed_section(self):
+        doc, record = self.make()
+        for name, cap in record["capabilities"].items():
+            page = re.search(rf'<section id="cap-{name}".*?</section>', doc, re.S).group(0)
+            m = re.search(r"<h2>Severed behaviour</h2><p data-severed>(.*?)</p>", page, re.S)
+            self.assertTrue(m, name)
+            text = plain(m.group(1))
+            if cap["severed"] == "not stated":
+                sv = next(r for r in cap["rows"] if r.startswith("SV-"))
+                self.assertRegex(text, rf"^Not stated by a decision record\. Open row: {sv}( \(.+\))?\.$")
+            else:
+                self.assertRegex(text, rf"^Stated in {re.escape(cap['severed'])} .+\.$")
+                self.assertIn('<a href="#adr-', m.group(1))
+            self.assertLess(page.index("<h2>Evidence</h2>"), page.index("<h2>Severed behaviour</h2>"))
+
+    def test_the_severed_table_in_st_tx_links_every_capability(self):
+        doc, record = self.make()
+        sec = section(doc, "St-Tx")
+        self.assertIn("Severed behaviour: ", plain(sec))
+        table = re.search(r"Severed behaviour:.*?(<table.*?</table>)", sec, re.S).group(1)
+        names = re.findall(r"<tr>\s*<td[^>]*>(.*?)</td>", table, re.S)
+        self.assertEqual([plain(n) for n in names], list(record["capabilities"]))
+        for n in names:
+            self.assertRegex(n, r'^<a href="#cap-\w+">\w+</a>$')
+        stated = sum(1 for c in record["capabilities"].values() if c["severed"] != "not stated")
+        self.assertIn(f"Severed behaviour: {stated} of {len(record['capabilities'])} capabilities have it stated "
+                      f"in a decision record; {len(record['capabilities']) - stated} do not.", plain(sec))
+
+    def test_a_pending_capability(self):
+        def pend(record):
+            name = self.first
+            cap = record["capabilities"][name]
+            for k in ("adrs", "derived_from", "built", "measured", "still_open", "increment"):
+                cap.pop(k, None)
+            cap["pending"] = ["the first source", "the second source"]
+        doc, _ = self.make(pend)
+        page = re.search(rf'<section id="cap-{self.first}".*?</section>', doc, re.S).group(0)
+        self.assertIn('<span class="pending" data-pending>decision pending</span>', page)
+        self.assertLess(page.index("class=\"badge"), page.index("data-pending"))
+        self.assertIn("<li>Decision pending: the first source</li>", page)
+        self.assertIn("<li>Decision pending: the second source</li>", page)
+        self.assertIn("Written from the pending sources below. No decision record decides it yet; "
+                      "this description is not their text.", plain(page))
+        self.assertIn('class="badge phase-proposed">proposed</span>', page)
+        table = section(doc, "St-Rm-P")
+        row = re.search(rf"<tr>\s*<td[^>]*>(?:<a[^>]*>)?{self.first}.*?</tr>", table, re.S).group(0)
+        self.assertIn("decision pending", plain(row))
+        self.assertIn('class="badge phase-proposed">proposed</span>', row)
+        other, record = self.make()
+        self.assertEqual(other.count('<span class="pending" data-pending>'),
+                         sum(1 for c in record["capabilities"].values() if c.get("pending")))
 
 
 def tbl(head, rows, extra=""):

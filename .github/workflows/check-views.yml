@@ -134,6 +134,13 @@ jobs:
           PUPPETEER_SKIP_DOWNLOAD: "true"
         run: npm ci
 
+      - name: Relabel list
+        env:
+          RELABEL: ${{ secrets.ARCH_RELABEL }}
+        run: |
+          if [ -n "$RELABEL" ]; then printf '%s\n' "$RELABEL" > "$RUNNER_TEMP/relabel.txt"; echo "relabel: repository secret"
+          else cp docs/arch/tools/relabel-sample.txt "$RUNNER_TEMP/relabel.txt"; echo "relabel: sample list only"; fi
+
       - name: Build the HTML export
         env:
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
@@ -146,13 +153,15 @@ jobs:
             --values "$BUNDLE/k8s/egress-values.yaml" \
             --release openddil \
             --readiness "$READINESS" \
+            --relabel "$RUNNER_TEMP/relabel.txt" \
             --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
 
       - name: Check the export
         run: |
           python docs/arch/tools/check_export.py \
             --export "$RUNNER_TEMP/export/openddil-architecture.html" \
-            --barred docs/arch/tools/barred-sample.txt
+            --barred docs/arch/tools/barred-sample.txt \
+            --relabel "$RUNNER_TEMP/relabel.txt"
 
       - name: Check the export in a browser
         working-directory: docs/arch/tools/export

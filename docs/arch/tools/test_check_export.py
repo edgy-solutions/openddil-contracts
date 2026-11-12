@@ -67,9 +67,9 @@ def extra_pages(prov=PROV):
     return pages
 
 
-def good(views=None, diagrams=FENCES, prov=PROV, decl=None):
+def good(views=None, diagrams=FENCES, prov=PROV, decl=None, front=""):
     views = list(TREE.views) if views is None else views
-    pages = [f'<section id="front" class="page" data-front><h1>x</h1><a href="#view-{views[0]}">v</a>{prov}</section>']
+    pages = [f'<section id="front" class="page" data-front><h1>x</h1><a href="#view-{views[0]}">v</a>{front}{prov}</section>']
     for i, v in enumerate(views):
         body = SVG * (diagrams if i == 0 else 0)
         if i == 0:
@@ -95,6 +95,17 @@ class Base(unittest.TestCase):
         with redirect_stdout(out), redirect_stderr(err):
             rc = check_export.main(["--export", str(f), "--root", str(ARCH),
                                     "--barred", str(barred or self.tmp / "barred.txt")])
+        return rc, out.getvalue(), err.getvalue()
+
+    def run_relabel(self, doc, rules_text):
+        f = self.tmp / "e.html"
+        f.write_text(doc, encoding="utf-8")
+        lst = self.tmp / "relabel.txt"
+        lst.write_text(rules_text, encoding="utf-8", newline="\n")
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            rc = check_export.main(["--export", str(f), "--root", str(ARCH),
+                                    "--barred", str(self.tmp / "barred.txt"), "--relabel", str(lst)])
         return rc, out.getvalue(), err.getvalue()
 
     def fails(self, doc, word):
@@ -229,6 +240,47 @@ class Red(Base):
         self.assertIn("lists 12 slots, INVENTORY.md's slot table 13", err)
         self.fails(good(decl=declarations([SLOTS[1], SLOTS[0]] + SLOTS[2:])), "declarations")
         self.fails(good(decl=declarations(SLOTS[:-1] + ["spare-slot"])), "declarations")
+
+
+class Relabel(Base):
+    LINE = '<p class="relabel" data-relabel>Decision records are shown verbatim.</p>'
+    RULES = "# c\n\nzebra-host-9\tthe lab\nPat Example\tthe owner\n"
+
+    def test_a_clean_export_passes_and_says_so(self):
+        rc, out, err = self.run_relabel(good(front=self.LINE), self.RULES)
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out.strip().endswith("relabel: 0 survivors on 2 rules"), out)
+
+    def test_a_planted_survivor_fails_without_naming_it(self):
+        doc = good(front=self.LINE + "<p>ran on Zebra-Host-9 twice, and zebra-host-9</p>")
+        rc, out, err = self.run_relabel(doc, self.RULES)
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL: relabel: rule 1 (line 3 of relabel.txt) survives 2 time(s)", err)
+        self.assertNotIn("zebra", err.lower())
+        self.assertNotIn("rule 2", err)
+
+    def test_an_escaped_survivor_fails(self):
+        doc = good(front=self.LINE + "<p>Pat&#32;Example</p>")
+        rc, out, err = self.run_relabel(doc, self.RULES)
+        self.assertEqual(rc, 1)
+        self.assertIn("rule 2 (line 4 of relabel.txt) survives 1 time(s)", err)
+        self.assertNotIn("Pat", err)
+
+    def test_no_data_relabel_line_fails(self):
+        rc, out, err = self.run_relabel(good(), self.RULES)
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL: relabel: the front page has no data-relabel line", err)
+
+    def test_without_the_flag_nothing_about_relabel_is_checked(self):
+        rc, out, err = self.run_check(good(front="<p>zebra-host-9</p>"))
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn("relabel", out)
+
+    def test_a_bad_list_is_exit_2_and_names_no_content(self):
+        rc, out, err = self.run_relabel(good(front=self.LINE), "zebra-host-9 no tab here\n")
+        self.assertEqual(rc, 2)
+        self.assertIn("relabel.txt line 1", err)
+        self.assertNotIn("zebra", err)
 
 
 class Input(Base):

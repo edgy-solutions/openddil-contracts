@@ -12,7 +12,7 @@ Phases, highest first:
     built unmeasured  cites a chart template under `built`, and no readiness entry
     accepted design   cites an ADR whose Status begins with accepted
     proposed          cites an ADR whose Status begins with proposed, or a
-                      `still_open` citation
+                      `still_open` citation, or a `pending` entry
     row               cites only rows in a register
 A capability that cites none of these has no phase, and that is a failure.
 
@@ -24,6 +24,13 @@ own text (capability, entry, anchor, line); it never echoes a readiness line.
 Two keys say how a capability's page reads:
     description   two or three plain sentences, written from the decisions below
     derived_from  citations the description was written from; when absent, from `adrs`
+    severed       required for every capability: the exact string `not stated`, or one
+                  citation `ADR-NNNN §LABEL` of the record that says how the capability
+                  behaves when its link is severed. `not stated` needs an `SV-` id in
+                  `rows`; a citation needs none.
+    pending       optional list of non-empty strings naming the sources a decision waits
+                  on. A capability with it is at least `proposed`, and needs no
+                  `derived_from` or `adrs`.
 A decision is cited by section: `ADR-0038 §1`, in `adrs`, `derived_from` and
 `still_open[].adr`. The label is the number a heading starts with, or the
 GitHub slug of a heading with none (adr_sections.py lists them). A bare
@@ -51,8 +58,10 @@ ROADMAP = "ROADMAP-2026-10-29-isolation-increments.md"
 REGISTER_HEADER = ["ID", "Subject", "Status"]
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 OUTPUT_FIELDS = ("phase", "evidence")
+NOT_STATED = "not stated"
 SECTIONS = ("lanes", "labs", "entries", "capabilities")
-CAP_KEYS = ("description", "derived_from", "adrs", "built", "measured", "rows", "still_open", "increment")
+CAP_KEYS = ("description", "derived_from", "adrs", "built", "measured", "rows", "still_open", "increment",
+            "severed", "pending")
 ADR_ID_RE = re.compile(r"ADR-\d{4}")
 
 
@@ -307,13 +316,17 @@ def check_record(record: dict, capabilities: dict[str, str], decisions_dir) -> l
         for f in OUTPUT_FIELDS:
             if f in cap:
                 fails.append(f"{name} has a field '{f}': phase and evidence are computed, not recorded")
-        if not any(cap.get(k) for k in ("adrs", "built", "measured", "still_open", "rows")):
+        if not any(cap.get(k) for k in ("adrs", "built", "measured", "still_open", "rows", "pending")):
             fails.append(f"{name} has no phase")
         for key in cap:
             if key not in CAP_KEYS and key not in OUTPUT_FIELDS:
                 fails.append(f"{name} has a key '{key}' that the record does not accept")
         fails += check_description(name, cap.get("description"))
-        if not cap.get("adrs") and not cap.get("derived_from"):
+        pend = cap.get("pending")
+        if pend is not None and (not isinstance(pend, list) or not pend
+                                 or not all(isinstance(p, str) and p.strip() for p in pend)):
+            fails.append(f"{name}: pending must be a list of non-empty strings")
+        if not cap.get("adrs") and not cap.get("derived_from") and not pend:
             fails.append(f"{name}: its description is derived from no decision")
         cited = list(cap.get("adrs") or []) + list(cap.get("derived_from") or []) + [
             (s or {}).get("adr") for s in still_open(cap) if isinstance(s, dict) and (s or {}).get("adr")]
@@ -332,6 +345,23 @@ def check_record(record: dict, capabilities: dict[str, str], decisions_dir) -> l
             text = read_text(path) if path else None
             if text is not None and says not in text:
                 fails.append(f"{name}: {adr} does not contain {says!r}")
+        sv_rows = [r for r in cap.get("rows") or [] if str(r).startswith("SV-")]
+        severed = cap.get("severed")
+        if not severed:
+            fails.append(f"{name} has no severed entry")
+        elif severed == NOT_STATED:
+            if not sv_rows:
+                fails.append(f"{name}: severed is not stated and rows names no SV- row")
+        else:
+            try:
+                adr_sections.parse_citation(severed)
+            except ValueError:
+                fails.append(f"{name}: severed {severed!r} is neither '{NOT_STATED}' nor a citation ADR-NNNN §LABEL")
+            else:
+                fails += check_section(name, severed, decisions_dir)
+                check_adr(name, adr_id(severed))
+                if sv_rows:
+                    fails.append(f"{name}: severed is stated in {severed} and rows still names {sv_rows[0]}")
         for row in cap.get("rows") or []:
             status = registers.get(row)
             if follow is not None and status is None:
@@ -360,7 +390,7 @@ def phase_of(cap: dict, statuses: dict[str, str | None]) -> str | None:
         return "built unmeasured"
     if any(s.startswith("accepted") for s in leads):
         return "accepted design"
-    if any(s.startswith("proposed") for s in leads) or still_open(cap):
+    if any(s.startswith("proposed") for s in leads) or still_open(cap) or cap.get("pending"):
         return "proposed"
     if cap.get("rows"):
         return "row"
@@ -533,6 +563,8 @@ def render_table(record: dict, capabilities: dict[str, str], decisions_dir, temp
                 noted.add(adr)
             decisions.append(f"{adr} §{label}{note}")
         decisions += [f"{adr} §{label} (names it still open)" for adr, label in open_citations(cap)]
+        if cap.get("pending"):
+            decisions.append("decision pending")
         rows.append(f"| {name} | {lane} | {phase} | {evidence} | {', '.join(built) or '-'} | "
                     f"{', '.join(decisions) or '-'} | {', '.join(cap.get('rows') or []) or '-'} |")
 

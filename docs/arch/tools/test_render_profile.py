@@ -36,7 +36,7 @@ PHASES_MARKER = "<!-- generated: capability-phases -->"
 PHASES_FILES = (("uaf", "St-Rm-P.md"), ("dodaf202", "CV-3.md"), ("naf4", "Cr.md"))
 # The one citation of a real capability. Removing it leaves a capability with a
 # description and no phase.
-STRIPPED = "    adrs: [ADR-0039 §1, ADR-0039 §2]\n"
+STRIPPED = "    adrs: [ADR-0039 §1, ADR-0039 §2]\n    severed: not stated\n    rows: [SV-11]\n"
 LINK = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 
 

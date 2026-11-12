@@ -310,7 +310,7 @@ class Perturbed(unittest.TestCase):
         self.expect("phases", "TacticalSustainmentCorrelation")
 
     def test_13_phases_capability_with_no_citation(self):
-        edit(self.root, "capability-record.yaml", "    adrs: [ADR-0039 §1, ADR-0039 §2]\n", "")
+        edit(self.root, "capability-record.yaml", "    adrs: [ADR-0039 §1, ADR-0039 §2]\n    severed: not stated\n    rows: [SV-11]\n", "")
         self.expect("phases", "TacticalSustainmentCorrelation has no phase")
 
     def test_13_phases_marker_twice(self):
