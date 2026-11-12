@@ -6,7 +6,7 @@
 - **Noted 2026-11-11: the output kinds open when the remaining-life kind is specified.** `sustainment` and `anomaly` are
   this slice's set, not a closed vocabulary (ADR-0038 C2). When ADR-0059 §4.2's remaining-life kind is specified, the
   set opens to admit it. Until then the validator's refusal below stands.
-- **What this is.** ADR-0034 (Accepted 2026-08-07) fenced the engine. On 2026-11-07 Chris lifted the fence for one slice:
+- **What this is.** ADR-0034 (Accepted 2026-08-07) fenced the engine. On 2026-11-07 the project owner lifted the fence for one slice:
   - one Faust runner that loads declared units from the bundle;
   - the wear unit first and the thermal unit second;
   - the producer stamp.
@@ -166,7 +166,7 @@ of its inputs:
 - an unlabelled input leaves the result unlabelled.
 
 It becomes the rule for these units after ADR-0055 is accepted. It is a separate, predicted change, not part of this
-slice (Chris, 2026-11-07), for two reasons:
+slice (the project owner, 2026-11-07), for two reasons:
 - The wear unit is a lifetime accumulator. Its high-water is the intersection over every sample that ever contributed,
   so the table record must carry label state. That changes the changelog's format, which is a migration and not a port.
 - The record the label applies to is the tier's `telemetry_latest_state` row for the asset. Matching to that row is the
@@ -271,7 +271,7 @@ comes after that, and this record will be amended with the result.
 - **Nothing is pushed.** Every commit named in Status is local on 2026-11-08.
 - **Thermal is on a branch.** Its unit and the chart commit that enables it are not merged.
 - **`temp_ewma_k`.** The thermal state keeps an EWMA that the decision does not read, so that the state matches the
-  original rule exactly. Using it or dropping it is a design change. Chris ruled on 2026-11-08 that it comes out only
+  original rule exactly. Using it or dropping it is a design change. The project owner ruled on 2026-11-08 that it comes out only
   after the match-to-row, in its own commit.
 - **Celsius.** The UCUM code `Cel` is not convertible today, so a sample with it is counted as `role_unconvertible` and
   its temperatures are skipped. A fix is on a separate branch. It is not part of this slice.
