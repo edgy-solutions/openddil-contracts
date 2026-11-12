@@ -1038,7 +1038,8 @@ documented as ignored; it should be deleted once the callers are cleaned up.
 `dis_ingress_kind_dropped`, on Redpanda Connect's Prometheus endpoint, which is
 on by default at `:4196/metrics`. **Nothing scrapes it.** There is no
 `ServiceMonitor` and no `prometheus.io/scrape` annotation anywhere in the
-chart; `openddil-demo/values.yaml:418` carries `httpPort: 4196` and nothing
+chart; `openddil-demo/values.yaml:723` (openddil-helm 8bbcb9a; the line was
+:418 when this row was written) carries `httpPort: 4196` and nothing
 collects from it.
 
 So the drop count is real, per-kind, and reachable only by hand:
@@ -2159,6 +2160,29 @@ correct on 2026-09-19.
 ---
 
 ## OPEN 2026-09-19 — hq_link_severed tracks the simulator, not reachability
+
+**Restated 2026-11-11 against the code; the heading is kept so links hold.**
+The probe this row describes is gone. On 2026-10-05 (openddil-projector
+556d4ec) the flag became a reachability reading, which is the semantics
+decision below, taken: `LinkReachability`
+(`openddil-projector/src/edge_buffer_monitor.py:196`) counts an exchange when
+the relay group's committed offsets advance (the relay commits only after its
+parent acks) or when its lag reads 0. With no exchange for longer than
+`LINK_SEVER_AFTER_S` (`:100`, by default 2 x (exchange period + probe
+interval)) it reads severed, and it needs `LINK_RESTORE_EXCHANGES` (2)
+exchanges in a row to read up again. The column keeps its name for schema
+compatibility. Unit tests: `src/tests/test_edge_buffer_reachability.py`.
+
+What stays open, from the code read and not from a run:
+
+- No severance rehearsal is cited here that read the new flag under a
+  NetworkPolicy cut. Close this row when one does.
+- Lag 0 counts as an exchange. A tier that produces nothing during a cut has
+  lag 0, so it reads up. Whether the link heartbeat
+  (`LINK_HEARTBEAT_ENABLED`, default false) keeps lag above 0 under a cut
+  where it is on was not read here.
+
+The original record follows.
 
 Found by the severance rehearsal. edge-01 severed with sever-tier.sh (a
 NetworkPolicy), and its edge_buffer_status row reported truthfully on two
