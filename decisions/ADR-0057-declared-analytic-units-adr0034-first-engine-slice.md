@@ -3,6 +3,9 @@
 ## Status
 
 **PROPOSED — 2026-11-08. This records what was built. It is not a new decision.**
+- **Noted 2026-11-11: the output kinds open when the remaining-life kind is specified.** `sustainment` and `anomaly` are
+  this slice's set, not a closed vocabulary (ADR-0038 C2). When ADR-0059 §4.2's remaining-life kind is specified, the
+  set opens to admit it. Until then the validator's refusal below stands.
 - **What this is.** ADR-0034 (Accepted 2026-08-07) fenced the engine. On 2026-11-07 the project owner lifted the fence for one slice:
   - one Faust runner that loads declared units from the bundle;
   - the wear unit first and the thermal unit second;

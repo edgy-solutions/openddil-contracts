@@ -4,6 +4,73 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-11 — built-in test arrives as free strings, with no test type, result, isolated unit or confidence
+
+**A proposed seam, not built.** `HealthFlags.active_fault_codes` is a list of strings, and nothing records which test
+ran, its result, the candidate units it isolated to, or how sure it is. The proposal is a declared built-in test kind:
+test type from a per-variant vocabulary, result, fault code, isolated units as an ambiguity group, and a confidence with
+its kind. A failed result opens or joins an episode.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §5. Named by: the architecture order of 2026-11-10.
+
+Close when the kind is specified and a deployment's ingest emits it, with a fixture that opens an episode from a failed
+result.
+
+## OPEN 2026-11-11 — an episode cannot count detection, isolation, false-alarm or no-fault-found rates
+
+**A design, not built.** An episode's detecting source is an opaque string, it names one component, it closes with free
+text, and it carries no variant. The proposal adds a declared detecting source, an ambiguity group, a confirmed component
+and a closure reason (`confirmed`, `no_fault_found`, `cannot_duplicate`) at close, and the variant frozen at open. The
+counts compose up the tiers as sums, like ADR-0051 §4, and rates are divided at read. Ruled 2026-11-11: a closure is
+confirmed only by the completed work order's outcome, returned through iagent's maintenance action record; a closure
+recorded at a tier is declared-local and unconfirmed; a release never closes an episode. The outcome's fields are a
+question to iagent's architect.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.1. Named by: the architecture order of 2026-11-10, extended 2026-11-11.
+
+Close when the fields are on the episode, the outcome's fields are answered and bound, and the rollup carries the
+counts, with a test that composes two tiers' counts.
+
+## OPEN 2026-11-11 — no failure-mode, mechanism or cause vocabulary on an episode
+
+**Nothing built.** An episode's `fault_code` is a catalog key, not a failure mode. ISO 14224's definitions are unread, so
+no vocabulary is proposed yet; the first step is that read.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` finding 4. Named by: the architecture order of 2026-11-10.
+
+Close when a vocabulary is declared from a read standard and an episode can carry a failure mode.
+
+## OPEN 2026-11-11 — usage meters stop at ADR-0051's three
+
+**Nothing built.** Hours in service, cycles, power cycles and distance exist as fields or accumulators, but none is a
+declared meter, and power cycles has no unit. A remaining-life output must be stated in a declared meter.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` finding 6, and ADR-0051 §3. Named by: the architecture order of 2026-11-10.
+
+Close when each of these is a declared meter kind with a UCUM unit, or is named as not one.
+
+## OPEN 2026-11-11 — remaining useful life as an output kind of the algorithm contract
+
+**A design, not built.** The algorithm contract refuses any output kind but `sustainment` and `anomaly`, and the wear
+unit reports remaining life as a percentage of an authored life. The proposal is a remaining-life kind: a distribution in
+a declared usage meter's unit, with a horizon, the threshold it was computed against, `ORIGIN_DERIVED`, a confidence with
+its kind, and an advisory marking. It needs ADR-0057's closed set opened, as ADR-0038 C2 requires.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.2. Named by: the architecture order of 2026-11-11.
+
+Close when the kind is declared, the runner accepts it, and one unit emits it in a meter unit.
+
+## OPEN 2026-11-11 — a scoring harness for remaining-life outputs over recorded failures
+
+**A design, not built.** Nothing returns a confirmed failure to OpenDDIL, so nothing can score a prediction. The proposal
+is an offline harness that joins each remaining-life output to the component's confirmed failure and scores it with the
+PHM prognostic metrics, by the paper's text. While the wear unit's life totals are placeholders, its scores measure
+placeholders.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.3. Named by: the architecture order of 2026-11-11.
+
+Close when the harness runs over a recording with confirmed failures and reports each metric, citing the paper.
+
 ## OPEN 2026-11-10 — the intake reads kinds only at start
 
 A changed kind schema reaches the intake only through a chart upgrade. The kinds checksum rolls four workloads
