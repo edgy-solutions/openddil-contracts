@@ -279,8 +279,20 @@ OpenDDIL's side to them.
   - cm-service emits one record per close, on a topic of its own. The `asset-cm-state` wire shape does not change
     (finding 3).
   - The projector writes it idempotently on the key. A replay writes no second row.
-  - **Backfill at first start:** cm-service emits each closed episode it already holds once, on the same key. Closed
-    episodes cleared by a wipe of the workflow engine's state before this lands are gone, and the pane says so.
+  - **Backfill at first start, from the live state and from exported files** (ruled 2026-11-12):
+    - cm-service emits each closed episode it already holds once, on the same key.
+    - The backfill also loads exported files. Each is an export of the closed episodes in the workflow engine's state,
+      taken before a wipe, one line per episode with its asset. A file line goes through the same emit, so an episode
+      found in the state and in a file, or in two files, is one row on the key.
+    - **Both record shapes are accepted:** the shape stored in the workflow engine's state on a running tier, and the
+      shape the current code declares (`ClosedEpisodeRecord`). Fields are mapped by name. A field a record lacks is
+      left empty, never invented. A record without `discrepancy_id` or `detected_at_ns` is refused, counted and
+      named. It is never written, and never dropped silently.
+    - **Labels come from the asset's record, not the episode.** Neither shape carries labels on the episode. The
+      asset's record carries them. A file line is loaded only with its asset's labels from the same export. A line
+      without them is refused and named. It is never loaded unlabelled.
+    - Closed episodes cleared by a wipe before this lands are gone unless an exported file holds them, and the pane
+      says so.
   - The usage-meter columns at open and close are ADR-0051's and not filled here (out of the increment).
 - **The ledger is unchanged.** It stays a record of deliveries. The filer is read from the episode, never from the
   ledger.
@@ -390,6 +402,13 @@ Each is a test a named workflow runs. A slice merges on its own checks.
    - A replay of the topic writes no second row.
    - Over a fixture of 1,001 closes, the topic's count and the table's count are equal.
    - The backfill emits each held closed episode once; a second start adds no row.
+   - **From an exported file:** a fixture export loads one row per line. An episode in both the live state and the
+     file is one row. Loading the same file twice adds no row.
+   - **The stored shape:** a fixture with the field set stored in the workflow engine's state on a running tier (read
+     2026-11-12) loads, each field in its column.
+   - **The current code's shape:** a fixture built from the current `ClosedEpisodeRecord` loads the same way.
+   - Red: a record without `detected_at_ns` is refused and counted, not written. A file line without its asset's
+     labels is refused, not loaded unlabelled.
    - The published `asset-cm-state` payload is byte-equal to a golden payload taken before the change.
 2. **No task state, ledger unchanged.** With a store fake that raises on any write, `GET /reports/mine` and
    `GET /reports/tier` succeed.
