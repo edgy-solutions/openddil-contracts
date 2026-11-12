@@ -939,6 +939,7 @@ nav.views ul,nav.capabilities ul,nav.decisions ul{columns:2 280px;padding-left:1
   .badge,.phase-measured,.phase-built-unmeasured,.phase-accepted-design,.phase-proposed,.phase-row{background:none;color:inherit;padding:0;border-radius:0;font-weight:600}
   th:nth-child(n+4){min-width:0!important}
   .decision th{min-width:0!important}
+  .decision td:nth-child(-n+3),.decision th:nth-child(-n+3){overflow-wrap:normal}
   .decision td:nth-child(n+4),.decision th:nth-child(n+4){overflow-wrap:anywhere}
   .decision td:nth-child(n+4) .nb{white-space:normal}
   table:has(thead th:nth-child(8)) td:nth-child(n+4),table:has(thead th:nth-child(8)) th:nth-child(n+4){overflow-wrap:anywhere}
