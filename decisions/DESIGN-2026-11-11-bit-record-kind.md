@@ -1,6 +1,8 @@
 # DESIGN 2026-11-11 — The built-in test record kind, and the detection and isolation counts it feeds
 
-**Status:** a design. Nothing built, nothing run, nothing measured. Ordered 2026-11-11 as a spec under ADR-0059 §5.
+**Status:** accepted as proposed, 2026-11-12, with its open item ruled: records stay at the tier, and only the episode
+and the counts go up (§6). Still a design: nothing built, nothing run, nothing measured. Ordered 2026-11-11 as a spec
+under ADR-0059 §5.
 ADR-0059 is PROPOSED, reviewed 2026-11-11 and accepted as proposed. This record specifies the kind by concept. Field
 names, the wire message and the topic are bound when it is built, not here.
 **Builds on:** ADR-0059 §4.1, §4.4 and §5, and findings 3-5; ADR-0051 §2-§4 (the frozen context, usage meters, the
@@ -114,11 +116,13 @@ ADR-0059 §4.1's counts, per (region, variant, component), are read here as foll
   one by one, and the kind is authoritative where both exist. The field is retired once every source a deployment
   declares is mapped. A FOLLOW-UPS row tracks the retirement. The other option, retiring it source by source so one
   result is never two records, was not taken.
+- **Records stay at the tier (ruled 2026-11-12).** A built-in test record stays at the tier where it was observed.
+  Only the episode and the counts go up: HQ gets the detection source and the ambiguity group on the episode, and the
+  sums of §5.3. A deployment that needs raw records upstream declares that kind explicitly, through the gate
+  (ADR-0046).
 
 Still open:
 - **The topic and the wire message.** Bound when built.
-- **Whether a record is released upward** through the gate (ADR-0046) as its own declared kind, or only as part of the
-  episode it opens. This design proposes only the episode and its counts go up.
 
 ## 7. Rows
 

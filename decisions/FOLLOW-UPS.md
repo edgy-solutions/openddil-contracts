@@ -91,6 +91,7 @@ built-in test result: test type and result from declared vocabularies, a fault c
 group as ordered component identities, and a confidence with its kind or none. A `fail` opens or joins an episode;
 a `pass` never closes one. It describes the inputs and join for ADR-0059 §4.1's detection and isolation counts.
 Ruled 2026-11-11: `active_fault_codes` stays beside the kind until every declared source is mapped (the next row).
+Accepted as proposed 2026-11-12: records stay at the tier; only the episode and the counts go up.
 
 Home: `DESIGN-2026-11-11-bit-record-kind.md`. Named by: ADR-0059 §5.
 
