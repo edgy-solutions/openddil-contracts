@@ -554,7 +554,7 @@ class BuiltStub(unittest.TestCase):
     def test_the_front_page_lists_every_capability_and_decision(self):
         front = re.search(r'<section id="front"[^>]*>(.*?)</section>', self.doc, re.S).group(1)
         self.assertEqual(len(re.findall(r'href="#cap-', re.search(r'<nav class="capabilities">.*?</nav>', front, re.S).group(0))), 31)
-        self.assertEqual(len(re.findall(r'href="#(adr-\d{4}|decision-roadmap)"', re.search(r'<nav class="decisions">.*?</nav>', front, re.S).group(0))), 50)
+        self.assertEqual(len(re.findall(r'href="#(adr-\d{4}|decision-roadmap)"', re.search(r'<nav class="decisions">.*?</nav>', front, re.S).group(0))), 52)
 
     def test_a_section_the_record_lacks_fails_the_render(self):
         tmp = Path(tempfile.mkdtemp())

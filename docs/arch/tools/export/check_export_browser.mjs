@@ -36,10 +36,10 @@ const PROFILES = ["uaf", "dodaf202", "naf4"];
 // Hard-coded counts, and how they are made up. Change them with the thing they count.
 //   29 views, plus the front page and the declarations page                  = 31
 //   31 capability pages: one per capability in model/openddil.sysml CapabilityTaxonomy
-//   50 decision pages: one per decisions/ADR-*.md (49) plus the roadmap note (1)
+//   52 decision pages: one per decisions/ADR-*.md (51) plus the roadmap note (1)
 const BASE_PAGES = 31;
 const CAPABILITY_PAGES = 31;
-const DECISION_PAGES = 50;
+const DECISION_PAGES = 52;
 const TOTAL_PAGES = BASE_PAGES + CAPABILITY_PAGES + DECISION_PAGES;
 let failed = 0;
 let passed = 0;
