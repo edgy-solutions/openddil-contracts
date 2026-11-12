@@ -10,7 +10,7 @@ This is a framework description. A deployment fills the `{{slot:name}}` placehol
 
 | | Taxonomy | Structure | Connectivity | Processes | States | Sequences | Information | Constraints | Roadmap | Traceability | Summary |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **Architecture management** | | | | | | | [Am-If](views/Am-If.md) | | | | |
+| **Architecture management** | | | | | | | [Am-If](views/Am-If.md) | | | [Am-Tr](views/Am-Tr.md) | |
 | **Summary** | | | | | | | | | | | [Sm-Ov](views/Sm-Ov.md) |
 | **Strategic** | [St-Tx](views/St-Tx.md) | | [St-Cn](views/St-Cn.md) | [St-Pr](views/St-Pr.md) | | | | | [St-Rm-P](views/St-Rm-P.md) | | |
 | **Operational** | [Op-Tx](views/Op-Tx.md) | [Op-Sr](views/Op-Sr.md) | [Op-Cn](views/Op-Cn.md) | [Op-Pr](views/Op-Pr.md) | [Op-St](views/Op-St.md) | [Op-Sq](views/Op-Sq.md) | [Op-If](views/Op-If.md) | [Op-Ct](views/Op-Ct.md) | | | |
@@ -129,6 +129,8 @@ It needs Node 22, Chrome (`PUPPETEER_EXECUTABLE_PATH`) and `markdown-it-py==4.0.
 Check it with `check_export.py --export FILE --barred FILE`: the view count equals `check_views.py`'s, no barred value is in the file, every page carries its provenance, nothing refers to the network, the file is under 16 MB, no link is dead, every Mermaid fence became an SVG, and the exception table is there. `node tools/export/check_export_browser.mjs FILE --shots DIR` loads it offline and checks the toggle, the search, the print view and the phone width, and it fails on any word wrapped mid-word in the first three columns of a table.
 
 CI builds the export from the public twin, checks it and attaches it to the check-views run as the `architecture-export` artifact. The file is not committed. CI runs the check on the public sample list, so a green check is not evidence that any private scan ran.
+
+To build it for a deployment, from the deployment's own bundle, values and capability record, follow [RUNBOOK-generate-for-a-deployment.md](RUNBOOK-generate-for-a-deployment.md).
 
 ## Naming a deployment
 

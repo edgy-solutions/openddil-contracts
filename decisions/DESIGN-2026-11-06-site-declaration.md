@@ -1,8 +1,8 @@
 # DESIGN 2026-11-06 — The site declaration: a stated answer for a class of records
 
-**Status:** design only, nothing built, nothing run. It is the first increment of ADR-0055 §1a, signed by Chris
+**Status:** design only, nothing built, nothing run. It is the first increment of ADR-0055 §1a, signed by the project owner
 2026-11-06; the rest of ADR-0055 is still proposed. The migration script `scripts/migrate_site_declarations.py` is written and tested offline only; it has
-never touched a cluster. Local branch, not merged. O1 to O5 are ruled by Chris (2026-11-06).
+never touched a cluster. Local branch, not merged. O1 to O5 are ruled by the project owner (2026-11-06).
 **Builds on:** ADR-0055 §1a (a default is not a declaration; signed 2026-11-06), §3b (high-water), §4 step 0 (load before amend), §6
 (schemes as declared policies); ADR-0050 §2 (the declaration record and its door) and its amendment of
 2026-11-06, ruled the same date; ADR-0042 (named exceptions at the parent).
@@ -253,7 +253,7 @@ rules, then a site declaration, then nothing.
 3. **Load.** Post each planned declaration through the PEP, with the operator's own session. Halt at the first
    refusal, with the state named.
 4. **Verify.** Read the census again and compare it to the prediction. It must match exactly.
-5. **Amend.** Chris's change, not the script's: remove the defaults from the chart values and the bundle, and remove
+5. **Amend.** The project owner's change, not the script's: remove the defaults from the chart values and the bundle, and remove
    step 3 from the mapper and the sim. The script does none of it.
 6. **Verify after the amend.** The same comparison, plus `label_source=default` at zero on every evaluator.
 
@@ -342,21 +342,21 @@ Bulk writes reach Electric shapes 10 to 100 s after the commit, so the census re
 
 ## Rulings (were open items)
 
-- **O1. The exemption kind and its rank. RULED by Chris, 2026-11-06: keep the kind, with an owner, at the rank
+- **O1. The exemption kind and its rank. RULED by the project owner, 2026-11-06: keep the kind, with an owner, at the rank
   proposed.** An exemption declares that a class of records carries no label by decision, such as a non-asset source
   or a test entity. Dropping the kind would force per-asset declarations for things that are not assets. The rank is
   a per-asset declaration, then a file row, then an exemption against rules, then a site declaration (§5.3).
-- **O2. The interim withhold at the parent. RULED by Chris, 2026-11-06: yes.** Stricter than §1a is the right
+- **O2. The interim withhold at the parent. RULED by the project owner, 2026-11-06: yes.** Stricter than §1a is the right
   direction for an interim. Until `label_key` can serve the intersection, a two-tier conflict shows as a named
   exception with nothing served, not as something served wrongly (§6.2).
-- **O3. The role. RULED by Chris, 2026-11-06: supervisor only.** One declaration labels a class of records, which is
+- **O3. The role. RULED by the project owner, 2026-11-06: supervisor only.** One declaration labels a class of records, which is
   a wider act than declaring one arrival. The arrivals roles are for the one-asset case and stay there. The role name
   is written into the declaration record (`declared_role`, §1.1). Whether a declaration was made under the
   right role is then read from the record corpus, never from what the UI allowed.
-- **O4. The sidecar's broker. RULED by Chris, 2026-11-06: the owning tier's broker.** A mounted file would be chart
+- **O4. The sidecar's broker. RULED by the project owner, 2026-11-06: the owning tier's broker.** A mounted file would be chart
   configuration that only looks like a record, and it would need a roll to change. A record on the tier's broker is
   declared through the door, is versioned, and is still there when the edge is severed.
-- **O5. The record class. RULED by Chris, 2026-11-06: yes.** §1a names a scope as a site or a rule. This design adds
+- **O5. The record class. RULED by the project owner, 2026-11-06: yes.** §1a names a scope as a site or a rule. This design adds
   `records` to the scope (§1.1). Without it the sim's per-edge default would leak into the DIS entities at that edge,
   which is the kind of mislabel §1a exists to stop. It narrows what one declaration says; it does not add a source.
 

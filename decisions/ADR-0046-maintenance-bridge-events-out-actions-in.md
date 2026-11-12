@@ -11,6 +11,8 @@ every tier, as decision 2 states.
 [Amendment 2026-10-05](#amendment-2026-10-05-a-refusal-for-an-unknown-answered-record-is-provisional).
 **Amended 2026-10-13:** a record's key names one event; an optional `episode_id` names its episode. See
 [Amendment 2026-10-13](#amendment-2026-10-13-one-key-per-event-the-episode-as-its-own-field).
+**Amended 2026-11-10:** a final `schema_invalid` refusal is re-decided once its body passes the loaded schema. See
+[Amendment 2026-11-10](#amendment-2026-11-10-a-schema_invalid-refusal-is-re-decided-against-the-loaded-schema).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -366,3 +368,31 @@ consumer confirms, its route dedupes on the event id. That is a deployment setti
 - The episode tuple, the owning tier, the first-observation rule, and when an episode opens or closes.
 - The gate and its order of checks. The intake's answered-record rule, which still matches the action's answered
   pointer against the kind's `key` (the event the action answers).
+
+
+## Amendment 2026-11-10: a `schema_invalid` refusal is re-decided against the loaded schema
+
+### What happened
+An action was refused `schema_invalid` because the declared kind was wrong. The kind wanted `task_refs` items as
+strings, and the action carried objects. After the kind is corrected, the intake still skips the action: its refusal
+is final, and its body hash is unchanged. The action could then be admitted only on a changed body from the
+consumer, which is a request for the consumer to work around OpenDDIL's own error. The worked example in
+`docs/arch/views/Op-Cn.md` records the case.
+
+### The rule
+- When the intake meets a stored row with an unchanged body hash, and the row's decision is `schema_invalid`, it
+  validates the body against the kind's schema as now loaded.
+- If the body passes, the artifact is decided again through §5's steps, like a fresh one. The new decision replaces
+  the stored row. The intake counts `schema_redecided` only when the new decision is stored.
+- If the body still fails, the row is skipped as before, and nothing is logged or stored again.
+- Every other row with an unchanged body hash is still skipped. A refusal for any other reason is not re-decided by
+  this rule. The provisional rule of the 2026-10-05 amendment is unchanged.
+
+### Why only `schema_invalid`
+A schema refusal is the only refusal whose cause can change on OpenDDIL's side while the body stays the same. A label
+mismatch, an unentitled approver or an unknown answered record depends on the artifact or on records the intake
+already re-reads by its own rules.
+
+### What does not change
+- The intake still loads kinds at start. A changed kind reaches it through a roll, which is when this rule acts.
+- The hash skip for every other decision, the order of §5's steps and the gate.

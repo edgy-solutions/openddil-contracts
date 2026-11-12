@@ -60,12 +60,17 @@ conformance claim.
 |---|---|---|
 | **1 — Data acquisition** | **Implemented** | `sensor-ingest`, the DIS sidecar, `redpanda-connect` ingress; ADR-0030's two-stage ingress makes new sources a definition file plus a mapping |
 | **2 — Data manipulation** | **Implemented** | Bloblang structure→Silver semantics; `faust-edge` windowing; ADR-0013 Quantity normalization; ADR-0026's decomposition of source vocabularies onto canonical axes |
-| **3 — State detection** | **Implemented** | `logistics-fusion` evaluators emitting `ConstrainingFactor` per non-nominal axis; `cm-service` compliance state; `assetTier` liveness classification |
+| **3 — State detection** | **Implemented** | `logistics-fusion` evaluators emitting `ConstrainingFactor` per non-nominal axis; `assetTier` liveness classification. *(Corrected 2026-11-11: `cm-service` compliance state was listed here. It is configuration status accounting, see below)* |
 | **4 — Health assessment** | **Partial** | Severity roll-ups (`overall_severity`, `overall_status`) and the CM/operational quadrant model give an *assessed condition*. What is absent is **diagnosis** — fault-cause attribution. The system says *what is wrong*, not *why* |
 | **5 — Prognostics assessment** | **Partial — mechanism built, prediction not** | ADR-0020's derivation engine is **built and closed** (Phase 5): wear accumulators, remaining-life fractions, `ORIGIN_DERIVED` stamping. What is missing is a **time horizon with uncertainty** — the engine reports *fraction remaining against authored coefficients*, not *fails at H+N, ±M*. Coefficients are unvalidated by design (gated on AFSIM or the co-located simulator) and `confidence` is an acknowledged placeholder |
-| **6 — Advisory generation** | **Partial — rule-based, shipping, unprovenanced** *(corrected 2026-08-12)* | `cm-service`'s discrepancy analyzer machine-generates recommended actions from baseline-vs-as-maintained comparison; they persist and render in the maintainer drill-in and in an HQ panel titled *"Enterprise CM Recommendations."* Narrow (CM domain, rule-based, no prognostic input) and carrying **no provenance whatever** — `Discrepancy.recommended_action` is a bare string. **This row read "Not implemented" as first published; AUDIT-2026-08-12 F1 falsified it** |
+| **6 — Advisory generation** | **Not implemented for condition** *(corrected 2026-11-11)* | No condition advice is generated. `logistics-fusion`'s constraining factors name what is wrong and carry no advice. `cm-service`'s discrepancy analyzer generates recommended actions, but from a baseline-vs-as-maintained comparison: that is configuration advice, under configuration status accounting (below). C4's provenance finding on `Discrepancy.recommended_action` still stands. *History: first published as "Not implemented"; AUDIT-2026-08-12 F1 changed it to "Partial — rule-based" on the analyzer; ADR-0059 found the analyzer's advice is configuration advice* |
 | **Information presentation** | **Implemented** | The COP, governed by ADR-0035's claim classes |
 | **External system interfaces** | **Implemented, reference-only** | Egress connectors; `CmEvent.work_order_ref` carries a foreign reference to an **externally created** work order. The system points at maintenance actions; it does not originate them |
+
+**Configuration status accounting, not a block (added 2026-11-11).** `cm-service`'s comparison of the as-maintained
+record against its baseline, its compliance state and its discrepancy analyzer are configuration management (ADR-0009),
+not condition monitoring. They sit under ConfigurationStatusAccounting in the capability taxonomy, and in no ISO 13374
+block. See ADR-0059, finding 2.
 
 The honest one-line summary: **OpenDDIL implements condition-based
 monitoring through health assessment, with prognostic mechanism but not

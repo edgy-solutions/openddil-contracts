@@ -4,13 +4,190 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-11 — built-in test arrives as free strings, with no test type, result, isolated unit or confidence
+
+**A proposed seam, not built.** `HealthFlags.active_fault_codes` is a list of strings, and nothing records which test
+ran, its result, the candidate units it isolated to, or how sure it is. The proposal is a declared built-in test kind:
+test type from a per-variant vocabulary, result, fault code, isolated units as an ambiguity group, and a confidence with
+its kind. A failed result opens or joins an episode.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §5. Named by: the architecture order of 2026-11-10.
+
+Close when the kind is specified and a deployment's ingest emits it, with a fixture that opens an episode from a failed
+result.
+
+## OPEN 2026-11-11 — an episode cannot count detection, isolation, false-alarm or no-fault-found rates
+
+**A design, not built.** An episode's detecting source is an opaque string, it names one component, it closes with free
+text, and it carries no variant. The proposal adds a declared detecting source, an ambiguity group, a confirmed component
+and a closure reason (`confirmed`, `no_fault_found`, `cannot_duplicate`) at close, and the variant frozen at open. The
+counts compose up the tiers as sums, like ADR-0051 §4, and rates are divided at read. Ruled 2026-11-11: a closure is
+confirmed only by the completed work order's outcome, returned through iagent's maintenance action record; a closure
+recorded at a tier is declared-local and unconfirmed; a release never closes an episode. The outcome's fields are a
+question to iagent's architect.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.1. Named by: the architecture order of 2026-11-10, extended 2026-11-11.
+
+Close when the fields are on the episode, the outcome's fields are answered and bound, and the rollup carries the
+counts, with a test that composes two tiers' counts.
+
+## OPEN 2026-11-11 — no failure-mode, mechanism or cause vocabulary on an episode
+
+**Nothing built.** An episode's `fault_code` is a catalog key, not a failure mode. ISO 14224's definitions are unread, so
+no vocabulary is proposed yet; the first step is that read.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` finding 4. Named by: the architecture order of 2026-11-10.
+
+Close when a vocabulary is declared from a read standard and an episode can carry a failure mode.
+
+## OPEN 2026-11-11 — usage meters stop at ADR-0051's three
+
+**Nothing built.** Hours in service, cycles, power cycles and distance exist as fields or accumulators, but none is a
+declared meter, and power cycles has no unit. A remaining-life output must be stated in a declared meter.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` finding 6, and ADR-0051 §3. Named by: the architecture order of 2026-11-10.
+
+Close when each of these is a declared meter kind with a UCUM unit, or is named as not one.
+
+## OPEN 2026-11-11 — remaining useful life as an output kind of the algorithm contract
+
+**A design, not built.** The algorithm contract refuses any output kind but `sustainment` and `anomaly`, and the wear
+unit reports remaining life as a percentage of an authored life. The proposal is a remaining-life kind: a distribution in
+a declared usage meter's unit, with a horizon, the threshold it was computed against, `ORIGIN_DERIVED`, a confidence with
+its kind, and an advisory marking. It needs ADR-0057's closed set opened, as ADR-0038 C2 requires.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.2. Named by: the architecture order of 2026-11-11.
+
+Close when the kind is declared, the runner accepts it, and one unit emits it in a meter unit.
+
+## OPEN 2026-11-11 — a scoring harness for remaining-life outputs over recorded failures
+
+**A design, not built.** Nothing returns a confirmed failure to OpenDDIL, so nothing can score a prediction. The proposal
+is an offline harness that joins each remaining-life output to the component's confirmed failure and scores it with the
+PHM prognostic metrics, by the paper's text. While the wear unit's life totals are placeholders, its scores measure
+placeholders.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.3. Named by: the architecture order of 2026-11-11.
+
+Close when the harness runs over a recording with confirmed failures and reports each metric, citing the paper.
+
+## OPEN 2026-11-11 — no collector at any tier; telemetry does not travel upward
+
+**A design, not built.** Nothing emits OpenTelemetry, and no collector is deployed. The proposal is a collector per
+tier: it exports locally, and forwards upward over OTLP through a persistent queue with a bound and a counted drop.
+Ruled 2026-11-11: metrics go upward by remote write (ADR-0059 §7.6), and traces and logs over OTLP.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 2, 3. Named by: the architecture order of 2026-11-11.
+
+Close when a cut tier's queued telemetry arrives upward after the link returns, with the drop counter at zero, and
+metrics arrive once, by remote write.
+
+## OPEN 2026-11-11 — no trace context crosses the egress or intake doors
+
+**A design, not built.** No `traceparent` is read or written anywhere. The forwarder sends a content type and a bearer
+token only. The proposal is W3C Trace Context on every forward, in the record's headers across the broker, and
+continued at intake. iagent is asked by packet to propagate it through its workflow and back.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 4. Named by: the architecture order of 2026-11-11.
+
+Close when one filing shows as one trace from the discrepancy door to the gate's release, and through iagent's answer
+if iagent propagates.
+
+## OPEN 2026-11-11 — spans and logs must carry opaque ids only; three log lines carry content or labels
+
+**A design, not built.** The forwarder logs up to 300 bytes of a destination's refusal body. The gate's decision lines
+carry the releasability label, and its details can quote a record value or name a classification marking. Intake's
+lines carry free-text details and subject names. The proposal is the rule, a redaction processor in each collector that
+keeps an allow list of id fields, and a test that plants a label, a marking and a record value and fails if any reaches
+an exporter. Ruled 2026-11-11: a subject is carried by the token's subject identifier only, never a subject name.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 5. Named by: the architecture order of 2026-11-11.
+
+Close when the test runs in CI against the collector's configuration, and the three lines log ids and subject
+identifiers only.
+
+## OPEN 2026-11-11 — decision records ride the log stream
+
+**A design, not built.** The gate's and intake's decision records are log lines, so forwarding logs would forward their
+labels. The proposal moves decision records to their own sink, with the log line naming the decision id only, and
+lets a decision record carry its trace id for correlation. A trace id is never provenance.
+
+Home: `ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md` Decision 6, 7. Named by: the architecture order of 2026-11-11.
+
+Close when the decision records are read from their own sink, and the log stream carries no label.
+
+## OPEN 2026-11-11 — no observed link-state kind for a network management system's input
+
+**A design, not built.** OpenDDIL's link state is derived from its own heartbeats only. Nothing reads a network
+management system (NMS), SNMP or an alert. The proposal is an observed kind: observed, provenance (which NMS, which
+probe or rule), link or device, state, cause if given, `observed_at`. A receiver takes an Alertmanager-compatible
+webhook first, and turns each alert into this kind and nothing else: an alert never opens a finding directly.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.3. Named by: the architecture order of 2026-11-11.
+
+Close when the kind is declared, a receiver writes it from a recorded webhook payload, and a severed tier's screen shows
+the NMS's state beside the heartbeat-derived state.
+
+## OPEN 2026-11-11 — OpenDDIL's exporters are not listed in any document
+
+**A design, not built.** Seven services expose Prometheus metrics, and nothing scrapes them. No document names them, so
+a deployment's monitoring cannot find them. The chart sets no metrics port for the configuration management service or
+fusion, which listen on their default. The list as read is in ADR-0059 §7.5.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.5. Named by: the architecture order of 2026-11-11.
+
+Close when the operator documentation lists each exporter's endpoint and metrics, and a check fails when a metrics
+module changes without the list.
+
+## OPEN 2026-11-11 — no disagreement entry for link state
+
+**A design, not built.** When an NMS and the heartbeats disagree about a link, ADR-0053 has no detector for it. The
+proposal is a detector row: the heartbeat-derived `link_status` or `hq_link_severed` (derived) against the NMS
+observation (observed), shown and never resolved.
+
+Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §7.3; ADR-0053 §1. Named by: the architecture order of
+2026-11-11.
+
+Close when ADR-0053's detector table carries the row and the disagreement view shows a link-state entry from a recorded
+disagreement.
+
+## OPEN 2026-11-10 — the intake reads kinds only at start
+
+A changed kind schema reaches the intake only through a chart upgrade. The kinds checksum rolls four workloads
+(assembler, forwarder, gate and intake), with the upgrade's hooks, so correcting one schema is a full roll. Home: the
+worked example in `docs/arch/views/Op-Cn.md`, finding O1. Named by: the operations card, entry of 2026-11-10.
+
+Close when a kind change is loaded without a roll, or when the roll is the documented step for it.
+
+## OPEN 2026-11-10 — a final `schema_invalid` refusal is not re-decided after its kind is corrected
+
+The intake skips a final refusal whose body hash is unchanged, so an action refused against a wrong kind stays refused
+after the kind is corrected. A fix is written and held for the next roll, on the local branch
+`fix/intake-redecide-schema-invalid`: a same-hash `schema_invalid` row whose body now passes the loaded schema is decided
+again, the new decision replaces the stored row, and `schema_redecided` counts it. Every other same-hash row is still
+skipped. ADR-0046's amendment of 2026-11-10 records the rule. Home: the worked example in
+`docs/arch/views/Op-Cn.md`, finding O2. Named by: the operations card, entry of 2026-11-10.
+
+Close when the fix is deployed and the walk's action reads admitted with `schema_redecided` 1.
+
+## OPEN 2026-11-10 — the stand-in answers `task_refs` as strings
+
+The stand-in that answers in place of the maintenance system in tests sends `task_refs` as strings. Under the kind
+changed to the object shape, its answers would be refused `schema_invalid`. Nothing polls it today. Decided
+2026-11-10: the stand-in changes its answer to the object shape, in the deployment's overlay, at the next roll.
+Owner: operations. Home: the worked example in
+`docs/arch/views/Op-Cn.md`, finding O4. Named by: the operations card, entry of 2026-11-10.
+
+Close when the stand-in's answer passes the deployed kind.
+
 ## OPEN 2026-11-07 — every image in the chart by digest, and every Dockerfile from its lock
 
 **A design, not built.** Of the chart's 33 default image blocks, 3 render by digest; 14 owned images resolve to `:latest`
 and 16 third-party images to tags. No Dockerfile takes its dependencies from a `uv.lock`, though five have one in their
 build context, and a `uv pip compile` during the build re-resolves on every build. The design adds a pin table that
 fails when a tag changes without its digest, a render guard and an in-template guard that fail on a tag, the locks, and a
-Dockerfile check, in five stages.
+Dockerfile check, in five stages. Its two design calls were ruled 2026-11-11: the pins live in git as `values-pins.yaml`, and
+where deployments run different digests, Stage 1 pins the one that ran longest under load and declares the other's roll.
 
 Two neighbours are tracked here. The `fix/ci-latest-master-only` workflow row is held until after the walk, because CI's
 `:latest` moved to an unmerged branch's image once; both clusters pin by digest, so nothing was harmed. The contracts CI
@@ -1038,7 +1215,8 @@ documented as ignored; it should be deleted once the callers are cleaned up.
 `dis_ingress_kind_dropped`, on Redpanda Connect's Prometheus endpoint, which is
 on by default at `:4196/metrics`. **Nothing scrapes it.** There is no
 `ServiceMonitor` and no `prometheus.io/scrape` annotation anywhere in the
-chart; `openddil-demo/values.yaml:418` carries `httpPort: 4196` and nothing
+chart; `openddil-demo/values.yaml:723` (openddil-helm 8bbcb9a; the line was
+:418 when this row was written) carries `httpPort: 4196` and nothing
 collects from it.
 
 So the drop count is real, per-kind, and reachable only by hand:
@@ -2159,6 +2337,29 @@ correct on 2026-09-19.
 ---
 
 ## OPEN 2026-09-19 — hq_link_severed tracks the simulator, not reachability
+
+**Restated 2026-11-11 against the code; the heading is kept so links hold.**
+The probe this row describes is gone. On 2026-10-05 (openddil-projector
+556d4ec) the flag became a reachability reading, which is the semantics
+decision below, taken: `LinkReachability`
+(`openddil-projector/src/edge_buffer_monitor.py:196`) counts an exchange when
+the relay group's committed offsets advance (the relay commits only after its
+parent acks) or when its lag reads 0. With no exchange for longer than
+`LINK_SEVER_AFTER_S` (`:100`, by default 2 x (exchange period + probe
+interval)) it reads severed, and it needs `LINK_RESTORE_EXCHANGES` (2)
+exchanges in a row to read up again. The column keeps its name for schema
+compatibility. Unit tests: `src/tests/test_edge_buffer_reachability.py`.
+
+What stays open, from the code read and not from a run:
+
+- No severance rehearsal is cited here that read the new flag under a
+  NetworkPolicy cut. Close this row when one does.
+- Lag 0 counts as an exchange. A tier that produces nothing during a cut has
+  lag 0, so it reads up. Whether the link heartbeat
+  (`LINK_HEARTBEAT_ENABLED`, default false) keeps lag above 0 under a cut
+  where it is on was not read here.
+
+The original record follows.
 
 Found by the severance rehearsal. edge-01 severed with sever-tier.sh (a
 NetworkPolicy), and its edge_buffer_status row reported truthfully on two

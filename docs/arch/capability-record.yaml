@@ -21,6 +21,8 @@ lanes:
   Isolation: Isolation increments
   Correlation: Correlation
   Releasability: Releasability
+  DataManagement: Data management
+  OperatorInteraction: Operator interaction
   AnticipatedCapability: Anticipated
 
 # Labs are named by letter. A letter is declared here, not read from the entry.
@@ -45,7 +47,7 @@ entries:
 
 capabilities:
   DataAcquisition:
-    adrs: [ADR-0038]
+    adrs: [ADR-0038, ADR-0010]
     built: [{template: edge.yaml, contains: sensor-ingest}]
     measured: [{entry: preflight-51, line: "| 1 | advancing | exit 0 |"}]
   DataManipulation:
@@ -54,7 +56,7 @@ capabilities:
     measured: [{entry: preflight-51, line: "| 3 | tier feed | clean"}]
   StateDetection:
     adrs: [ADR-0038]
-    built: [{template: tier-node.yaml, contains: cm-service}]
+    built: [{template: tier-node.yaml, contains: logistics-fusion}]
     measured: [{entry: preflight-51, line: "| 2 | derive stage | **COMPLETING**"}]
   HealthAssessment:
     adrs: [ADR-0038]
@@ -71,6 +73,8 @@ capabilities:
     adrs: [ADR-0038]
     built: [{template: tier-node.yaml, contains: tier-electric}]
     measured: [{entry: preflight-51, line: "| 4 | shape sizes | **TOTAL 85 KiB**"}]
+  DeclaredAnalyticUnits:
+    adrs: [ADR-0057]
   HierarchicalAggregation:
     adrs: [ADR-0022]
     built: [{template: regional.yaml, contains: regions}]
@@ -93,6 +97,8 @@ capabilities:
   OneSession:
     increment: "**One session**"
     still_open: [{adr: ADR-0045, says: "Federation across tiers, partly closed."}]
+  EdgeWorkflow:
+    adrs: [ADR-0031]
   TacticalSustainmentCorrelation:
     adrs: [ADR-0039]
   ConfigurationStatusAccounting:
@@ -114,6 +120,12 @@ capabilities:
   GatedIntake:
     adrs: [ADR-0046]
     built: [{template: egress.yaml, contains: intake}]
+  DeclaredLabelDimensions:
+    adrs: [ADR-0055]
+  OneIdentityPerThing:
+    adrs: [ADR-0056]
+  DeclaredCards:
+    adrs: [ADR-0058]
   SustainmentFeasibility:
     rows: [AE-3, AE-5, GD-10]
   AdvisoryProvenance:
@@ -138,7 +150,7 @@ capabilities:
 rendered:
   workload:
     asset-registry-service: [HierarchicalAggregation]
-    cm-service: [StateDetection, ConfigurationStatusAccounting]
+    cm-service: [ConfigurationStatusAccounting]
     cm-service-bootstrap: {infrastructure: "registers the service with the workflow engine"}
     edge-hq-bridge: [HierarchicalAggregation]
     egress-assembler: [GatedRelease]
@@ -153,7 +165,7 @@ rendered:
     frontend: [InformationPresentation]
     images-pullable-1: {infrastructure: "pre-install hook that proves every image can be pulled"}
     logistics-fusion-bootstrap: {infrastructure: "registers the service with the workflow engine"}
-    logistics-fusion-service: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    logistics-fusion-service: [StateDetection, HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
     logistics-sim: {infrastructure: "a simulated source of sustainment telemetry, not a capability"}
     pep: [LabelledReadEnforcement]
     postgres: {infrastructure: "store"}
@@ -165,11 +177,11 @@ rendered:
     restate-hub: {infrastructure: "workflow engine at the hub"}
     restate-server: {infrastructure: "workflow engine at the edge"}
     sensor-ingest: [DataAcquisition]
-    tier-cm: [StateDetection, ConfigurationStatusAccounting]
+    tier-cm: [ConfigurationStatusAccounting]
     tier-declaration-intake: [ArrivalDeclaration]
     tier-electric: [InformationPresentation]
     tier-frontend: [InformationPresentation]
-    tier-fusion: [HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
+    tier-fusion: [StateDetection, HealthAssessment, PrognosticAssessment, AdvisoryGeneration]
     tier-pep: [LabelledReadEnforcement]
     tier-pg: {infrastructure: "store at the tier"}
     tier-projector: [DataManipulation]
