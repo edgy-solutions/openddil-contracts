@@ -1,6 +1,8 @@
 # DESIGN 2026-11-11 — The remaining-life output kind, its ADR-0057 amendment, and the scoring harness
 
-**Status:** a design. Nothing built, nothing run, nothing measured. Ordered 2026-11-11 as a spec under ADR-0059 §4.2
+**Status:** accepted as proposed, 2026-11-12, with two rulings: the kind is `terminal` under ADR-0034's composition
+typing (§4), and a repair starts a new life only when declared a renewal (§5.2). The §4 amendment is applied to
+ADR-0057. Still a design: nothing built, nothing run, nothing measured. Ordered 2026-11-11 as a spec under ADR-0059 §4.2
 and §4.3. ADR-0059 is PROPOSED, reviewed 2026-11-11 and accepted as proposed; its ruling on ADR-0057 opens the output
 kinds when this kind is specified. This record specifies the kind by concept. Field names, the wire message and the
 topic are bound when it is built, not here.
@@ -56,6 +58,7 @@ One output per component per computation. Each row is a concept. Its field name 
 | Failure threshold | The threshold the output was computed against, by reference and version | A reference, never an inline number |
 | Confidence | A value with its declared kind (ADR-0020), or absent | Never a default (§3) |
 | Advisory | Always set. The output informs a person and starts nothing (ADR-0038 C7) | A unit cannot unset it |
+| Composition | `terminal` under ADR-0034 (ruled 2026-11-12) | Never `upward`; a fleet figure is its own derived record |
 | Provenance | `ORIGIN_DERIVED` and the producer stamp (ADR-0057 §5) | As every derived output |
 | Labels | As ADR-0057 §5 sets them: copy-source today, high-water after ADR-0055 | Unchanged by this kind |
 
@@ -85,7 +88,8 @@ With no declared kind, the confidence is absent. A reader never sees a number wi
 
 ## 4. The ADR-0057 amendment, drafted
 
-To be applied to ADR-0057 when this design is accepted. Drafted text, by section:
+Applied to ADR-0057 on acceptance (2026-11-12), with the composition refusal the terminal ruling adds. Text, by
+section:
 
 > **Status.** Amended (date of acceptance): the output kinds admit `remaining_life`, specified in
 > DESIGN-2026-11-11-remaining-life-output-kind. The set stays open (ADR-0038 C2): a further kind is added the same
@@ -99,7 +103,10 @@ To be applied to ADR-0057 when this design is accepted. Drafted text, by section
 > - an output kind other than `sustainment`, `anomaly` or `remaining_life`;
 > - a remaining-life output with no meter kind, no distribution form, no horizon or no threshold reference;
 > - a remaining-life output whose confidence kind is not one of ADR-0020's declared kinds;
-> - a remaining-life output that is not marked advisory.
+> - a remaining-life output that is not marked advisory;
+> - a remaining-life output in a unit whose `composition` is not `terminal` (ruled 2026-11-12). A distribution over
+>   one component's remaining use does not compose into a fleet figure, so by the composition gate it is never
+>   `upward`. A fleet-level prognosis is a separate derived record with its own rule.
 >
 > The render check (§4) refuses a remaining-life output whose meter kind is not declared for the variants the unit is
 > deployed to.
@@ -113,7 +120,7 @@ To be applied to ADR-0057 when this design is accepted. Drafted text, by section
 > tolerance is declared in advance with its reason. A distribution is compared parameter by parameter, or quantile by
 > quantile.
 
-The token `remaining_life` is proposed. It is bound with the amendment.
+The token `remaining_life` is bound with the amendment (2026-11-12).
 
 What the amendment does not change: the runner, the roles, the composition gate, the labels rule, the stamp's shape,
 and the refusal of `dependencies`.
@@ -147,6 +154,11 @@ definition of its own for any of them. The paper's parameters are declared per r
   remaining use is unknown. It is counted as censored and never scored as wrong.
 - **Not a failure:** a `no_fault_found` or `cannot_duplicate` closure does not end a life. A closure declared at the
   tier counts only when a work order outcome confirms it.
+- **A repair in place (ruled 2026-11-12).** A repair starts a new life only when that repair type is declared a
+  renewal for that component. The declaration is per variant and names its owner, like the movement deadbands. With
+  nothing declared, the life continues, and the repair is an event recorded on it. A declared renewal ends a life
+  without being a failure: an output computed before it, with no confirmed failure between, is censored at the
+  renewal.
 - **Grouping:** scores are grouped by the producer stamp (unit, version, configuration hash), so two versions are never
   averaged together.
 
@@ -163,6 +175,8 @@ definition of its own for any of them. The paper's parameters are declared per r
   then no outcome field is bound here.
 - **The episode's closure reason, confirmed component and frozen variant** (ADR-0059 §4.1). Not built.
 - **A meter that is not a placeholder.** `duration:emitting` needs its accumulator (ADR-0051 §3).
+- **Renewal declarations.** Until a repair type is declared a renewal for a component and variant, every repair
+  continues the life (§5.2).
 
 ## 6. Rows
 
@@ -175,9 +189,10 @@ for confirmed outcomes.
 - No field name, topic or wire message.
 - ISO 13381-1:2025: unread. The 2015 preview's terms are used, and are checked against 2025 before any field freezes.
 - Saxena et al. 2008: unread. Only the 2010 paper's metrics are named.
-- Whether a repair in place starts a new life for the same component identity. It is a question for ADR-0056's
-  identity rules and the meter's declaration, and is not decided here.
-- Whether the kind is `propagating` or `terminal` under ADR-0034's composition typing.
+- Which repair types are renewals for which components. §5.2 rules that only a declaration makes one; no
+  declaration exists yet.
+- A fleet-level prognosis. The kind is `terminal` (§4), so it never goes upward; a fleet figure is a separate derived
+  record with its own rule.
 
 ## Related
 
