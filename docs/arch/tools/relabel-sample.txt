@@ -1,0 +1,14 @@
+# Relabel list: format samples only.
+#
+# One rule per line: PATTERN<TAB>REPLACEMENT. The two parts are separated by a tab.
+# PATTERN is a regular expression, matched without regard to case. Blank lines and lines
+# starting with # are skipped. Rules apply in file order to the decision records at export;
+# the records in the repository are not changed. A replacement that starts with "the "
+# loses it after an article or determiner, and takes a capital at the start of a sentence.
+#
+# A deployment supplies its own list. In CI it is the optional repository secret
+# ARCH_RELABEL; without it, this file is used. This file holds format samples only: the
+# values below are made up and name nothing real.
+\bzebra-host-9\b	the lab
+\bPat Example\b	the project owner
+\bExample Works\b	the vendor

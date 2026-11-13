@@ -33,6 +33,14 @@ const extraArgs = opt("--puppeteer-config")
 mkdirSync(shots, { recursive: true });
 
 const PROFILES = ["uaf", "dodaf202", "naf4"];
+// Hard-coded counts, and how they are made up. Change them with the thing they count.
+//   29 views, plus the front page and the declarations page                  = 31
+//   31 capability pages: one per capability in model/openddil.sysml CapabilityTaxonomy
+//   52 decision pages: one per decisions/ADR-*.md (51) plus the roadmap note (1)
+const BASE_PAGES = 31;
+const CAPABILITY_PAGES = 31;
+const DECISION_PAGES = 52;
+const TOTAL_PAGES = BASE_PAGES + CAPABILITY_PAGES + DECISION_PAGES;
 let failed = 0;
 let passed = 0;
 function check(ok, what, detail = "") {
@@ -117,7 +125,54 @@ try {
   check((await display("#view-Rs-Cn")) === "block" && (await display("#front")) === "none",
     "clicking a filled cell shows that view and hides the front");
   const provCount = await page.evaluate(() => document.querySelectorAll("[data-provenance]").length);
-  check(provCount === 31, "a provenance block on every page", String(provCount));
+  check(provCount === TOTAL_PAGES, `a provenance block on every page (${TOTAL_PAGES}: ${BASE_PAGES} + ${CAPABILITY_PAGES} capability + ${DECISION_PAGES} decision)`, String(provCount));
+  const kinds = await page.evaluate(() => [document.querySelectorAll("section.capability").length, document.querySelectorAll("section.decision").length]);
+  check(kinds[0] === CAPABILITY_PAGES && kinds[1] === DECISION_PAGES, `${CAPABILITY_PAGES} capability pages and ${DECISION_PAGES} decision pages`, kinds.join(" "));
+
+  // --- capability and decision pages ---
+  await go("#front");
+  const navs = await page.evaluate(() => [document.querySelectorAll("nav.capabilities a").length, document.querySelectorAll("nav.decisions a").length]);
+  check(navs[0] === CAPABILITY_PAGES && navs[1] === DECISION_PAGES, "front: a link per capability page and per decision page", navs.join(" "));
+  await go("#view-St-Tx");
+  const capHref = await page.evaluate(() => { const a = document.querySelector('#view-St-Tx a[href^="#cap-"]'); return a ? a.getAttribute("href") : null; });
+  check(capHref !== null, "CV-2: a capability name is a link", String(capHref));
+  if (capHref) {
+    await page.click(`#view-St-Tx a[href="${capHref}"]`);
+    check((await display(capHref)) === "block" && (await display("#view-St-Tx")) === "none" && (await display("#front")) === "none",
+      "CV-2: clicking a capability name shows its page", capHref);
+  }
+  const decHref = await page.evaluate(() => {
+    for (const sec of document.querySelectorAll("section.capability")) {
+      const a = sec.querySelector('a[href^="#adr-"]');
+      if (a) return [sec.id, a.getAttribute("href")];
+    }
+    return null;
+  });
+  check(decHref !== null, "a capability page links a decision section", JSON.stringify(decHref));
+  if (decHref) {
+    await go("#" + decHref[0]);
+    await page.click(`#${decHref[0]} a[href="${decHref[1]}"]`);
+    const landed = await page.evaluate((h) => {
+      const e = document.getElementById(h.slice(1));
+      if (!e) return null;
+      const r = e.getBoundingClientRect();
+      return [location.hash === h, /^H[2-4]$/.test(e.tagName), r.height > 0, getComputedStyle(e.closest(".page")).display];
+    }, decHref[1]);
+    check(landed !== null && landed[0] && landed[1] && landed[2] && landed[3] === "block",
+      "a decision link on a capability page lands on the section heading, shown", JSON.stringify(landed));
+  }
+  const stamps = await page.evaluate(() => [...document.querySelectorAll("section.decision")].map((s) => s.id));
+  const unstamped = [];
+  for (const id of stamps) {
+    await go("#" + id);
+    const t = await page.evaluate((i) => {
+      const e = document.querySelector(`#${i} [data-stamp]`);
+      return e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0 ? e.textContent : "";
+    }, id);
+    if (!/^Commit [0-9a-f]{7,}, \d{4}-\d{2}-\d{2}: decisions\/.+\.md/.test(t)) unstamped.push(id);
+  }
+  check(stamps.length === DECISION_PAGES && unstamped.length === 0, "every decision page shows its stamp", unstamped.slice(0, 3).join(","));
+  await go("#view-Rs-Cn");
 
   const uafBody = await body("uaf");
   const uafH1 = await page.evaluate(() => document.querySelector("#view-Rs-Cn h1").textContent);
@@ -229,7 +284,7 @@ try {
   await go("#view-Op-Tx");
   await page.emulateMediaType("print");
   const shown = await page.evaluate(() => [...document.querySelectorAll(".page")].filter((e) => getComputedStyle(e).display !== "none").length);
-  check(shown === 31, "print: all 31 pages are displayed", String(shown));
+  check(shown === TOTAL_PAGES, `print: all ${TOTAL_PAGES} pages are displayed`, String(shown));
   check((await display(".bar")) === "none", "print: the bar is hidden");
   check((await display("#results")) === "none", "print: the search panel is hidden");
   const gridsShown = await page.evaluate(() => [...document.querySelectorAll(".grid")].filter((e) => getComputedStyle(e).display !== "none").length);
@@ -409,7 +464,7 @@ try {
       names: bs.every((b) => names.includes(b.textContent)),
       minC: Math.min(...cs.map((c) => contrast(c.color, c.backgroundColor))) };
   `);
-  check(badges.n === 35 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 35 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
+  check(badges.n === 36 && badges.bgs === 5 && badges.names && badges.minC >= 4.5, "badges: 36 in Phase column, 5 backgrounds, phase names, contrast at least 4.5", JSON.stringify(badges));
 
   const head = await inPage(`
     const hs = [...document.querySelectorAll("#view-Op-Tx thead th")].map((h) => getComputedStyle(h));
