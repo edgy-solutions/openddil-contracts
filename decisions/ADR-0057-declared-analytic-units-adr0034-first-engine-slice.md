@@ -3,9 +3,13 @@
 ## Status
 
 **PROPOSED — 2026-11-08. This records what was built. It is not a new decision.**
-- **Noted 2026-11-11: the output kinds open when the remaining-life kind is specified.** `sustainment` and `anomaly` are
-  this slice's set, not a closed vocabulary (ADR-0038 C2). When ADR-0059 §4.2's remaining-life kind is specified, the
-  set opens to admit it. Until then the validator's refusal below stands.
+- **Amended 2026-11-12: the output kinds admit `remaining_life`**, specified in
+  [DESIGN-2026-11-11-remaining-life-output-kind](DESIGN-2026-11-11-remaining-life-output-kind.md), which was accepted as
+  proposed that day. The set stays open (ADR-0038 C2): a further kind is added the same way, by a specification and an
+  amendment. A remaining-life output is terminal under ADR-0034's composition typing, so it never goes upward. The
+  amendment is applied in §1, §5 and §9 below.
+- **Noted 2026-11-11: the output kinds open when the remaining-life kind is specified.** `sustainment` and `anomaly` were
+  this slice's set, not a closed vocabulary (ADR-0038 C2).
 - **What this is.** ADR-0034 (Accepted 2026-08-07) fenced the engine. On 2026-11-07 the project owner lifted the fence for one slice:
   - one Faust runner that loads declared units from the bundle;
   - the wear unit first and the thermal unit second;
@@ -54,19 +58,30 @@ port they match exactly, with no tolerance.
 | `inputs` | One topic, and the roles the unit reads, each `required` or optional. |
 | `params` | Every tunable constant: `type` (`number` or `integer`), `default`, optional `minimum`/`maximum`, `unit`. |
 | `state` | The table name, its partitions, the record namespace, and the record's fields with type, nullability and default. |
-| `outputs` | Each output's `kind`, topic, `direction` (`local` or `upward`), `producer_id`, `source_protocol` and `labels`. An anomaly output also has `event_type` and `severity`. |
+| `outputs` | Each output's `kind`, topic, `direction` (`local` or `upward`), `producer_id`, `source_protocol` and `labels`. An anomaly output also has `event_type` and `severity`. A remaining-life output also declares its meter kind, its distribution form, its horizon, its failure threshold reference, and its confidence kind or none (amended 2026-11-12). |
 | `resources` | `memory_mi` and `cpu_m`: the unit's envelope (see §8). |
 | `dependencies` | Must be `[]` (see §7). |
 
 The validator refuses all of these:
 - an unknown key or an unknown role;
 - a default outside its own bounds;
-- an output kind other than `sustainment` or `anomaly`;
+- an output kind other than `sustainment`, `anomaly` or `remaining_life`;
 - non-empty `dependencies`;
 - `labels` other than `copy-source` (see §5);
 - a `terminal` unit with an `upward` output.
 
 The last refusal is ADR-0034's composition gate, built: the truncation bug cannot be written into a declaration.
+
+**Amended 2026-11-12, the remaining-life refusals.** The validator also refuses:
+- a remaining-life output with no meter kind, no distribution form, no horizon or no threshold reference;
+- a remaining-life output whose confidence kind is not one of ADR-0020's declared kinds;
+- a remaining-life output that is not marked advisory;
+- a remaining-life output in a unit whose `composition` is not `terminal`. A distribution over one component's
+  remaining use does not compose into a fleet figure, so by the gate above it is never `upward`. A fleet-level
+  prognosis is a separate derived record with its own rule.
+
+The render check (§4) refuses a remaining-life output whose meter kind is not declared for the variants the unit is
+deployed to.
 
 The roles are a closed list in `edge/algorithm_runtime/contract.py`: `position_ecef_m`, `pitch_deg`, `roll_deg`,
 `sample_time_ns`, `component_temp_k` and `ambient_temp_k`. Adding a role is a change to the runtime, not to a unit.
@@ -146,6 +161,11 @@ a payload that sets `value_provenance` is refused (`output_refused`).
 
 The confidence is 0.0 because a derived value has no measured confidence, and a number above zero would claim one
 (ADR-0020).
+
+**A remaining-life output (amended 2026-11-12)** is stamped `ORIGIN_DERIVED` with confidence 0.0, like every output.
+Its prediction confidence is a separate value with a declared kind. An asserted confidence comes from the declaration,
+never from the unit. A payload that sets an asserted confidence, or sets advisory to false, is refused
+(`output_refused`).
 
 **The producer stamp.** Every output carries `producer_stamp {unit, version, config_hash, tier}`. The stamp is ADR-0034's
 mandatory provenance stamp, in the shape the 2026-09-08 addendum fixed. `model_artifact_hash` is reserved and empty,
@@ -227,6 +247,9 @@ uses. It then diffs the unit's outputs and end state against what production emi
 - **What it imports.** It does not import Faust, and it streams with bounded memory.
 - **Count-only units.** A unit with no sustainment output has nothing to compare, so it runs COUNT-ONLY and says so in
   its report. For such a unit, "equal" means nothing, and the report does not print it.
+- **Remaining-life outputs (amended 2026-11-12).** They are compared like a sustainment output: exactly, unless a
+  tolerance is declared in advance with its reason. A distribution is compared parameter by parameter, or quantile by
+  quantile.
 - **CI.** The step "replay harness" in `tests.yml` runs `tests/test_replay.py` on synthetic recordings, with sockets
   disabled.
 
