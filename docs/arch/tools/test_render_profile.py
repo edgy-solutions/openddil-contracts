@@ -294,6 +294,29 @@ class TempTree(unittest.TestCase):
         self.assertEqual(rc, 1, err)
         self.assertIn("TacticalSustainmentCorrelation has no phase", err)
 
+    def test_cv3_names_the_default_record_as_a_link(self):
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o")
+        self.assertEqual(rc, 0, err)
+        text = read(self.tmp / "o", "St-Rm-P.md")
+        self.assertTrue(any(t.endswith("capability-record.yaml") for t in relative_links(text)))
+        self.assertNotIn("the deployment's own", text)
+
+    def test_cv3_names_a_passed_record_as_the_deployments_own(self):
+        own = self.tmp / "own-record.yaml"
+        shutil.copyfile(self.arch / "capability-record.yaml", own)
+        rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o", "--record", own)
+        self.assertEqual(rc, 0, err)
+        text = read(self.tmp / "o", "St-Rm-P.md")
+        self.assertEqual(text.count("`capability-record.yaml`, the deployment's own"), 2)
+        self.assertFalse([t for t in relative_links(text) if t.endswith("capability-record.yaml")])
+
+    def test_name_record_refuses_a_view_without_the_link(self):
+        import capability_phases as cp
+        own, default = self.tmp / "a.yaml", self.arch / "capability-record.yaml"
+        self.assertEqual(cp.name_record("no link", default, default), "no link")
+        with self.assertRaises(cp.CheckError):
+            cp.name_record("no link", own, default)
+
     def test_unreadable_record_is_exit_2(self):
         rc, _, err = run(self.tool, "--profile", "uaf", "--out", self.tmp / "o", "--record", self.tmp / "none.yaml")
         self.assertEqual(rc, 2, err)
