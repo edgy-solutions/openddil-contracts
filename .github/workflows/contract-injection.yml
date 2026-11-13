@@ -9,15 +9,15 @@ on:
 
 jobs:
   inject-contract:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout Contracts Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           path: openddil-contracts
 
       - name: Checkout Helm Chart Repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v7
         with:
           repository: your-org/openddil-stack # Adjust to your actual repository
           path: openddil-stack
