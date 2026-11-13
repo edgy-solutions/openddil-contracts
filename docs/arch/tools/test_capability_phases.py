@@ -83,6 +83,11 @@ other text
 |---|---|---|
 | GD-1 | debt one | open |
 | GD-2 | debt two | open |
+
+| ID | Subject | Status |
+|---|---|---|
+| SV-1 | severed one | open |
+| SV-2 | severed two | open |
 """
 
 DEBT = "# Debt\n\nGD-1 is here.\n"
@@ -106,10 +111,16 @@ def base_record() -> dict:
             "e2": {"anchor": "## B. Second section", "lab": "B"},
         },
         "capabilities": {
-            "Alpha": {"adrs": ["ADR-0001"], "built": [{"template": "t.yaml", "contains": "foo-bar"}],
-                      "measured": [{"entry": "e1", "line": "| 1 | alpha"}]},
-            "Beta": {"adrs": ["ADR-0002"], "increment": "**First one**"},
-            "Gamma": {"rows": ["AE-1"]},
+            "Alpha": {"description": "The first stub. It is built and measured.",
+                      "adrs": ["ADR-0001 §context"], "built": [{"template": "t.yaml", "contains": "foo-bar"}],
+                      "measured": [{"entry": "e1", "line": "| 1 | alpha"}],
+                      "severed": "ADR-0001 §status"},
+            "Beta": {"description": "The second stub. It is proposed.",
+                     "adrs": ["ADR-0002 §context"], "increment": "**First one**",
+                     "severed": "not stated", "rows": ["SV-1"]},
+            "Gamma": {"description": "The third stub. It holds only a row.",
+                      "derived_from": ["ADR-0001 §status"], "rows": ["AE-1", "SV-2"],
+                      "severed": "not stated"},
         },
     }
 
@@ -209,6 +220,78 @@ class Phases(Fixture):
                          ["measured", "proposed", "row"])
 
 
+class Severed(Fixture):
+    def fails(self, mutate):
+        mutate(self.rec)
+        return "\n".join(self.check())
+
+    def test_missing_entry(self):
+        self.assertIn("Alpha has no severed entry", self.fails(lambda r: r["capabilities"]["Alpha"].pop("severed")))
+
+    def test_not_stated_needs_an_sv_row(self):
+        out = self.fails(lambda r: r["capabilities"]["Beta"].update(rows=[]))
+        self.assertIn("Beta: severed is not stated and rows names no SV- row", out)
+        out = self.fails(lambda r: r["capabilities"]["Gamma"].update(rows=["AE-1"]))
+        self.assertIn("Gamma: severed is not stated and rows names no SV- row", out)
+
+    def test_a_citation_and_an_sv_row_conflict(self):
+        out = self.fails(lambda r: r["capabilities"]["Alpha"].update(rows=["SV-1"]))
+        self.assertIn("Alpha: severed is stated in ADR-0001 §status and rows still names SV-1", out)
+
+    def test_a_citation_is_checked_like_the_others(self):
+        self.assertIn("no section", self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0001 §nowhere")))
+        self.assertIn("ADR-0099 is not exactly one file",
+                      self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0099 §context")))
+        self.assertIn("ADR-0004 is not in decisions/README.md",
+                      self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0004 §context")))
+        self.assertIn("has no readable ## Status line",
+                      self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0005 §context")))
+
+    def test_a_bare_adr_or_other_text_is_refused(self):
+        self.assertIn("Alpha", self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0001")))
+        self.assertIn("Alpha", self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="Not Stated")))
+
+    def test_severed_is_an_accepted_key(self):
+        self.assertIn("severed", cp.CAP_KEYS)
+        self.assertEqual(self.check(), [])
+
+
+class Pending(Fixture):
+    def test_pending_alone_is_a_proposed_phase_with_no_derivation(self):
+        self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It waits on a decision.",
+                                             "pending": ["a source"], "rows": ["SV-2"], "severed": "not stated"}
+        self.assertEqual(self.check(), [])
+        self.assertEqual(cp.phase_of(self.rec["capabilities"]["Gamma"], {}), "proposed")
+
+    def test_pending_does_not_lower_a_phase(self):
+        self.assertEqual(cp.phase_of({"adrs": ["ADR-0001"], "pending": ["x"]}, {"ADR-0001": "accepted"}),
+                         "accepted design")
+
+    def test_no_pending_and_no_derivation_still_fails(self):
+        self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It has rows only.",
+                                             "rows": ["SV-2"], "severed": "not stated"}
+        self.assertIn("Gamma: its description is derived from no decision", "\n".join(self.check()))
+
+    def test_pending_counts_as_a_phase(self):
+        self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It waits.", "pending": ["x"],
+                                             "severed": "ADR-0001 §status"}
+        self.assertNotIn("Gamma has no phase", "\n".join(self.check()))
+
+    def test_pending_must_be_non_empty_strings(self):
+        for bad in ([], [""], "text", [3]):
+            self.rec["capabilities"]["Gamma"].update(pending=bad)
+            self.assertIn("Gamma: pending must be a list of non-empty strings", "\n".join(self.check()))
+
+    def test_the_table_phase_stays_the_phase_and_the_decisions_cell_says_pending(self):
+        self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It waits.", "pending": ["x"],
+                                             "rows": ["SV-2"], "severed": "not stated"}
+        t = self.render()
+        cells = self.cells(t, "Gamma")
+        self.assertEqual(cells[2], "proposed")
+        self.assertIn("decision pending", cells[5])
+        self.assertNotIn("decision pending", self.cells(t, "Beta")[5])
+
+
 class CheckRecord(Fixture):
     def fails(self, mutate):
         mutate(self.rec)
@@ -239,7 +322,7 @@ class CheckRecord(Fixture):
         self.assertIn("LaneOne has no lanes entry", self.fails(lambda r: r["lanes"].pop("LaneOne")))
 
     def test_unknown_adr(self):
-        out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0099"]))
+        out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0099 §context"]))
         self.assertIn("Beta: ADR-0099 is not exactly one file", out)
 
     def test_two_files_for_one_adr(self):
@@ -247,11 +330,11 @@ class CheckRecord(Fixture):
         self.assertIn("ADR-0002 is not exactly one file", "\n".join(self.check()))
 
     def test_adr_absent_from_the_index(self):
-        out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0004"]))
+        out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0004 §context"]))
         self.assertIn("Beta: ADR-0004 is not in decisions/README.md", out)
 
     def test_status_neither_accepted_nor_proposed(self):
-        out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0005"]))
+        out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0005 §context"]))
         self.assertIn("Beta: ADR-0005 has no readable ## Status line beginning accepted or proposed", out)
 
     def test_unknown_row(self):
@@ -265,13 +348,13 @@ class CheckRecord(Fixture):
                       self.fails(lambda r: r["capabilities"]["Gamma"].update(rows=["GD-2"])))
 
     def test_gd_row_present_passes(self):
-        self.rec["capabilities"]["Gamma"]["rows"] = ["GD-1"]
+        self.rec["capabilities"]["Gamma"]["rows"] = ["GD-1", "SV-2"]
         self.assertEqual(self.check(), [])
 
     def test_still_open_text_absent(self):
-        self.rec["capabilities"]["Beta"]["still_open"] = [{"adr": "ADR-0001", "says": "Still open"}]
+        self.rec["capabilities"]["Beta"]["still_open"] = [{"adr": "ADR-0001 §context", "says": "Still open"}]
         self.assertEqual(self.check(), [])
-        self.rec["capabilities"]["Beta"]["still_open"] = [{"adr": "ADR-0001", "says": "never written"}]
+        self.rec["capabilities"]["Beta"]["still_open"] = [{"adr": "ADR-0001 §context", "says": "never written"}]
         self.assertIn("ADR-0001 does not contain 'never written'", "\n".join(self.check()))
 
     def test_increment_not_on_a_roadmap_row(self):
@@ -325,7 +408,8 @@ class RenderFailures(Fixture):
     def test_every_failure_is_reported_together(self):
         self.rec["entries"]["e1"]["anchor"] = "no such anchor"
         self.rec["capabilities"]["Alpha"]["built"][0]["contains"] = "absent text"
-        self.rec["capabilities"]["Gamma"] = {}
+        self.rec["capabilities"]["Gamma"] = {"description": "One stub. Two sentences.", "derived_from": ["ADR-0001 §status"],
+                                             "severed": "ADR-0001 §status"}
         text = self.render_fails()
         for want in ("anchor 'no such anchor'", "does not contain 'absent text'", "Gamma has no phase"):
             self.assertIn(want, text)
@@ -340,7 +424,8 @@ class RenderFailures(Fixture):
 
 class Evidence(Fixture):
     def test_an_adr_saying_measured_without_an_entry_reads_not_measured(self):
-        self.rec["capabilities"]["Alpha"] = {"adrs": ["ADR-0001"]}
+        self.rec["capabilities"]["Alpha"] = {"description": "Two plain sentences. Here they are.", "adrs": ["ADR-0001 §context"],
+                                             "severed": "ADR-0001 §status"}
         t = self.render()
         self.assertEqual(self.cells(t, "Alpha")[2:4], ["accepted design", "not measured"])
 
@@ -385,17 +470,17 @@ class Evidence(Fixture):
 
     def test_the_other_cells(self):
         t = self.render()
-        self.assertEqual(self.cells(t, "Alpha")[4:], ["templates/t.yaml", "ADR-0001", "-"])
+        self.assertEqual(self.cells(t, "Alpha")[4:], ["templates/t.yaml", "ADR-0001 §context", "-"])
         self.assertEqual(self.cells(t, "Beta")[1], "Lane one, 1: First one")
-        self.assertEqual(self.cells(t, "Gamma")[1:], ["Top", "row", "not measured", "-", "-", "AE-1"])
+        self.assertEqual(self.cells(t, "Gamma")[1:], ["Top", "row", "not measured", "-", "-", "AE-1, SV-2"])
 
     def test_a_done_increment_reads_done(self):
         self.rec["capabilities"]["Beta"]["increment"] = "**Done one**"
         self.assertEqual(self.cells(self.render(), "Beta")[1], "Lane one, done: Done one")
 
     def test_still_open_reads_as_such(self):
-        self.rec["capabilities"]["Gamma"]["still_open"] = [{"adr": "ADR-0001", "says": "Still open"}]
-        self.assertEqual(self.cells(self.render(), "Gamma")[5], "ADR-0001 (names it still open)")
+        self.rec["capabilities"]["Gamma"]["still_open"] = [{"adr": "ADR-0001 §context", "says": "Still open"}]
+        self.assertEqual(self.cells(self.render(), "Gamma")[5], "ADR-0001 §context (names it still open)")
 
     def test_duplicate_templates_are_listed_once(self):
         self.rec["capabilities"]["Alpha"]["built"].append({"template": "t.yaml", "contains": "foo"})
@@ -404,19 +489,49 @@ class Evidence(Fixture):
 
 class Decisions(Fixture):
     def test_index_disagreement_is_shown_and_the_file_decides_the_phase(self):
-        self.rec["capabilities"]["Beta"]["adrs"] = ["ADR-0003"]
+        self.rec["capabilities"]["Beta"]["adrs"] = ["ADR-0003 §context"]
         self.put("README.md", README.replace("ADR-0003: three](ADR-0003-three.md) — **accepted.**",
                                              "ADR-0003: three](ADR-0003-three.md) — **Proposed.**"))
         t = self.render()
         self.assertEqual(self.cells(t, "Beta")[2], "accepted design")
-        self.assertEqual(self.cells(t, "Beta")[5], "ADR-0003 (record: accepted; index: proposed)")
+        self.assertEqual(self.cells(t, "Beta")[5], "ADR-0003 §context (record: accepted; index: proposed)")
 
     def test_agreement_shows_nothing(self):
-        self.assertEqual(self.cells(self.render(), "Beta")[5], "ADR-0002")
+        self.assertEqual(self.cells(self.render(), "Beta")[5], "ADR-0002 §context")
 
     def test_an_index_status_that_is_neither_shows_nothing(self):
         self.put("README.md", README.replace("— **proposed.**", "— **superseded.**"))
-        self.assertEqual(self.cells(self.render(), "Beta")[5], "ADR-0002")
+        self.assertEqual(self.cells(self.render(), "Beta")[5], "ADR-0002 §context")
+
+
+class Descriptions(Fixture):
+    def test_a_missing_description_names_the_capability(self):
+        got = "\n".join(self.check(self._without("Beta", "description")))
+        self.assertIn("Beta has no description", got)
+
+    def test_a_bare_adr_id_cites_no_section(self):
+        self.rec["capabilities"]["Beta"]["adrs"] = ["ADR-0002"]
+        self.assertIn("'ADR-0002' cites no section", "\n".join(self.check()))
+
+    def test_a_section_the_record_lacks_fails(self):
+        self.rec["capabilities"]["Beta"]["adrs"] = ["ADR-0002 §99"]
+        got = "\n".join(self.check())
+        self.assertIn("Beta", got)
+        self.assertIn("99", got)
+
+    def test_no_adrs_and_no_derived_from_fails(self):
+        self.rec["capabilities"]["Gamma"].pop("derived_from")
+        self.assertIn("Gamma: its description is derived from no decision", "\n".join(self.check()))
+
+    def test_the_counts_line_does_not_depend_on_the_section_named(self):
+        first = self.render().split("\n")[0]
+        self.rec["capabilities"]["Alpha"]["adrs"] = ["ADR-0001 §status"]
+        self.assertEqual(self.render().split("\n")[0], first)
+
+    def _without(self, name, key):
+        rec = copy.deepcopy(self.rec)
+        rec["capabilities"][name].pop(key)
+        return rec
 
 
 class Counts(Fixture):
@@ -519,6 +634,21 @@ if WHY:
     print(f"SKIP real-record tests: {WHY}", file=sys.stderr)
 
 
+class StubbedRealRecord(unittest.TestCase):
+    """The real record, given the stub descriptions and sections the author's content will carry, passes."""
+
+    def test_it_passes(self):
+        import tempfile as _t
+        sys.path.insert(0, str(HERE / "testdata"))
+        import stub_content
+        tmp = Path(_t.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        stub_content.stub_tree(tmp, repo=False)
+        record = cp.load_record(tmp / "docs" / "arch" / "capability-record.yaml")
+        sysml = (tmp / "docs" / "arch" / "model" / "openddil.sysml").read_text(encoding="utf-8")
+        self.assertEqual(cp.check_record(record, cp.model_capabilities(sysml), tmp / "decisions"), [])
+
+
 @unittest.skipIf(WHY, WHY or "")
 class RealSources(unittest.TestCase):
     """The real record against the real sources. Nothing from the readiness doc is printed."""
@@ -542,7 +672,7 @@ class RealSources(unittest.TestCase):
 
     def test_counts(self):
         self.assertTrue(self.table.startswith(
-            "Phases: 7 measured, 9 built unmeasured, 7 accepted design, 5 proposed, 2 row.\n"))
+            "Phases: 7 measured, 9 built unmeasured, 7 accepted design, 6 proposed, 2 row.\n"))
 
     def test_no_uncited_readiness_line_is_quoted(self):
         lines = self.readiness.replace("\r\n", "\n").split("\n")
