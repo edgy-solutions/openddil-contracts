@@ -53,26 +53,26 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: edgy-solutions/openddil-helm
           ref: master
           path: repos/openddil-helm
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
           ref: master
           path: repos/openddil-customer-bundle-example
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -123,7 +123,7 @@ jobs:
             --readiness "$READINESS" \
             --barred docs/arch/tools/barred-sample.txt
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -171,7 +171,7 @@ jobs:
           node check_export_browser.mjs "$RUNNER_TEMP/export/openddil-architecture.html" \
             --shots "$RUNNER_TEMP/shots" --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: architecture-export
           path: ${{ runner.temp }}/export/openddil-architecture.html
