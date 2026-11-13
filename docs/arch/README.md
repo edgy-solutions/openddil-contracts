@@ -133,7 +133,7 @@ The export also holds a page for each capability and a page for each decision re
 
 CI builds the export from the public twin, checks it and attaches it to the check-views run as the `architecture-export` artifact. The file is not committed. CI runs the check on the public sample list, so a green check is not evidence that any private scan ran.
 
-To build it for a deployment, from the deployment's own bundle, values and capability record, follow [RUNBOOK-generate-for-a-deployment.md](RUNBOOK-generate-for-a-deployment.md).
+To build it for a deployment, from the deployment's own bundle, values and capability record, follow [RUNBOOK-generate-for-a-deployment.md](RUNBOOK-generate-for-a-deployment.md). For its CV-3, the deployment's own capability record and readiness doc, follow [RUNBOOK-cv3-for-a-deployment.md](RUNBOOK-cv3-for-a-deployment.md).
 
 ## Naming a deployment
 

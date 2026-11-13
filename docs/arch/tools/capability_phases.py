@@ -69,6 +69,22 @@ class CheckError(Exception):
     """A citation did not resolve: exit 1. Carries stderr to pass through."""
 
 
+RECORD_LINK = "[capability-record.yaml](../capability-record.yaml)"
+RECORD_OWN = "`capability-record.yaml`, the deployment's own"
+
+
+def name_record(text: str, record_path, default_path) -> str:
+    """St-Rm-P text: when the render uses a record other than the framework's, stop naming the framework's.
+
+    The link to the framework record becomes plain words. A text without the link is a CheckError,
+    so a reworded view cannot quietly keep the wrong source."""
+    if Path(record_path).resolve() == Path(default_path).resolve():
+        return text
+    if RECORD_LINK not in text:
+        raise CheckError(f"St-Rm-P: the link {RECORD_LINK} is not in the view; the deployment's record cannot be named\n")
+    return text.replace(RECORD_LINK, RECORD_OWN)
+
+
 # --- record and model ---------------------------------------------------------
 
 def load_record(path) -> dict:
