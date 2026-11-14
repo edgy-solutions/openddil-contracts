@@ -5,6 +5,10 @@ implementer spec in three slices (3a, 3b, 3c), each with its own checks. Design 
 nothing measured for this increment. ADR-0058 is PROPOSED. This spec builds the part of it that has no card declaration
 yet: what each tier's UI shows of work owned by iagent, and what it shows of the reports its own people filed. Ordered
 2026-11-10, with its scope; sliced, and the closed-episode projection chosen over a ledger stamp, 2026-11-11.
+**Amendment proposed 2026-11-14 (§3.1, §3.2, §9 3a check 3):** "work recorded" reads from the completion record, a new
+intake kind that names its release record. Ordered by the project owner on 2026-11-14, after iagent's architect's
+answers of that date. Those answers are an unchecked draft, so the kind's fields and versions are provisional until
+iagent's checked copy is placed and its completion contract (due 2026-11-27) is merged.
 **Builds on:** ADR-0058 §3 (cortex owns task and approval shapes; OpenDDIL owns record, finding and indicator) and
 §6; ADR-0046 (decision 1: OpenDDIL holds no workflow state; decision 2 and §5.4: per-tier instances and owning-tier
 intake are the design; §6: delegation); ADR-0051 (§1 and its first slice: a closed episode is kept, and projected at the
@@ -264,10 +268,15 @@ OpenDDIL's side to them.
 | proposed | the case's decide step: the choice, the actor, the time | iagent | 3b: read with the person's token (Q12). In 3a, "read in 3b" |
 | approved | the case's review step: the actor, the time, the delegation (§2a) | iagent | 3b, as proposed |
 | released | the admitted action in `intake_records` (decision, `decided_at`), or a refusal with its reason | OpenDDIL's decision on iagent's artifact | a refusal is a state, not a gap |
-| work recorded | the work order | MMIS | no source today (finding 12). Shown as "no source", never as pending |
+| work recorded | the completion record: an intake kind of its own in `intake_records`, admitted at the tier. It names the release record it completes, and joins to the episode through that record | iagent's record, OpenDDIL's intake decision | not built: the kind is undeclared until iagent's completion contract is merged. Until then, "no source", never pending |
 | sent, awaiting reply | `delivered`, and the next state cannot be read because the step that owns it is at a tier this one cannot reach | — | named; distinct from "case opened, nothing proposed yet" |
 
 - **No combined status.** Each state is a row with its source and time. There is no overall badge (ADR-0058 §2b).
+- **"Work recorded" joins through the release, not the work order** (amended 2026-11-14). The completion record names
+  the release record it completes, and the release joins the episode through its case (§3.2). No OpenDDIL row holds a
+  work order reference as a join key. A completion record that names no release record at this tier is listed as unmatched, and
+  is never matched by asset or by time. A refused completion record is a state with its reason, as a refused release
+  is. Its fields, and the closure reason and repair type vocabularies it cites, are provisional (see the status line).
 - **Until 3c, the door is the hub's** (finding 6). The edge reads the ledger and the intake through the hub's pane API.
   Severed from the hub, those states read "door at the hub, unreachable", never "queued".
 
@@ -303,6 +312,9 @@ OpenDDIL's side to them.
   reads that pointer.
   - Matching on the intake key's prefix is refused. The key's format is the consumer's, not ours.
   - An action whose kind declares no `case_ref` is not joined. The pane names it.
+- **Action → completion** (amended 2026-11-14). The completion kind's declaration names a pointer into its body to the
+  release record it completes, as `case_ref` does for an action. The join reads that pointer, never the intake key's
+  prefix. The pointer's name and the body's fields wait on iagent's completion contract.
 - **Case → proposed and approved (3b):** read through the PEP from the tier's BFF, per request, not stored (§1.4).
 
 ### 3.3 The routes
@@ -417,7 +429,9 @@ Each is a test a named workflow runs. A slice merges on its own checks.
    - "queued for send" for no row and for `held`;
    - "door at the hub, unreachable" with the hub's pane API down;
    - "proposed" and "approved" as "read in 3b";
-   - "work recorded" as "no source".
+   - "work recorded" as "no source" while the completion kind is undeclared. With the kind declared: a completion
+     record naming the episode's release record reads "work recorded" with its time, and one naming a release record
+     the tier does not hold is listed as unmatched.
 4. **The filer.**
    - An episode with two sources lists for both filers.
    - A viewer in no episode's sources gets an empty list, with the state "no reports filed by you".
