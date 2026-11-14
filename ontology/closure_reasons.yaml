@@ -1,0 +1,84 @@
+# =============================================================================
+# Closure reasons: why a failure episode closed (ADR-0059 §4.1, §4.4)
+# =============================================================================
+# STATUS: PROPOSED 2026-11-14. Provisional. Nothing reads this file yet. It is
+# drafted so that the maintenance action record's completion contract can cite
+# it by name, and no outcome field is bound to it until that contract is merged.
+#
+# A closure reason says what the maintenance that answered an episode found.
+# The built-in test counts (ADR-0059 §4.1) and the remaining-life scoring
+# (DESIGN-2026-11-11-remaining-life-output-kind §5.2) are read from it, so the
+# values are declared here, once, rather than in a service.
+#
+# WHO SETS IT
+#   - A confirmed closure carries its reason in the completed work order's
+#     outcome, which returns through iagent (ADR-0059 §4.4). Only those
+#     closures count as `confirmed`.
+#   - A closure recorded at a tier, by a person or a workflow step, is
+#     declared-local and unconfirmed. It carries a reason from this list too,
+#     is counted under that reason, and is never counted as confirmed.
+#
+# CLOSED VOCABULARY
+#   Counts are summed at each tier and composed up the tiers (ADR-0059 §4.1),
+#   so a reason must mean the same thing at every tier and in every deployment.
+#   A deployment does not add values. It maps its maintenance system's codes to
+#   these in its own bundle. A code with no mapping is refused at intake with
+#   its code named. It is never given a default reason.
+#
+# NOT A CLOSURE
+#   A cancelled or deferred work order closes nothing and carries no reason
+#   from this list. What such an outcome returns is open, with the outcome's
+#   fields (ADR-0059 §4.4's question to iagent's architect).
+#
+# CURATION RULES (treat this file as code):
+#   - Changes require a PR with a domain expert reviewer.
+#   - A change to `confirms_failure` or `ends_life` changes every count and
+#     score read from it. It needs its own decision record.
+#
+# FIELDS
+#   meaning          what a maintainer found, in one sentence
+#   confirms_failure true only for a verified failure. Read by §4.1's
+#                    confirmed counts and by the remaining-life join
+#   ends_life        whether the closure ends the confirmed component's life
+#                    for remaining-life scoring
+#   candidate        true for a value proposed but off unless a deployment
+#                    switches it on in its bundle
+#   basis            where the term comes from, and what was read
+# =============================================================================
+
+reasons:
+  confirmed:
+    meaning: The reported failure was verified on the confirmed component.
+    confirms_failure: true
+    ends_life: true
+    candidate: false
+    basis: >-
+      MIL-HDBK-2155 failure verification: a reported failure is "verified as
+      actual or an explanation provided for lack of verification" (ADR-0059 §4.1).
+
+  no_fault_found:
+    meaning: The indication was examined and no failure was found on any candidate component.
+    confirms_failure: false
+    ends_life: false
+    candidate: false
+    basis: >-
+      Not a handbook term. A closure value name aligned to MIL-HDBK-2155's
+      "explanation provided for lack of verification" (ADR-0059 §4.1).
+
+  cannot_duplicate:
+    meaning: The reported symptom could not be reproduced, so it was neither verified nor ruled out.
+    confirms_failure: false
+    ends_life: false
+    candidate: false
+    basis: >-
+      A closure value name. Kept apart from no_fault_found because one says the
+      unit was examined and found sound, the other that the symptom was not seen.
+
+  retest_okay:
+    meaning: A unit removed at one level of repair was tested at the next and passed.
+    confirms_failure: false
+    ends_life: false
+    candidate: true
+    basis: >-
+      MIL-HDBK-2165's "retest okay", for a deployment that repairs at two
+      levels (ADR-0059 §4.1). A candidate fourth value, off by default.

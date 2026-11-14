@@ -1,0 +1,72 @@
+# =============================================================================
+# Repair types: what was done to a component to close an episode
+# =============================================================================
+# STATUS: PROPOSED 2026-11-14. Provisional. Nothing reads this file yet. It is
+# drafted so that the maintenance action record's completion contract can cite
+# it by name, and no outcome field is bound to it until that contract is merged.
+#
+# Why the outcome needs it: a repair starts a new life for a component only
+# when its repair type is declared a renewal for that component (ruled
+# 2026-11-12, DESIGN-2026-11-11-remaining-life-output-kind §5.2). The outcome
+# must therefore say which repair was done, from a list declared once.
+#
+# NO TYPE HERE IS A RENEWAL
+#   This file names repair types and nothing else. A renewal is declared per
+#   variant and component, names its owner, and lives with the deployment's
+#   declarations, like the movement deadbands. With nothing declared, every
+#   repair continues the life and is an event recorded on it. That holds for
+#   every type below, `replaced` included.
+#
+# `replaced` AND IDENTITY
+#   A replacement installs a different component, with its own identity
+#   (ADR-0056) and its own life. The removed component's life ends at removal
+#   whether or not a renewal is declared. That follows from identity, not from
+#   this file. A deployment that tracks the position rather than the part
+#   declares a renewal for `replaced` on that position.
+#
+# NO REPAIR
+#   An outcome where nothing was done (for example a `no_fault_found` closure,
+#   see closure_reasons.yaml) carries no repair type. There is no `none` value.
+#
+# OPEN TO A DEPLOYMENT'S ADDITIONS, IN-PLACE ONLY
+#   A deployment may add in-place types in its own bundle, each with a `kind`
+#   of `in_place`. It does not add a `replaced` kind. A type the outcome names
+#   that neither file declares is refused at intake with its name. It is never
+#   read as a default type.
+#
+# NAMES
+#   The names are not taken from a standard, because no maintenance-action
+#   standard was read for this draft. They are checked against one before any
+#   field freezes.
+#
+# CURATION RULES (treat this file as code):
+#   - Changes require a PR with a domain expert reviewer.
+#   - Removing or renaming a type orphans every renewal declaration that names
+#     it. That needs its own decision record.
+#
+# FIELDS
+#   kind      replaced: the component left the asset and another took its
+#             place; in_place: the same component stayed, and work was done on it
+#   meaning   what was done, in one sentence
+# =============================================================================
+
+types:
+  replaced:
+    kind: replaced
+    meaning: The component was removed and a different one installed in its place.
+
+  subpart_replaced:
+    kind: in_place
+    meaning: A part within the component was replaced, and the component kept its identity.
+
+  overhauled:
+    kind: in_place
+    meaning: The component was restored to a specified condition by a declared procedure.
+
+  adjusted:
+    kind: in_place
+    meaning: The component was adjusted, aligned or calibrated, with no part replaced.
+
+  serviced:
+    kind: in_place
+    meaning: The component was cleaned, lubricated, re-seated or reloaded, with no part replaced.
