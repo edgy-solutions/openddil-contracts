@@ -277,6 +277,12 @@ OpenDDIL's side to them.
   work order reference as a join key. A completion record that names no release record at this tier is listed as unmatched, and
   is never matched by asset or by time. A refused completion record is a state with its reason, as a refused release
   is. Its fields, and the closure reason and repair type vocabularies it cites, are provisional (see the status line).
+  - **A cancelled or deferred work order** returns a completion record whose outcome says so and which closes nothing
+    (iagent's answer to Q13, 2026-11-14). It reads "work recorded: cancelled" or "deferred", with its time, and the
+    episode stays as it was.
+  - **The episode id it carries is a check, not the join.** The record carries the episode id OpenDDIL sent, beside
+    iagent's case id (Q13(g)). When it differs from the episode the release joins, the row shows an episode mismatch,
+    as `case_id_mismatch` does, and the join stays the release's.
 - **Until 3c, the door is the hub's** (finding 6). The edge reads the ledger and the intake through the hub's pane API.
   Severed from the hub, those states read "door at the hub, unreachable", never "queued".
 
@@ -430,8 +436,9 @@ Each is a test a named workflow runs. A slice merges on its own checks.
    - "door at the hub, unreachable" with the hub's pane API down;
    - "proposed" and "approved" as "read in 3b";
    - "work recorded" as "no source" while the completion kind is undeclared. With the kind declared: a completion
-     record naming the episode's release record reads "work recorded" with its time, and one naming a release record
-     the tier does not hold is listed as unmatched.
+     record naming the episode's release record reads "work recorded" with its time; one naming a release record
+     the tier does not hold is listed as unmatched; a cancelled one reads "work recorded: cancelled" and leaves the
+     episode as it was; one carrying another episode's id shows the mismatch.
 4. **The filer.**
    - An episode with two sources lists for both filers.
    - A viewer in no episode's sources gets an empty list, with the state "no reports filed by you".
