@@ -261,7 +261,8 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
   - With no originator, §2 makes it unlabelled, so it is served to nobody even when that intersection names a nation.
     The labels library's `high_water` fails closed on exactly this case today.
   - A §3a class row is the same case. The built rollup sets no originator on its rows (`aggregator_app.py`, the comment
-    above the row's label), so each row has no `lk1` key.
+    above the row's label), so each row has no `lk1` key. A class row whose contributors share one author is not
+    covered by composite authorship as written below: see "Open for this ruling".
 - **A label over a second dimension,** such as `data_rights_holder` (§5).
 
 **Composite authorship.** In `lk2`, the nation dimension's author is a set.
@@ -314,6 +315,22 @@ of golden vectors, never against each other's text:
 - a hierarchical dimension;
 - the separators refused;
 - a single-author nation-only label, which must give the `lk1` key and not an `lk2` one.
+
+**Open for this ruling: a class row from one author.**
+- In an aggregate the author value grants nothing alone (§3a, ADR-0029:1086-1088). So a §3a class row whose
+  contributors share one author must not carry that author as a set of one, which would grant access by author.
+- The labels library's second slice (draft #36) writes such a class label as no author, with the author folded into
+  the release set. Under the form above, an empty author set gets no key, so that row is served to nobody: the case
+  this form is meant to close.
+- Two ways to close it:
+  1. **An aggregate claims no author** (ADR-0029's addendum, in its words). An empty author set with a declared
+     release is an aggregate's label: it is keyed, `nation||<release>`, and admits through the release only. An empty
+     author set with no release stays unlabelled, with no key. Composite authorship then covers single derived records
+     (high-water) only.
+  2. **The class row keeps its contributors' authors,** and the body marks it an aggregate, so that no author set of
+     any size grants access on it. The marker enters the canonical string.
+- Proposed: 1. It matches #36's built shape and the addendum's words, and it adds no marker to the form. The
+  golden vectors then add an aggregate label with a release, and an aggregate label with none (no key).
 
 **Not decided here.**
 - Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
