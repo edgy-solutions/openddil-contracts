@@ -27,8 +27,9 @@
 #
 # NOT A CLOSURE
 #   A cancelled or deferred work order closes nothing and carries no reason
-#   from this list. What such an outcome returns is open, with the outcome's
-#   fields (ADR-0059 §4.4's question to iagent's architect).
+#   from this list. iagent's architect answered on 2026-11-14 (provisional
+#   until checked) that it still returns a completion record, whose outcome
+#   says cancelled or deferred and which closes nothing.
 #
 # CURATION RULES (treat this file as code):
 #   - Changes require a PR with a domain expert reviewer.
