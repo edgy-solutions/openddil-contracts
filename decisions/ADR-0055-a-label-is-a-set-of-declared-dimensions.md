@@ -7,6 +7,8 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
+- **Proposed for ruling 2026-11-15: `lk2`, with composite authorship (§2a).** Provisional until the project owner
+  rules it.
 - **§1a is signed by the project owner, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
 
 ## Findings first
@@ -248,6 +250,74 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
 **The key carries what the wire cannot.** ADR-0029's addendum records that proto3 cannot tell an empty `releasable_to` from an absent one (ADR-0029:1120-1136). A canonical form encodes "declared and empty" and "absent" differently, so the key keeps a distinction the two repeated fields lose.
 - **The distinction applies only to `releasable_to` on a record that has an originator.** There, `{ATL}/{}` and `{ATL}/absent` give two keys.
 - **A record with no originator is unlabelled, whatever `releasable_to` holds.** NULL/NULL and NULL/`{}` compile to no key at all, not to two keys, and the record is served to nobody (§1).
+
+### 2a. `lk2`: more than one author, or more than one dimension (proposed for ruling, 2026-11-15)
+
+**Why a second form.** The first form, `lk1`, keys nation only, with one author
+(`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.2). Two kinds of label get no `lk1` key:
+- **A record with more than one author.**
+  - A single derived record over inputs from two nations has no author under ADR-0029's addendum ("an aggregate has
+    no author; it claims none"). Its release is the intersection of effective audiences (§3b).
+  - With no originator, §2 makes it unlabelled, so it is served to nobody even when that intersection names a nation.
+    The labels library's `high_water` fails closed on exactly this case today.
+  - A §3a class row is the same case. The built rollup sets no originator on its rows (`aggregator_app.py`, the comment
+    above the row's label), so each row has no `lk1` key.
+- **A label over a second dimension,** such as `data_rights_holder` (§5).
+
+**Composite authorship.** In `lk2`, the nation dimension's author is a set.
+- **One value is single authorship.** It grants access as the author value does today (§1).
+- **Two or more values are a composite.** The set records whose records the derivation used. **It grants nobody
+  access by itself.** A viewer is admitted on the nation dimension only through the release set. ADR-0029's rule holds
+  in effect: the author branch opens only where derivation preserved a single author.
+- **An empty author set is no author.** The record is unlabelled and gets no key, as in §2.
+- **High-water fills it** (§3b): the author set is the union of the inputs' authors, and the release is the
+  intersection of their effective audiences, unchanged. Inputs that share one author give a set of one.
+- A composite with no release set is refused at the stamp. High-water always gives a set, possibly empty.
+
+**The canonical form,** stated in words. The stack's SQL function and the library are both tested against one file
+of golden vectors, never against each other's text:
+- `lk2|<policy_id>|nation|<authors>|<release>`, then `|<name>|<values>` for each further declared dimension.
+- **Order:** nation first, then the other dimensions by name, in byte order. Names are snake_case ASCII (§1), so byte
+  order is unambiguous.
+- **Sets:** distinct values, sorted in byte order, joined by `,`.
+  - The author set is never empty.
+  - A release set that is absent writes `~`, and one declared empty writes nothing, as in `lk1`.
+  - Any other set dimension declared empty writes nothing.
+- **A hierarchical dimension** writes its one level.
+- **The key** is `lk2:` followed by the hex SHA-256 of the canonical string's UTF-8 bytes.
+- **The body** is `{"policy": <id>, "v": 2, "dims": {...}}`. Nation is `{"author": [sorted], "release": [sorted] or
+  null}`. A set dimension is a sorted array, and a hierarchical one a string.
+- **No key** when:
+  - the author set is empty;
+  - a declared dimension has no value on the record (§1);
+  - the record carries a dimension the policy does not declare;
+  - any value fails its dimension's format;
+  - there is no policy row.
+- **Formats exclude the separators.** Nation keeps `^[A-Z]{3}$`. Every other dimension's values must match
+  `^[A-Za-z0-9][A-Za-z0-9._:-]{0,62}$`, checked when the dimension is declared. So `|`, `,` and `~` never appear
+  inside a value.
+
+**Which form a label gets: one form per label, and every `lk1` key is kept.**
+- Under a policy that declares nation only:
+  - a label with one author compiles to `lk1`, byte for byte as today;
+  - a composite compiles to `lk2`.
+- A policy that declares a second dimension compiles every label to `lk2`.
+  - Declaring that dimension is a new policy id, so no key already stored is recomputed into the other form.
+  - Records stamped under the old id keep their `lk1` keys.
+- The form follows from the policy and the author count, which are both in the body. So every tier picks the same
+  form, and §2's "the same label gives the same key at every tier" holds.
+
+**Golden vectors.** An `lk2` vector file sits beside `lk1`'s, with at least these cases:
+- a composite with a release;
+- a composite with an empty release;
+- a second dimension, both empty and with values;
+- a hierarchical dimension;
+- the separators refused;
+- a single-author nation-only label, which must give the `lk1` key and not an `lk2` one.
+
+**Not decided here.**
+- Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
+- The §3a ruling, which is separate.
 
 ### 3. Derived records: a split by audience for composable rollups, high-water for single derived records
 
