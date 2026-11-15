@@ -13,6 +13,9 @@ every tier, as decision 2 states.
 [Amendment 2026-10-13](#amendment-2026-10-13-one-key-per-event-the-episode-as-its-own-field).
 **Amended 2026-11-10:** a final `schema_invalid` refusal is re-decided once its body passes the loaded schema. See
 [Amendment 2026-11-10](#amendment-2026-11-10-a-schema_invalid-refusal-is-re-decided-against-the-loaded-schema).
+**Amended 2026-11-15:** each kind the intake admits declares the contract versions it accepts, and an undeclared
+version is refused with the version named. See
+[Amendment 2026-11-15](#amendment-2026-11-15-an-intake-kind-declares-the-contract-versions-it-accepts).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -118,6 +121,7 @@ A **kind** is a JSON Schema document in the overlay, plus four declarations the 
 | `label` | the pointer to `{originator_nation, releasable_to}` (`/label`) |
 | `owning_tier` | the pointer to the tier that owns the subject (`/owning_tier`) |
 | `episode` | optional: the pointers whose tuple names one episode (`/asset_id`, `/fault/item`, `/fault/fault_code`) |
+| `versions` | inbound kinds: the pointer to the record's contract version, and the versions accepted, each with its schema (amendment 2026-11-15) |
 
 The code knows a kind only as a name, a schema and these pointers. This pass declares two:
 - **`MaintenanceFaultEvent`**, which keeps v1 §1's fields:
@@ -396,3 +400,47 @@ already re-reads by its own rules.
 ### What does not change
 - The intake still loads kinds at start. A changed kind reaches it through a roll, which is when this rule acts.
 - The hash skip for every other decision, the order of §5's steps and the gate.
+
+## Amendment 2026-11-15: an intake kind declares the contract versions it accepts
+
+### What happened
+A sample of iagent's action record at its contract version 2 was run through the intake's own validator, against the
+action kind a deployment declares. It was admitted with no errors. Neither the record nor the kind carries a contract
+version: version 2 exists only as a constant in iagent's SDK. So a version 1 record of the same shape would be
+admitted the same way, and the intake cannot say which version arrived. The kind also passes fields that iagent's
+version 2 does not declare, and it does not require three fields that version 2 requires.
+
+### The rule
+- **Each kind the intake admits declares the contract versions it accepts:** the pointer to the record's version,
+  and, for each accepted version, its schema.
+- **A record carries its version.** iagent adds the field to the record, and the field's name is iagent's.
+- **An undeclared version is refused.** The reason is `version_undeclared`, and the decision names the version that
+  arrived. It is counted, and the record is stored with its decision, like any refusal (§5).
+- **Each declared version has its own schema.** The fields iagent's version 2 requires (`provenance`, `task_refs` and
+  `parts`) are required in the kind's version 2 declaration.
+- **Unknown fields are kept, and never acted on.**
+  - A version's schema does not refuse a field it does not declare. The field is stored in the body.
+  - No route, gate step, label check, join or pane reads a field that the record's version does not declare.
+  - This is deliberately more tolerant than iagent's own version 2 schema, so that a peer adding a field does not
+    break the intake.
+
+### The transition
+- **Today's records carry no version.** Refusing them now would break the path in use.
+- **Until iagent ships the field, a record with no version is admitted and counted as `unversioned`.**
+  - It is validated against the kind's schema as declared today, and stored with no version.
+  - It is never assigned a version by default. A default is not a declaration (ADR-0055 §1a, in spirit).
+- **The end is named.** From the iagent release that adds the field, a record with no version is refused, with the
+  reason `version_missing`. The kind declares that release once iagent names it. Until then, the admission above
+  stands.
+
+### Why not "pin via the kind"
+A schema that happens to reject an old shape is not the same as knowing which version arrived. It also fails silently
+on the day two versions share a shape.
+
+### Open, not ruled here
+- Whether a `version_undeclared` refusal is decided again once its kind declares that version, as a `schema_invalid`
+  refusal is (amendment 2026-11-10). Its cause can change on OpenDDIL's side while the body stays the same.
+
+### What does not change
+- §5's steps and their order. The version check is part of step 1, validation.
+- The hash skip, the provisional rule of 2026-10-05, the re-decision rule of 2026-11-10, and the gate.

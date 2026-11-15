@@ -4,6 +4,22 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-15 — an intake kind declares no contract version, so the intake cannot say which version arrived
+
+**Ruled, not built.** No kind declares a version, and no record carries one, so a record of an older version with the
+same shape is admitted unnoticed. Ruled 2026-11-15:
+- each kind declares the versions it accepts, and an undeclared version is refused with the version named;
+- until iagent ships the field, a record with no version is admitted and counted as `unversioned`. It is never given
+  a default;
+- from the iagent release that adds the field, a record with no version is refused.
+iagent is asked for the field by packet.
+
+Home: `ADR-0046-maintenance-bridge-events-out-actions-in.md`, Amendment 2026-11-15. Named by: the architecture order
+of 2026-11-15.
+
+Close when an iagent release carries the field, the action kind declares version 2 with its required fields, and a
+record with no version reads refused `version_missing`.
+
 ## OPEN 2026-11-11 — built-in test arrives as free strings, with no test type, result, isolated unit or confidence
 
 **A proposed seam, not built.** `HealthFlags.active_fault_codes` is a list of strings, and nothing records which test
