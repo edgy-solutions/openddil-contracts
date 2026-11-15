@@ -4,6 +4,23 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-15 — the PEP prints a full traceback each time a client drops its connection
+
+**Measured on a test lab.** One card load produced 55 tracebacks in the PEP log, and one four-profile sign-in produced
+6-7. Every one is the standard library's `http.server` hitting `ConnectionResetError` in `rfile.readline`, after the
+client closed a keep-alive connection. That is normal client behaviour, not a PEP fault. The traceback is printed by
+`socketserver`'s default `handle_error`, because the `ThreadingHTTPServer` that serves `Pep` in
+`openddil-demo/gateway/pep.py` does not override it. The metrics server in the same file is built the same way.
+
+The noise hides real errors: a grep for `Traceback` in the PEP log reads mostly disconnects.
+
+Fix: give both servers a `handle_error` that treats `ConnectionResetError`, `BrokenPipeError` and
+`ConnectionAbortedError` as a client disconnect. Each one counts in a counter (for example
+`pep_client_disconnects_total`) and logs one line at DEBUG. Every other exception keeps the full traceback.
+
+Close when one card load on a test lab logs 0 disconnect tracebacks, and the counter reads that load's disconnects
+from the real exporter.
+
 ## OPEN 2026-11-11 — built-in test arrives as free strings, with no test type, result, isolated unit or confidence
 
 **A proposed seam, not built.** `HealthFlags.active_fault_codes` is a list of strings, and nothing records which test
