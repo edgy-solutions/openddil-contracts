@@ -7,6 +7,8 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
+- **Proposed for ruling 2026-11-15: §3a as written, not as built** (§3a, "The built rollup differs"). Provisional
+  until the project owner rules it.
 - **§1a is signed by the project owner, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
 
 ## Findings first
@@ -272,6 +274,26 @@ A **composable rollup** is an aggregate over many contributors whose parts a rea
 - Each row is also high-water within its class, because every contributor in a class has one label.
 
 **Status.** This is the rule the regional rollup already builds, and no record decided it before this one (Findings 4). It generalises from the nation audience to the full label.
+
+**The built rollup differs on unlabelled contributors (proposed for ruling, 2026-11-15).**
+- **What is built.** The rollup puts a contributor with no label into a class whose audience is empty, and emits that
+  class as a row releasable to nobody. Its own comment calls the empty string "a real class"
+  (`openddil-tactical-agents/regional/aggregator_app.py`, `_class_key`). There is no withheld tally.
+- **Where the two meet.** A labelled contributor's effective audience always holds its originator, so it is never
+  empty. The built empty class therefore holds exactly the unlabelled contributors.
+- **The proposal: this section as written.** The second slice builds §3a's rule, not the built one:
+  - a contributor with no label forms no class and is excluded from every row;
+  - it is counted in a withheld-contributor tally.
+- **The tally is its own record, never a field on a class row.** There is one per rollup, served to the rollup's
+  owner. It counts the excluded contributors and gives no other fact about them. A class row's readers see only their
+  class.
+- **What changes for a reader.** The row releasable to nobody disappears. No viewer could read it, so no viewer loses
+  a value. Anything that counts rows, or reads the row by its class key, sees one row fewer.
+- **The old row is retired, not left behind.** The rollup's topics are compacted and keyed by class, so the last
+  empty-class row would stay on them indefinitely. The change writes one tombstone for that key, at every tier that
+  emitted it, and the acceptance run reads the key gone.
+- **Not decided here.** Class rows have no single author, so under `lk1` they compile to no key (§2, and the
+  composite-authorship proposal). That ruling is separate, and the two can land in either order.
 
 **Limit.** An aggregate that cannot be combined across classes is not a composable rollup. A median, a single fleet status or a ranking each come out as one record, so §3b applies.
 
