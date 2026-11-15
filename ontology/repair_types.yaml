@@ -13,16 +13,17 @@
 # NO TYPE HERE IS A RENEWAL
 #   This file names repair types and nothing else. A renewal is declared per
 #   variant and component, names its owner, and lives with the deployment's
-#   declarations, like the movement deadbands. With nothing declared, every
-#   repair continues the life and is an event recorded on it. That holds for
-#   every type below, `replaced` included.
+#   declarations, like the movement deadbands. Renewal applies only to repairs
+#   in place. With nothing declared, an in-place repair continues the life and
+#   is an event recorded on it.
 #
-# `replaced` AND IDENTITY
-#   A replacement installs a different component, with its own identity
-#   (ADR-0056) and its own life. The removed component's life ends at removal
-#   whether or not a renewal is declared. That follows from identity, not from
-#   this file. A deployment that tracks the position rather than the part
-#   declares a renewal for `replaced` on that position.
+# `replaced` NEEDS NO RENEWAL: IT SWAPS IDENTITIES
+#   A replacement swaps identities at a position (ADR-0056). The removed
+#   component's life ends there, as a removal: a failure only if the closure is
+#   `confirmed`, otherwise censored. The installed component starts its own
+#   life under its own identity. Remaining life is keyed on component identity,
+#   so `replaced` never takes a renewal declaration, and one naming it is
+#   refused.
 #
 # NO REPAIR
 #   An outcome where nothing was done (for example a `no_fault_found` closure,

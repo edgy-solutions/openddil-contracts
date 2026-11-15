@@ -22,7 +22,8 @@
 #   Counts are summed at each tier and composed up the tiers (ADR-0059 §4.1),
 #   so a reason must mean the same thing at every tier and in every deployment.
 #   A deployment does not add values. It maps its maintenance system's codes to
-#   these in its own bundle. A code with no mapping is refused at intake with
+#   these in its own bundle. Adding a reason is an amendment to this contract,
+#   never a local extension. A code with no mapping is refused at intake with
 #   its code named. It is never given a default reason.
 #
 # NOT A CLOSURE
