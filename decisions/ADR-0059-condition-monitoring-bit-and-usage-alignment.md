@@ -12,6 +12,10 @@ was not read is never used to decide anything here.
 - network state as an observed input (§7), with the alerting path added the same day;
 - ADR-0038 §1 and St-Tx corrected so the analyzer sits under configuration status accounting;
 - ADR-0057's output kinds open when the remaining-life kind is specified.
+**Specified 2026-11-12:** the remaining-life output kind (§4.2), with the ADR-0057 amendment that opens the output
+kinds, in [DESIGN-2026-11-11-remaining-life-output-kind.md](DESIGN-2026-11-11-remaining-life-output-kind.md); the
+built-in test record kind (§5) in [DESIGN-2026-11-11-bit-record-kind.md](DESIGN-2026-11-11-bit-record-kind.md). Both
+accepted as proposed.
 **Amendment proposed 2026-11-15 (§4.4, Decision 5, What this does not establish):** the record that crosses back today
 is written at release, not at completion, so it confirms no closure. A confirmed closure comes only from a completion
 record that names the release record it completes. Neither is built. Provisional until the project owner rules it.
