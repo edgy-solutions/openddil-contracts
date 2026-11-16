@@ -16,9 +16,11 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 ARCH = HERE.parent
 REPO = ARCH.parent.parent
-TOOL = HERE / "check_views.py"
+TOOL = kit_path.TOOLS / "check_views.py"
 
 
 def run(root, *extra):

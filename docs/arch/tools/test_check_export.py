@@ -18,6 +18,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 import check_export  # noqa: E402
 import capability_phases  # noqa: E402
 import check_views  # noqa: E402

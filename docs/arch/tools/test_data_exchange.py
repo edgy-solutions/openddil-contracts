@@ -20,7 +20,9 @@ from unittest import mock
 import yaml
 
 HERE = Path(__file__).resolve().parent
-TOOL = HERE / "data_exchange.py"
+sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
+TOOL = kit_path.TOOLS / "data_exchange.py"
 DATA = HERE / "testdata"
 BASIC = DATA / "rendered-basic.yaml"
 ROOT = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))

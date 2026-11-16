@@ -1,0 +1,6 @@
+# Declares this repository's architecture content to the export kit. Paths are relative to this file.
+kit: 1
+paths:
+  root: .                    # the architecture directory: views/, model/, profiles.yaml, slots.yaml, ...
+  repo: ../..                # the repository root (git stamps run here)
+  decisions: ../../decisions

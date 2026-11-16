@@ -21,6 +21,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 import refresh_specimen as rs  # noqa: E402
 import capability_phases as cp  # noqa: E402
 

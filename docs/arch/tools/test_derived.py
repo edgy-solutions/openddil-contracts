@@ -17,6 +17,7 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 import capability_phases as cp  # noqa: E402
 import derived  # noqa: E402
 from render_profile import mask_sysml  # noqa: E402

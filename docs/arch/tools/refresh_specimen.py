@@ -48,10 +48,11 @@ def missing_input() -> str | None:
 
 
 def render_profile(profile: str, out: Path) -> subprocess.CompletedProcess:
-    cmd = [sys.executable, str(HERE / "render_profile.py"), "--profile", profile,
-           "--out", str(out), "--chart", str(CHART), "--release", RELEASE,
+    cmd = [sys.executable, "-m", "arch_kit", "--config", str(ARCH / "arch-kit.yaml"), "render_profile",
+           "--profile", profile, "--out", str(out), "--chart", str(CHART), "--release", RELEASE,
            "--values", str(TIER_NODE), "--values", str(TWIN)]
-    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8")
+    env = {**os.environ, "PYTHONPATH": os.environ.get("ARCH_KIT", "")}
+    return subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", env=env)
 
 
 def render_all(root: Path) -> str | None:

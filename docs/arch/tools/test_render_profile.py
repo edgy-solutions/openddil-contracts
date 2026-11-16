@@ -21,9 +21,11 @@ from pathlib import Path
 import yaml
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 ARCH = HERE.parent
 REPO = ARCH.parent.parent
-TOOL = HERE / "render_profile.py"
+TOOL = kit_path.TOOLS / "render_profile.py"
 PROFILES = yaml.safe_load((ARCH / "profiles.yaml").read_text(encoding="utf-8"))
 SIBLINGS = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))
 CHART = SIBLINGS / "openddil-helm" / "openddil-demo"
