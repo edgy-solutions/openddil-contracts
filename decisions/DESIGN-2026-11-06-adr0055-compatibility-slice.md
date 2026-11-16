@@ -104,7 +104,8 @@ label     := jsonb_build_object('policy', policy_id, 'v', 1,
   - This text first wrote `string_agg(DISTINCT x, ',' ORDER BY x COLLATE "C")`. Postgres refuses that, because with
     `DISTINCT` an `ORDER BY` expression must appear in the argument list.
   - The corrected form above is confirmed in CI on Postgres 17 and on Postgres 15, in a step that allows no skips.
-    The run was the stack's schema checks, run 43949112291 on `feat/lk1-sql-function` at 5383945.
+    The run was the stack's PR #2 (`feat/lk1-sql-function` at 5383945), schema checks run 43949112291, in its
+    `tests (postgres 17)` and `tests (postgres 15)` jobs.
   - There, `test_sql_string_agg_corrected_form_matches_function_and_vectors` passed: the form gives the same release
     string as the migration's function, for every golden vector with a release set, and sorts by byte order.
     `test_sql_string_agg_design_original_form_is_refused` passed too.
