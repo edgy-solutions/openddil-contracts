@@ -1,0 +1,125 @@
+{
+  "era1_contrast": [
+    {
+      "asset_id": "asset-0001",
+      "component": "pump",
+      "era1_id": "53d1a83e-9bfd-5b1b-a247-5126bb5c7183",
+      "era2_id": "d5e6c6e7-dd4f-534e-ae88-109afdcec7b0",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001"
+    },
+    {
+      "asset_id": "asset-0002",
+      "component": "pump",
+      "era1_id": "cb1bdcfa-d374-570a-b27c-47e20a9256f6",
+      "era2_id": "a3bfa985-f1ca-5a15-a6af-a53b96d83398",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000002"
+    }
+  ],
+  "generator": "openddil_identity.ids.mint_identity",
+  "generator_version": "1",
+  "minted_at": "2026-11-16T04:01:21Z",
+  "namespace": "01a1e284-45a5-7101-a8c8-9882e4b3e92d",
+  "seed_form": "episode_id := uuid5(EPISODE_NAMESPACE, \"episode|\" + identity_iri + \"|\" + component + \"|\" + fault_code)",
+  "vectors": [
+    {
+      "component": "pump",
+      "episode_id": "d5e6c6e7-dd4f-534e-ae88-109afdcec7b0",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "plain_1",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|pump|F001"
+    },
+    {
+      "component": "valve",
+      "episode_id": "ba6f4b5a-1227-5729-bd0a-c1d41aabc5db",
+      "fault_code": "F002",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "plain_2",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|valve|F002"
+    },
+    {
+      "component": "motor",
+      "episode_id": "0e999a92-b7ef-5c19-bd1f-dc71373c1a36",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "same_identity_other_component",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|motor|F001"
+    },
+    {
+      "component": "pump",
+      "episode_id": "19022369-dcac-5754-b360-9bdea4b13d37",
+      "fault_code": "F003",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "same_identity_other_fault",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|pump|F003"
+    },
+    {
+      "component": "pump",
+      "episode_id": "a3bfa985-f1ca-5a15-a6af-a53b96d83398",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000002",
+      "name": "other_identity_same_inputs",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000002|pump|F001"
+    },
+    {
+      "component": "Pump",
+      "episode_id": "1ee486ac-9bab-5513-bbff-aca735b89f83",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "case_upper",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|Pump|F001"
+    },
+    {
+      "component": "pump",
+      "episode_id": "d5e6c6e7-dd4f-534e-ae88-109afdcec7b0",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "case_lower",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|pump|F001"
+    },
+    {
+      "component": " pump",
+      "episode_id": "1a1a26c0-2002-54aa-be17-fd9abfcc6cbf",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "leading_whitespace",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001| pump|F001"
+    },
+    {
+      "component": "pompe-éè",
+      "episode_id": "ecf97da3-53fa-557c-ba29-6789307e1a70",
+      "fault_code": "F001",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "non_ascii_component",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|pompe-éè|F001"
+    },
+    {
+      "component": "pump",
+      "episode_id": "b35f7396-23d2-5388-9d71-43cae188637d",
+      "fault_code": "",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "empty_fault_code",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|pump|"
+    },
+    {
+      "collides_with": "pipe_in_fault_code",
+      "component": "a|b",
+      "episode_id": "4c539429-aa21-5f57-bf94-494f2fe296f9",
+      "fault_code": "c",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "pipe_in_component",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|a|b|c"
+    },
+    {
+      "collides_with": "pipe_in_component",
+      "component": "a",
+      "episode_id": "4c539429-aa21-5f57-bf94-494f2fe296f9",
+      "fault_code": "b|c",
+      "identity": "01900000-0000-7000-8000-000000000001",
+      "name": "pipe_in_fault_code",
+      "seed": "episode|urn:uuid:01900000-0000-7000-8000-000000000001|a|b|c"
+    }
+  ]
+}
