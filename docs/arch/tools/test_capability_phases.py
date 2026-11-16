@@ -105,23 +105,23 @@ TEMPLATE = "kind: Deployment\nname: foo-bar\n"
 
 def base_record() -> dict:
     return {
-        "lanes": {"LaneOne": "Lane one", "Capability": "Top"},
-        "labs": {"A": "the first lab cluster", "B": "the second lab cluster"},
+        "groups": {"LaneOne": "Lane one", "Capability": "Top"},
+        "environments": {"A": "the first lab cluster", "B": "the second lab cluster"},
         "entries": {
-            "e1": {"anchor": "RUN 2026-09-26 anchor one", "lab": "A"},
-            "e2": {"anchor": "## B. Second section", "lab": "B"},
+            "e1": {"anchor": "RUN 2026-09-26 anchor one", "environment": "A"},
+            "e2": {"anchor": "## B. Second section", "environment": "B"},
         },
         "capabilities": {
             "Alpha": {"description": "The first stub. It is built and measured.",
                       "adrs": ["ADR-0001 §context"], "built": [{"template": "t.yaml", "contains": "foo-bar"}],
                       "measured": [{"entry": "e1", "line": "| 1 | alpha"}],
-                      "severed": "ADR-0001 §status"},
+                      "degraded_mode": "ADR-0001 §status"},
             "Beta": {"description": "The second stub. It is proposed.",
                      "adrs": ["ADR-0002 §context"], "increment": "**First one**",
-                     "severed": "not stated", "rows": ["SV-1"]},
+                     "degraded_mode": "not stated", "rows": ["SV-1"]},
             "Gamma": {"description": "The third stub. It holds only a row.",
                       "derived_from": ["ADR-0001 §status"], "rows": ["AE-1", "SV-2"],
-                      "severed": "not stated"},
+                      "degraded_mode": "not stated"},
         },
     }
 
@@ -177,13 +177,54 @@ class Model(Fixture):
     def test_load_record(self):
         p = self.tmp / "r.yaml"
         p.write_text("lanes: {}\nlabs: {}\nentries: {}\ncapabilities: {}\n", encoding="utf-8")
-        self.assertEqual(cp.load_record(p)["lanes"], {})
+        self.assertEqual(cp.load_record(p)["groups"], {})
         for text in ("not: [valid", "- a list\n", "lanes: {}\n"):
             p.write_text(text, encoding="utf-8")
             with self.assertRaises(cp.InputError):
                 cp.load_record(p)
         with self.assertRaises(cp.InputError):
             cp.load_record(self.tmp / "missing.yaml")
+
+
+class Seam(Fixture):
+    """The loader (kit_loader.py) maps this record's own keys to the kit's neutral ones."""
+    DISK = ("lanes: {L: lane}\nlabs: {A: first}\nentries:\n  e1: {anchor: x, lab: A}\n"
+            "capabilities:\n  Alpha: {description: d, severed: not stated, rows: [SV-1]}\n")
+
+    def write(self, text):
+        p = self.tmp / "r.yaml"
+        p.write_text(text, encoding="utf-8")
+        return p
+
+    def test_the_record_comes_back_with_the_neutral_keys(self):
+        r = cp.load_record(self.write(self.DISK))
+        self.assertEqual(list(r), ["groups", "environments", "entries", "capabilities"])
+        self.assertEqual(r["groups"], {"L": "lane"})
+        self.assertEqual(r["environments"], {"A": "first"})
+        self.assertEqual(r["entries"]["e1"], {"anchor": "x", "environment": "A"})
+        self.assertEqual(list(r["capabilities"]["Alpha"]), ["description", "degraded_mode", "rows"])
+        self.assertEqual(r["capabilities"]["Alpha"]["degraded_mode"], "not stated")
+
+    def test_a_neutral_key_on_disk_is_refused(self):
+        for old, new in (("lanes: {L: lane}", "groups: {L: lane}\nlanes: {L: lane}"),
+                         ("labs: {A: first}", "labs: {A: first}\nenvironments: {A: first}"),
+                         ("{anchor: x, lab: A}", "{anchor: x, lab: A, environment: A}"),
+                         ("severed: not stated", "severed: not stated, degraded_mode: not stated")):
+            with self.subTest(new=new), self.assertRaises(cp.InputError) as cm:
+                cp.load_record(self.write(self.DISK.replace(old, new)))
+            self.assertIn("neutral record", str(cm.exception))
+
+    def test_messages_name_the_records_own_key(self):
+        record = cp.load_record(self.write(self.DISK))
+        del record["capabilities"]["Alpha"]["degraded_mode"]
+        out = "\n".join(cp.check_record(record, {"Alpha": "L"}, self.dec))
+        self.assertIn("Alpha has no severed entry", out)
+        self.assertNotIn("degraded_mode", out)
+        broken = self.write(self.DISK.replace("severed: not stated, ", ""))
+        with self.assertRaises(cp.InputError) as cm:
+            cp.load_record(broken)
+        self.assertIn("'severed' is a required property", str(cm.exception))
+        self.assertNotIn("degraded_mode", str(cm.exception))
 
 
 class Phases(Fixture):
@@ -227,7 +268,7 @@ class Severed(Fixture):
         return "\n".join(self.check())
 
     def test_missing_entry(self):
-        self.assertIn("Alpha has no severed entry", self.fails(lambda r: r["capabilities"]["Alpha"].pop("severed")))
+        self.assertIn("Alpha has no severed entry", self.fails(lambda r: r["capabilities"]["Alpha"].pop("degraded_mode")))
 
     def test_not_stated_needs_an_sv_row(self):
         out = self.fails(lambda r: r["capabilities"]["Beta"].update(rows=[]))
@@ -240,27 +281,27 @@ class Severed(Fixture):
         self.assertIn("Alpha: severed is stated in ADR-0001 §status and rows still names SV-1", out)
 
     def test_a_citation_is_checked_like_the_others(self):
-        self.assertIn("no section", self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0001 §nowhere")))
+        self.assertIn("no section", self.fails(lambda r: r["capabilities"]["Alpha"].update(degraded_mode="ADR-0001 §nowhere")))
         self.assertIn("ADR-0099 is not exactly one file",
-                      self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0099 §context")))
+                      self.fails(lambda r: r["capabilities"]["Alpha"].update(degraded_mode="ADR-0099 §context")))
         self.assertIn("ADR-0004 is not in decisions/README.md",
-                      self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0004 §context")))
+                      self.fails(lambda r: r["capabilities"]["Alpha"].update(degraded_mode="ADR-0004 §context")))
         self.assertIn("has no readable ## Status line",
-                      self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0005 §context")))
+                      self.fails(lambda r: r["capabilities"]["Alpha"].update(degraded_mode="ADR-0005 §context")))
 
     def test_a_bare_adr_or_other_text_is_refused(self):
-        self.assertIn("Alpha", self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="ADR-0001")))
-        self.assertIn("Alpha", self.fails(lambda r: r["capabilities"]["Alpha"].update(severed="Not Stated")))
+        self.assertIn("Alpha", self.fails(lambda r: r["capabilities"]["Alpha"].update(degraded_mode="ADR-0001")))
+        self.assertIn("Alpha", self.fails(lambda r: r["capabilities"]["Alpha"].update(degraded_mode="Not Stated")))
 
     def test_severed_is_an_accepted_key(self):
-        self.assertIn("severed", cp.CAP_KEYS)
+        self.assertIn("degraded_mode", cp.CAP_KEYS)
         self.assertEqual(self.check(), [])
 
 
 class Pending(Fixture):
     def test_pending_alone_is_a_proposed_phase_with_no_derivation(self):
         self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It waits on a decision.",
-                                             "pending": ["a source"], "rows": ["SV-2"], "severed": "not stated"}
+                                             "pending": ["a source"], "rows": ["SV-2"], "degraded_mode": "not stated"}
         self.assertEqual(self.check(), [])
         self.assertEqual(cp.phase_of(self.rec["capabilities"]["Gamma"], {}), "proposed")
 
@@ -270,12 +311,12 @@ class Pending(Fixture):
 
     def test_no_pending_and_no_derivation_still_fails(self):
         self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It has rows only.",
-                                             "rows": ["SV-2"], "severed": "not stated"}
+                                             "rows": ["SV-2"], "degraded_mode": "not stated"}
         self.assertIn("Gamma: its description is derived from no decision", "\n".join(self.check()))
 
     def test_pending_counts_as_a_phase(self):
         self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It waits.", "pending": ["x"],
-                                             "severed": "ADR-0001 §status"}
+                                             "degraded_mode": "ADR-0001 §status"}
         self.assertNotIn("Gamma has no phase", "\n".join(self.check()))
 
     def test_pending_must_be_non_empty_strings(self):
@@ -285,7 +326,7 @@ class Pending(Fixture):
 
     def test_the_table_phase_stays_the_phase_and_the_decisions_cell_says_pending(self):
         self.rec["capabilities"]["Gamma"] = {"description": "The third stub. It waits.", "pending": ["x"],
-                                             "rows": ["SV-2"], "severed": "not stated"}
+                                             "rows": ["SV-2"], "degraded_mode": "not stated"}
         t = self.render()
         cells = self.cells(t, "Gamma")
         self.assertEqual(cells[2], "proposed")
@@ -320,7 +361,7 @@ class CheckRecord(Fixture):
         self.assertNotIn("LaneOne", self.caps)
 
     def test_missing_lane(self):
-        self.assertIn("LaneOne has no lanes entry", self.fails(lambda r: r["lanes"].pop("LaneOne")))
+        self.assertIn("LaneOne has no lanes entry", self.fails(lambda r: r["groups"].pop("LaneOne")))
 
     def test_unknown_adr(self):
         out = self.fails(lambda r: r["capabilities"]["Beta"].update(adrs=["ADR-0099 §context"]))
@@ -367,7 +408,7 @@ class CheckRecord(Fixture):
         self.assertIn("Alpha: measured names entry e9", out)
 
     def test_unknown_lab(self):
-        self.assertIn("entry e1 names lab Z", self.fails(lambda r: r["entries"]["e1"].update(lab="Z")))
+        self.assertIn("entry e1 names lab Z", self.fails(lambda r: r["entries"]["e1"].update(environment="Z")))
 
 
 class RenderFailures(Fixture):
@@ -410,7 +451,7 @@ class RenderFailures(Fixture):
         self.rec["entries"]["e1"]["anchor"] = "no such anchor"
         self.rec["capabilities"]["Alpha"]["built"][0]["contains"] = "absent text"
         self.rec["capabilities"]["Gamma"] = {"description": "One stub. Two sentences.", "derived_from": ["ADR-0001 §status"],
-                                             "severed": "ADR-0001 §status"}
+                                             "degraded_mode": "ADR-0001 §status"}
         text = self.render_fails()
         for want in ("anchor 'no such anchor'", "does not contain 'absent text'", "Gamma has no phase"):
             self.assertIn(want, text)
@@ -426,7 +467,7 @@ class RenderFailures(Fixture):
 class Evidence(Fixture):
     def test_an_adr_saying_measured_without_an_entry_reads_not_measured(self):
         self.rec["capabilities"]["Alpha"] = {"description": "Two plain sentences. Here they are.", "adrs": ["ADR-0001 §context"],
-                                             "severed": "ADR-0001 §status"}
+                                             "degraded_mode": "ADR-0001 §status"}
         t = self.render()
         self.assertEqual(self.cells(t, "Alpha")[2:4], ["accepted design", "not measured"])
 

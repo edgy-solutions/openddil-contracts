@@ -19,3 +19,4 @@ registers:
   roadmap: ROADMAP-2026-10-29-isolation-increments.md
 readiness:
   default: ../scripts/RECORDING-READINESS.md   # relative to the chart directory
+loader: kit_loader.py        # the module that reads this repository's record, decisions, registers and readiness doc
