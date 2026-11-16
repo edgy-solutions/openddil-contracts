@@ -47,6 +47,10 @@ def nl(author, release):
     return {"nation": {"author": author, "release": release}}
 
 
+def rl(release):
+    return {"nation": {"rollup": True, "release": release}}
+
+
 def subsets(items):
     for n in range(len(items) + 1):
         for c in itertools.combinations(items, n):
@@ -67,7 +71,7 @@ def test_check5_three_classes():
     s = split_by_audience(fourteen(), D1)
     assert [c.label["nation"]["release"] for c in s.classes] == [["ATL", "BDR"], ["ATL"], ["BDR"]]
     assert [len(c.members) for c in s.classes] == [1, 7, 6]
-    assert all(c.label["nation"]["author"] is None for c in s.classes)
+    assert all(c.label["nation"]["rollup"] is True and "author" not in c.label["nation"] for c in s.classes)
     assert s.withheld == 0 and s.withheld_by_reason == () and s.withheld_ids == ()
 
 
@@ -185,24 +189,35 @@ def test_ids_are_programming_errors(bad):
 
 
 def test_class_label_values():
-    assert class_label(nl("ATL", None), D1) == class_label(nl("ATL", []), D1) == nl(None, ["ATL"])
-    assert class_label(nl("ATL", ["CRD", "BDR"]), D1) == nl(None, ["ATL", "BDR", "CRD"])
+    assert class_label(nl("ATL", None), D1) == class_label(nl("ATL", []), D1) == rl(["ATL"])
+    assert class_label(nl("ATL", ["CRD", "BDR"]), D1) == rl(["ATL", "BDR", "CRD"])
     assert class_label(None, D1) == Refused(NO_LABEL, None, None)
     assert class_label({}, D1) == Refused(DIMENSION_MISSING, "nation", None)
     cl = class_label(ml("ATL", [], ["H2", "H1"], "C"), D3)
-    assert cl == {"nation": {"author": None, "release": ["ATL"]}, "data_rights_holder": ["H1", "H2"], "classification": "C"}
+    assert cl == {"nation": {"rollup": True, "release": ["ATL"]}, "data_rights_holder": ["H1", "H2"], "classification": "C"}
 
 
 @pytest.mark.parametrize(
     "bad",
     [
-        nl("ATL", ["ATL"]),  # author not None
-        nl(None, None),  # release None
-        nl(None, ["ZZZ"]),  # out of vocabulary
-        nl(None, "ATL"),  # not a collection
+        nl("ATL", ["ATL"]),  # author present
+        nl(None, ["ATL"]),  # the old form
+        {"nation": {"author": [], "release": ["ATL"]}},  # empty author set, no marker
+        {"nation": {"rollup": True, "author": "ATL", "release": ["ATL"]}},  # marker with an author
+        {"nation": {"rollup": True, "author": None, "release": ["ATL"]}},  # marker with an author key
+        {"nation": {"rollup": True, "author": [], "release": ["ATL"]}},
+        {"nation": {"rollup": 1, "release": ["ATL"]}},
+        {"nation": {"rollup": "true", "release": ["ATL"]}},
+        {"nation": {"rollup": False, "release": ["ATL"]}},
+        {"nation": {"release": ["ATL"]}},  # marker missing
+        {"nation": {"rollup": True}},  # release absent
+        rl(None),  # release None
+        rl(["ZZZ"]),  # out of vocabulary
+        rl("ATL"),  # not a collection
+        rl({"ATL"}),  # a set is not a list or tuple
+        rl([None]),
         {},  # missing dimension
-        {"nation": {"author": None, "release": ["ATL"]}, "extra": ["x"]},  # extra dimension
-        {"nation": {"author": None}},  # wrong keys
+        {"nation": {"rollup": True, "release": ["ATL"]}, "extra": ["x"]},  # extra dimension
         {"nation": ["ATL"]},  # wrong shape
         None,
         5,
@@ -214,11 +229,28 @@ def test_class_label_values():
 def test_admits_class_fail_closed(bad):
     for viewer in ({"nation": ["ATL"]}, {"nation": ["ATL", "BDR", "CRD"]}, None, 5, {1: 2}):
         assert admits_class(viewer, bad, D1) is False
-    assert admits_class({"nation": ["ATL"]}, nl(None, ["ATL"]), D1) is True
+    assert admits_class({"nation": ["ATL"]}, rl(["ATL"]), D1) is True
+    assert admits_class({"nation": ["ATL"]}, rl(("ATL",)), D1) is True
     assert admits_class({"nation": ["ATL"]}, bad, object()) is False
 
 
 def test_admits_class_viewer_junk():
-    row = nl(None, ["ATL"])
+    row = rl(["ATL"])
     for v in (None, 5, "x", [], {1: ["ATL"]}, {"nation": 5}, {"nation": None}):
         assert admits_class(v, row, D1) is False
+
+
+def test_marker_empty_release_admits_nobody():
+    for v in ({"nation": []}, {"nation": ["ATL"]}, {"nation": ["ATL", "BDR", "CRD"]}):
+        assert admits_class(v, rl([]), D1) is False
+
+
+def test_rollup_over_one_author_is_not_the_authors_label():
+    contribs = [("c1", nl("ATL", None)), ("c2", nl("ATL", []))]
+    s = split_by_audience(contribs, D1)
+    assert len(s.classes) == 1
+    label = s.classes[0].label
+    assert label == rl(["ATL"])
+    assert all(label != lab for _, lab in contribs)
+    assert admits_class({"nation": ["ATL"]}, label, D1) is True
+    assert admits_class({"nation": ["ATL"]}, nl("ATL", []), D1) is False

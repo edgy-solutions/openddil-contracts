@@ -4,6 +4,10 @@ Status: Builds on the PROPOSED ADR-0055 §3a ruling (an unlabelled contributor f
 tally). It is not a ruled behaviour: the built regional rollup keeps an empty-audience class, and which one
 stands is an owed ruling.
 
+The class row's label form builds on the PROPOSED ADR-0055 §2a (#38), not a ruled one: a rollup's nation value carries
+an explicit "rollup, no author" marker, {"rollup": True, "release": [...]}, and no author key. An empty author set is
+never read as a rollup.
+
 A contributor with no label, or one that does not validate, forms no class.
 There is no empty-audience class; that is the difference from the built
 aggregator (regional/aggregator_app.py:_class_key, "The empty string is a real
@@ -11,9 +15,9 @@ class").
 
 What this slice does not do:
 
-- No key for a class row. Its nation value has no author, and lk1 keys only
-  author|release; the key form for an author-less row is owed (it sits with the
-  lk2 ruling). class_label returns a label, never a key.
+- No key for a class row. Its nation value is the rollup marker with no
+  author, and lk1 keys only author|release; the key form for a marker row is owed
+  (it sits with the lk2 ruling). class_label returns a label, never a key.
 - No sums or rows, and no stamping. The caller computes rows from each class's
   members.
 
@@ -33,9 +37,9 @@ NO_LABEL = "no_label"
 def class_label(label, declaration):
     """The label a contributor carries in an aggregate, or Refused. Never raises.
 
-    A permissive dimension with an author becomes {"author": None, "release":
-    sorted({author} | release)}: in an aggregate the author grants nothing
-    alone. Every other dimension keeps its validated value.
+    A permissive dimension with an author becomes the rollup marker {"rollup": True,
+    "release": sorted({author} | release)}, with no author key: in an aggregate
+    the author grants nothing alone. Every other dimension keeps its validated value.
     """
     try:
         return _class_label(label, declaration)
@@ -54,7 +58,7 @@ def _class_label(label, declaration):
         v = res.label[dim.name]
         if dim.type == PERMISSIVE and dim.has_author:
             out[dim.name] = {
-                "author": None,
+                "rollup": True,
                 "release": sorted({v["author"]} | set(v["release"] or ())),
             }
         else:
@@ -117,11 +121,13 @@ def split_by_audience(contributors, declaration):
 
 
 def _class_form(label, declaration):
-    """Normalise a class-form label (author-less on has_author dimensions), or None.
+    """Normalise a class-form label (the rollup marker on has_author dimensions), or None.
 
     The label must name exactly the declared dimensions, each well-formed and
-    inside its vocabulary. A has_author dimension needs author None and a
-    release list.
+    inside its vocabulary. A has_author dimension needs exactly the keys
+    rollup and release: rollup the bool True, release a list or tuple of
+    vocabulary strings (empty admits nobody). Any author key, a missing or
+    false rollup, or a missing release gives None.
     """
     if not isinstance(label, Mapping):
         return None
@@ -148,16 +154,16 @@ def _class_form(label, declaration):
             out[dim.name] = v
             continue
         if dim.type == PERMISSIVE and dim.has_author:
-            if not isinstance(v, Mapping) or set(v.keys()) != {"author", "release"}:
+            if not isinstance(v, Mapping) or set(v.keys()) != {"rollup", "release"}:
                 return None
-            if v["author"] is not None:
+            if v["rollup"] is not True:
                 return None
             v = v["release"]
-            if not isinstance(v, (list, tuple, set, frozenset)):
+            if not isinstance(v, (list, tuple)):
                 return None
             if not _is_str_collection(v) or any(x not in vocab for x in v):
                 return None
-            out[dim.name] = {"author": None, "release": sorted(set(v))}
+            out[dim.name] = {"rollup": True, "release": sorted(set(v))}
             continue
         if v is None or not _is_str_collection(v) or any(x not in vocab for x in v):
             return None
@@ -169,7 +175,7 @@ def admits_class(viewer, class_label, declaration):
     """True when the viewer may read a class row. Never raises.
 
     As admits, except that on a permissive dimension with an author the class
-    label's author must be None and the viewer needs one release value.
+    label must be the rollup marker (no author) and the viewer needs one release value.
     """
     try:
         return _admits_class(viewer, class_label, declaration)

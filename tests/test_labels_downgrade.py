@@ -163,3 +163,18 @@ def test_no_automatic_downgrade():
     given = lab("ATL", ["BDR"], ["H1"])
     r = rec(label=given)
     assert r.label == given
+
+
+def test_marker_label_is_refused_a_downgrade_cannot_hand_out_a_rollup():
+    marker = {"nation": {"rollup": True, "release": ["BDR", "CRD"]}, "data_rights_holder": ["H1"]}
+    assert rec(label=marker) == Refused(VALUE_MALFORMED, "nation", None)
+    assert rec(label=FLOOR) == Refused(VALUE_MALFORMED, "nation", None)
+
+
+def test_marker_floor_counts_release_only():
+    assert FLOOR["nation"] == {"rollup": True, "release": ["BDR"]}
+    assert isinstance(rec(label=lab("ATL", ["BDR"], ["H1"])), Downgrade)
+    # The floor's marker never supplies an author, even under single authorship.
+    assert rec(label=lab("BDR", [], ["H1"]), floor=FLOOR).reason == DOWNGRADE_LOWERS_NOTHING
+    wide = class_label(lab("ATL", ["BDR"], ["H1"]), D)
+    assert rec(label=lab("ATL", ["BDR"], ["H1"]), floor=wide).reason == DOWNGRADE_LOWERS_NOTHING

@@ -4,6 +4,10 @@ Status: Builds on the PROPOSED ADR-0055 §3a ruling (an unlabelled contributor f
 tally). It is not a ruled behaviour: the built regional rollup keeps an empty-audience class, and which one
 stands is an owed ruling.
 
+A floor may be in class form: on a permissive dimension with an author, the PROPOSED ADR-0055 §2a (#38) rollup marker
+{"rollup": True, "release": [...]}, which has no author and counts by its release only. A label in marker form never
+validates, so a downgrade cannot hand out a rollup label.
+
 A downgrade is a record of four things: the label it gives, the reason, the
 inputs it covers, and the owner who decided it. The owner is a person or role
 named in the declaration of each dimension the downgrade lowers. A downgrade
@@ -72,7 +76,7 @@ def _record(floor, label, reason, inputs, owner, declaration, single_authorship)
 
     def aud(x):
         s = set(x["release"] or ())
-        if x["author"] is not None and single_authorship:
+        if x.get("author") is not None and single_authorship:
             s.add(x["author"])
         return s
 
