@@ -12,6 +12,10 @@ was not read is never used to decide anything here.
 - network state as an observed input (§7), with the alerting path added the same day;
 - ADR-0038 §1 and St-Tx corrected so the analyzer sits under configuration status accounting;
 - ADR-0057's output kinds open when the remaining-life kind is specified.
+**Specified 2026-11-12:** the remaining-life output kind (§4.2), with the ADR-0057 amendment that opens the output
+kinds, in [DESIGN-2026-11-11-remaining-life-output-kind.md](DESIGN-2026-11-11-remaining-life-output-kind.md); the
+built-in test record kind (§5) in [DESIGN-2026-11-11-bit-record-kind.md](DESIGN-2026-11-11-bit-record-kind.md). Both
+accepted as proposed.
 **Builds on:** ADR-0038 §1 (the ISO 13374 reading) and C1, C2 and C7; ADR-0051 (failure records, usage meters,
 composable rollups); ADR-0057 (the declared analytic unit); ADR-0020 (derived values and the confidence staircase);
 ADR-0013 (the quantity and its unit); ADR-0046 (declared kinds at the gate); ADR-0056 (one identity per thing).
