@@ -84,10 +84,10 @@ on:
 
 jobs:
   notify:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Dispatch source-repo-changed to openddil-helm
-        uses: peter-evans/repository-dispatch@v3
+        uses: peter-evans/repository-dispatch@v4
         with:
           token: ${{ secrets.BUNDLE_REBUILD_PAT }}
           repository: ${{ github.repository_owner }}/openddil-helm
