@@ -129,7 +129,7 @@ class CouldNotRun(unittest.TestCase):
         self.assertIn("case good", err)
 
     def test_real_model_still_has_both_fault_sites(self):
-        self.assertEqual(len(v.cases(v.MODEL.read_text(encoding="utf-8"))), 3)
+        self.assertEqual(len(v.cases(v.project.model_file("validate_sysml").read_text(encoding="utf-8"))), 3)
 
 
 if __name__ == "__main__":

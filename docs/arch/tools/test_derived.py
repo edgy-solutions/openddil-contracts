@@ -66,7 +66,7 @@ def body(table: str) -> list[str]:
 
 class RealTree(unittest.TestCase):
     def test_dependencies_builds_one_row_per_increment_and_fold_in(self):
-        roadmap = (REPO / "decisions" / cp.ROADMAP).read_text(encoding="utf-8")
+        roadmap = (REPO / "decisions" / cp.roadmap_file()).read_text(encoding="utf-8")
         record = cp.load_record(ARCH / "capability-record.yaml")
         rows = body(derived.dependencies(record, roadmap))
         increments = derived.table_with(roadmap, derived.ROADMAP_HEADER, "increment")

@@ -4,3 +4,18 @@ paths:
   root: .                    # the architecture directory: views/, model/, profiles.yaml, slots.yaml, ...
   repo: ../..                # the repository root (git stamps run here)
   decisions: ../../decisions
+name: OpenDDIL               # the framework's display name: attribution default, title strip
+model:
+  file: model/openddil.sysml # relative to paths.root
+  package: OpenDDIL
+exchange:
+  annotations:
+    produces: openddil.io/produces-topics
+    groups: openddil.io/consumer-groups
+  schema_key: x-openddil
+registers:
+  follow_ups: FOLLOW-UPS.md
+  debt: GENERALIZATION-DEBT.md
+  roadmap: ROADMAP-2026-10-29-isolation-increments.md
+readiness:
+  default: ../scripts/RECORDING-READINESS.md   # relative to the chart directory

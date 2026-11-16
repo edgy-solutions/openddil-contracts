@@ -142,7 +142,7 @@ class Fixture(unittest.TestCase):
         self.put("README.md", README)
         self.put("FOLLOW-UPS.md", FOLLOW_UPS)
         self.put("GENERALIZATION-DEBT.md", DEBT)
-        self.put(cp.ROADMAP, ROADMAP)
+        self.put(cp.roadmap_file(), ROADMAP)
         (self.tpl / "t.yaml").write_text(TEMPLATE, encoding="utf-8")
         self.caps = cp.model_capabilities(MODEL)
         self.rec = base_record()
