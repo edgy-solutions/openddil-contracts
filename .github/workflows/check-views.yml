@@ -53,24 +53,26 @@ env:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: edgy-solutions/openddil-helm
           ref: master
           path: repos/openddil-helm
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
           ref: master
           path: repos/openddil-customer-bundle-example
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -121,7 +123,7 @@ jobs:
             --readiness "$READINESS" \
             --barred docs/arch/tools/barred-sample.txt
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -131,6 +133,13 @@ jobs:
         env:
           PUPPETEER_SKIP_DOWNLOAD: "true"
         run: npm ci
+
+      - name: Relabel list
+        env:
+          RELABEL: ${{ secrets.ARCH_RELABEL }}
+        run: |
+          if [ -n "$RELABEL" ]; then printf '%s\n' "$RELABEL" > "$RUNNER_TEMP/relabel.txt"; echo "relabel: repository secret"
+          else cp docs/arch/tools/relabel-sample.txt "$RUNNER_TEMP/relabel.txt"; echo "relabel: sample list only"; fi
 
       - name: Build the HTML export
         env:
@@ -144,13 +153,15 @@ jobs:
             --values "$BUNDLE/k8s/egress-values.yaml" \
             --release openddil \
             --readiness "$READINESS" \
+            --relabel "$RUNNER_TEMP/relabel.txt" \
             --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
 
       - name: Check the export
         run: |
           python docs/arch/tools/check_export.py \
             --export "$RUNNER_TEMP/export/openddil-architecture.html" \
-            --barred docs/arch/tools/barred-sample.txt
+            --barred docs/arch/tools/barred-sample.txt \
+            --relabel "$RUNNER_TEMP/relabel.txt"
 
       - name: Check the export in a browser
         working-directory: docs/arch/tools/export
@@ -160,7 +171,7 @@ jobs:
           node check_export_browser.mjs "$RUNNER_TEMP/export/openddil-architecture.html" \
             --shots "$RUNNER_TEMP/shots" --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: architecture-export
           path: ${{ runner.temp }}/export/openddil-architecture.html

@@ -91,6 +91,44 @@ Home: `ADR-0059-condition-monitoring-bit-and-usage-alignment.md` §4.3. Named by
 
 Close when the harness runs over a recording with confirmed failures and reports each metric, citing the paper.
 
+## OPEN 2026-11-11 — the remaining-life output kind is specified, not built
+
+**A design, not built.** `DESIGN-2026-11-11-remaining-life-output-kind.md` specifies, by concept, a third output
+kind for a declared analytic unit: a distribution over the use remaining before a declared failure threshold, in a
+declared usage meter's unit, with a horizon, a confidence with its kind or none, and always advisory. It drafts the
+ADR-0057 amendment that admits the kind, and the scoring harness's inputs and join. Accepted as proposed 2026-11-12:
+the kind is terminal, a repair starts a new life only when declared a renewal, and the amendment is applied to
+ADR-0057. The harness waits for confirmed outcomes from the completed work order (ADR-0059 §4.4).
+
+Home: `DESIGN-2026-11-11-remaining-life-output-kind.md`. Named by: ADR-0059 §4.2, §4.3.
+
+Close when a unit emits the kind through the amended validator, and one scoring run joins its outputs to a
+confirmed failure.
+
+## OPEN 2026-11-11 — the built-in test record kind is specified, not built
+
+**A design, not built.** `DESIGN-2026-11-11-bit-record-kind.md` specifies, by concept, a declared record for one
+built-in test result: test type and result from declared vocabularies, a fault code from the catalog, the ambiguity
+group as ordered component identities, and a confidence with its kind or none. A `fail` opens or joins an episode;
+a `pass` never closes one. It describes the inputs and join for ADR-0059 §4.1's detection and isolation counts.
+Ruled 2026-11-11: `active_fault_codes` stays beside the kind until every declared source is mapped (the next row).
+Accepted as proposed 2026-11-12: records stay at the tier; only the episode and the counts go up.
+
+Home: `DESIGN-2026-11-11-bit-record-kind.md`. Named by: ADR-0059 §5.
+
+Close when one deployment's source is mapped into the kind, and the counts are read from it at one tier.
+
+## OPEN 2026-11-11 — retire `active_fault_codes` once every source is mapped
+
+**Kept by ruling, for now.** Ruled 2026-11-11: `HealthFlags.active_fault_codes` stays beside the built-in test kind
+while sources are mapped one by one. The ingest fills both, and the kind is authoritative where both exist. Until the
+field is retired, one result can appear in two places, and a reader that counts both counts it twice.
+
+Home: `DESIGN-2026-11-11-bit-record-kind.md` §6. Named by: ADR-0059 §5.
+
+Close when every source a deployment declares is mapped into the kind, no reader is left on the field, and it is
+removed from the contract.
+
 ## OPEN 2026-11-11 — no collector at any tier; telemetry does not travel upward
 
 **A design, not built.** Nothing emits OpenTelemetry, and no collector is deployed. The proposal is a collector per
@@ -3394,6 +3432,33 @@ heading, where nothing can be split. Verified by diffing: the change is
 | AE-4 | Horizon exists; uncertainty band does not | open |
 | AE-5 | GD-10 is a prerequisite here too | open |
 | AE-6 | Diagnosis absent, deliberately not listed | open |
+
+### SV — severed behaviour not stated by a decision record (CV-2)
+
+Every capability of a framework for disconnected, intermittent and limited links should say how it behaves on a severed tier. These are the capabilities whose decision records do not. A row closes when a decision record states it, and the capability's `severed` entry then cites that section.
+
+| ID | Subject | Status |
+|---|---|---|
+| SV-1 | DataAcquisition: severed behaviour not stated | open |
+| SV-2 | DataManipulation: severed behaviour not stated | open |
+| SV-3 | StateDetection: severed behaviour not stated | open |
+| SV-4 | HealthAssessment: severed behaviour not stated | open |
+| SV-5 | PrognosticAssessment: severed behaviour not stated | open |
+| SV-6 | AdvisoryGeneration: severed behaviour not stated | open |
+| SV-7 | HierarchicalAggregation: severed behaviour not stated | open |
+| SV-8 | TierLocalMaintenanceChain: severed behaviour not stated; the roadmap plans it per tier | open |
+| SV-9 | TierLocalWorkflow: severed behaviour not stated; the roadmap plans it per tier | open |
+| SV-10 | EdgeWorkflow: severed behaviour not stated; a proposed spec covers it | open |
+| SV-11 | TacticalSustainmentCorrelation: severed behaviour not stated | open |
+| SV-12 | ConfigurationStatusAccounting: severed behaviour not stated | open |
+| SV-13 | ArrivalDeclaration: severed behaviour not stated | open |
+| SV-14 | GatedRelease: severed behaviour not stated; never severed mid-stream | open |
+| SV-15 | DeclaredCards: severed behaviour not stated | open |
+| SV-16 | SustainmentFeasibility: severed behaviour not stated | open |
+| SV-17 | AdvisoryProvenance: severed behaviour not stated | open |
+| SV-18 | FailureReporting: severed behaviour not stated | open |
+| SV-19 | SafetyInterlockRefusal: severed behaviour not stated | open |
+| SV-20 | DisagreementDetection: severed behaviour not stated | open |
 
 ### C — do-not-harden constraints (`ADR-0038` §6)
 

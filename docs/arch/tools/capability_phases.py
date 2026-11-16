@@ -12,7 +12,7 @@ Phases, highest first:
     built unmeasured  cites a chart template under `built`, and no readiness entry
     accepted design   cites an ADR whose Status begins with accepted
     proposed          cites an ADR whose Status begins with proposed, or a
-                      `still_open` citation
+                      `still_open` citation, or a `pending` entry
     row               cites only rows in a register
 A capability that cites none of these has no phase, and that is a failure.
 
@@ -20,6 +20,21 @@ Evidence comes from the readiness doc only: an entry is an anchor line that
 holds a date, and a quote is the cited line. A decision record's wording is
 never read for evidence, only its Status line. A message names the record's
 own text (capability, entry, anchor, line); it never echoes a readiness line.
+
+Two keys say how a capability's page reads:
+    description   two or three plain sentences, written from the decisions below
+    derived_from  citations the description was written from; when absent, from `adrs`
+    severed       required for every capability: the exact string `not stated`, or one
+                  citation `ADR-NNNN §LABEL` of the record that says how the capability
+                  behaves when its link is severed. `not stated` needs an `SV-` id in
+                  `rows`; a citation needs none.
+    pending       optional list of non-empty strings naming the sources a decision waits
+                  on. A capability with it is at least `proposed`, and needs no
+                  `derived_from` or `adrs`.
+A decision is cited by section: `ADR-0038 §1`, in `adrs`, `derived_from` and
+`still_open[].adr`. The label is the number a heading starts with, or the
+GitHub slug of a heading with none (adr_sections.py lists them). A bare
+`ADR-0038` cites no section, and a section that does not resolve fails.
 
 Used by render_profile.py (the St-Rm-P marker) and check_views.py (the
 `phases` rule). This module writes no file. Stdlib and PyYAML only.
@@ -31,6 +46,7 @@ from pathlib import Path
 
 import yaml
 
+import adr_sections
 from data_exchange import InputError
 from marks import adr_status
 
@@ -42,7 +58,11 @@ ROADMAP = "ROADMAP-2026-10-29-isolation-increments.md"
 REGISTER_HEADER = ["ID", "Subject", "Status"]
 DATE_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 OUTPUT_FIELDS = ("phase", "evidence")
+NOT_STATED = "not stated"
 SECTIONS = ("lanes", "labs", "entries", "capabilities")
+CAP_KEYS = ("description", "derived_from", "adrs", "built", "measured", "rows", "still_open", "increment",
+            "severed", "pending")
+ADR_ID_RE = re.compile(r"ADR-\d{4}")
 
 
 class CheckError(Exception):
@@ -99,8 +119,38 @@ def adr_lead(decisions_dir: Path, adr: str) -> str | None:
     return status.lstrip("* ").lower() if status else None
 
 
+def adr_id(citation) -> str:
+    """The ADR id a citation starts with; the text itself when it starts with none."""
+    m = ADR_ID_RE.match(str(citation).strip())
+    return m.group(0) if m else str(citation)
+
+
+def parsed(items) -> list[tuple[str, str]]:
+    """(id, label) of each item that is a citation; an item that is not one is left out."""
+    out = []
+    for item in items or []:
+        try:
+            out.append(adr_sections.parse_citation(item))
+        except ValueError:
+            pass
+    return out
+
+
 def record_adrs(cap: dict) -> list[str]:
-    return list(cap.get("adrs") or [])
+    """The ADR ids `adrs` cites, de-duplicated in order."""
+    return list(dict.fromkeys(adr_id(c) for c in cap.get("adrs") or []))
+
+
+def record_citations(cap: dict) -> list[tuple[str, str]]:
+    return parsed(cap.get("adrs"))
+
+
+def derived_citations(cap: dict) -> list[tuple[str, str]]:
+    return parsed(cap.get("derived_from"))
+
+
+def open_citations(cap: dict) -> list[tuple[str, str]]:
+    return parsed((s or {}).get("adr") for s in cap.get("still_open") or [] if isinstance(s, dict))
 
 
 def still_open(cap: dict) -> list[dict]:
@@ -113,7 +163,7 @@ def statuses_of(record: dict, decisions_dir) -> dict[str, str | None]:
     for cap in record["capabilities"].values():
         cap = cap or {}
         ids.update(record_adrs(cap))
-        ids.update(s.get("adr") for s in still_open(cap) if isinstance(s, dict))
+        ids.update(adr_id(s.get("adr")) for s in still_open(cap) if isinstance(s, dict) and s.get("adr"))
     return {i: adr_lead(Path(decisions_dir), i) for i in sorted(i for i in ids if i)}
 
 
@@ -137,6 +187,22 @@ def register_rows(text: str) -> dict[str, str]:
     return out
 
 
+def register_subjects(text: str) -> dict[str, tuple[str, str]]:
+    """Row id to (subject, status), for every `| ID | Subject | Status |` register in the text."""
+    out: dict[str, tuple[str, str]] = {}
+    lines = text.split("\n")
+    for i, line in enumerate(lines):
+        if not line.lstrip().startswith("|") or split_row(line) != REGISTER_HEADER:
+            continue
+        for nxt in lines[i + 2:]:
+            if not nxt.lstrip().startswith("|"):
+                break
+            cells = split_row(nxt)
+            if len(cells) >= 3:
+                out.setdefault(cells[0], (cells[1], cells[-1]))
+    return out
+
+
 def roadmap_rows(text: str) -> list[list[str]]:
     return [split_row(ln) for ln in text.split("\n") if ln.lstrip().startswith("|")]
 
@@ -146,10 +212,51 @@ def roadmap_row(rows: list[list[str]], increment: str) -> list[str] | None:
     return (exact or [r for r in rows if any(increment in c for c in r)] or [None])[0]
 
 
+def increment_label(cap: dict, road_rows: list[list[str]]) -> str | None:
+    """`number: text` for the capability's CV-3 increment, or None when it names none."""
+    if not cap.get("increment"):
+        return None
+    first = roadmap_row(road_rows, cap["increment"])[0]
+    number = "done" if first.startswith("done") else first
+    return f"{number}: {cap['increment'].replace('**', '')}"
+
+
 def index_status(index_text: str, adr: str) -> str | None:
     """The bold status the decisions index gives an ADR, when it begins accepted or proposed."""
     m = re.search(rf"\[{re.escape(adr)}:[^\n]*?\)\s*—\s*\*\*(accepted|proposed)", index_text, re.I)
     return m.group(1).lower() if m else None
+
+
+def sentences(text: str) -> int:
+    """How many sentences the text has: the . ? and ! that end one, not those of e.g. and i.e."""
+    text = re.sub(r"\b(e\.g|i\.e)\.", "", text, flags=re.I)
+    return len(re.findall(r"[.?!][\"')\]]*(?=\s|$)", text))
+
+
+def check_description(name: str, description) -> list[str]:
+    if not isinstance(description, str) or not description.strip():
+        return [f"{name} has no description"]
+    n = sentences(description)
+    if not 2 <= n <= 4:
+        return [f"{name}: the description has {n} sentence{'s' if n != 1 else ''}, expected two or three"]
+    return []
+
+
+def check_section(name: str, item, decisions_dir: Path) -> list[str]:
+    """A citation must be `ADR-NNNN §LABEL` and the label must name one heading of the record."""
+    try:
+        adr, label = adr_sections.parse_citation(item)
+    except ValueError:
+        return [f"{name}: {item!r} cites no section"]
+    path = adr_file(decisions_dir, adr)
+    text = read_text(path) if path else None
+    if text is None:
+        return []  # no file: check_adr says so
+    try:
+        adr_sections.resolve(text, label)
+    except LookupError as e:
+        return [f"{name}: {adr} §{label}: {e.args[0]}"]
+    return []
 
 
 # --- the record against the decisions -----------------------------------------
@@ -209,20 +316,52 @@ def check_record(record: dict, capabilities: dict[str, str], decisions_dir) -> l
         for f in OUTPUT_FIELDS:
             if f in cap:
                 fails.append(f"{name} has a field '{f}': phase and evidence are computed, not recorded")
-        if not any(cap.get(k) for k in ("adrs", "built", "measured", "still_open", "rows")):
+        if not any(cap.get(k) for k in ("adrs", "built", "measured", "still_open", "rows", "pending")):
             fails.append(f"{name} has no phase")
-        for adr in record_adrs(cap):
+        for key in cap:
+            if key not in CAP_KEYS and key not in OUTPUT_FIELDS:
+                fails.append(f"{name} has a key '{key}' that the record does not accept")
+        fails += check_description(name, cap.get("description"))
+        pend = cap.get("pending")
+        if pend is not None and (not isinstance(pend, list) or not pend
+                                 or not all(isinstance(p, str) and p.strip() for p in pend)):
+            fails.append(f"{name}: pending must be a list of non-empty strings")
+        if not cap.get("adrs") and not cap.get("derived_from") and not pend:
+            fails.append(f"{name}: its description is derived from no decision")
+        cited = list(cap.get("adrs") or []) + list(cap.get("derived_from") or []) + [
+            (s or {}).get("adr") for s in still_open(cap) if isinstance(s, dict) and (s or {}).get("adr")]
+        for item in cited:
+            fails += check_section(name, item, decisions_dir)
+        for adr in dict.fromkeys(adr_id(c) for c in list(cap.get("adrs") or []) + list(cap.get("derived_from") or [])):
             check_adr(name, adr)
         for item in still_open(cap):
             adr, says = (item or {}).get("adr"), (item or {}).get("says")
             if not adr or not says:
                 fails.append(f"{name}: a still_open citation needs adr and says")
                 continue
+            adr = adr_id(adr)
             check_adr(name, adr)
             path = adr_file(decisions_dir, adr)
             text = read_text(path) if path else None
             if text is not None and says not in text:
                 fails.append(f"{name}: {adr} does not contain {says!r}")
+        sv_rows = [r for r in cap.get("rows") or [] if str(r).startswith("SV-")]
+        severed = cap.get("severed")
+        if not severed:
+            fails.append(f"{name} has no severed entry")
+        elif severed == NOT_STATED:
+            if not sv_rows:
+                fails.append(f"{name}: severed is not stated and rows names no SV- row")
+        else:
+            try:
+                adr_sections.parse_citation(severed)
+            except ValueError:
+                fails.append(f"{name}: severed {severed!r} is neither '{NOT_STATED}' nor a citation ADR-NNNN §LABEL")
+            else:
+                fails += check_section(name, severed, decisions_dir)
+                check_adr(name, adr_id(severed))
+                if sv_rows:
+                    fails.append(f"{name}: severed is stated in {severed} and rows still names {sv_rows[0]}")
         for row in cap.get("rows") or []:
             status = registers.get(row)
             if follow is not None and status is None:
@@ -251,7 +390,7 @@ def phase_of(cap: dict, statuses: dict[str, str | None]) -> str | None:
         return "built unmeasured"
     if any(s.startswith("accepted") for s in leads):
         return "accepted design"
-    if any(s.startswith("proposed") for s in leads) or still_open(cap):
+    if any(s.startswith("proposed") for s in leads) or still_open(cap) or cap.get("pending"):
         return "proposed"
     if cap.get("rows"):
         return "row"
@@ -405,23 +544,27 @@ def render_table(record: dict, capabilities: dict[str, str], decisions_dir, temp
         phase = phase_of(cap, statuses)
         counts[phase] += 1
         lane = str(record["lanes"][parent])
-        if cap.get("increment"):
-            first = roadmap_row(road_rows, cap["increment"])[0]
-            number = "done" if first.startswith("done") else first
-            lane += f", {number}: {cap['increment'].replace('**', '')}"
+        label = increment_label(cap, road_rows)
+        if label:
+            lane += f", {label}"
         evidence = NOT_MEASURED
         if phase == "measured":
             used.update(record["entries"][m["entry"]]["lab"] for m in cap["measured"])
             evidence = "; ".join(evidence_item(record, entries, m, quotes[(name, k)])
                                  for k, m in enumerate(cap["measured"]))
         built = list(dict.fromkeys(f"templates/{b['template']}" for b in cap.get("built") or []))
-        decisions = []
-        for adr in record_adrs(cap):
-            theirs = index_status(index_text, adr)
-            mine = "accepted" if statuses[adr].startswith("accepted") else "proposed"
-            note = f" (record: {mine}; index: {theirs})" if theirs and mine != theirs else ""
-            decisions.append(adr + note)
-        decisions += [f"{s['adr']} (names it still open)" for s in still_open(cap)]
+        decisions, noted = [], set()
+        for adr, label in record_citations(cap):
+            note = ""
+            if adr not in noted:
+                theirs = index_status(index_text, adr)
+                mine = "accepted" if statuses[adr].startswith("accepted") else "proposed"
+                note = f" (record: {mine}; index: {theirs})" if theirs and mine != theirs else ""
+                noted.add(adr)
+            decisions.append(f"{adr} §{label}{note}")
+        decisions += [f"{adr} §{label} (names it still open)" for adr, label in open_citations(cap)]
+        if cap.get("pending"):
+            decisions.append("decision pending")
         rows.append(f"| {name} | {lane} | {phase} | {evidence} | {', '.join(built) or '-'} | "
                     f"{', '.join(decisions) or '-'} | {', '.join(cap.get('rows') or []) or '-'} |")
 

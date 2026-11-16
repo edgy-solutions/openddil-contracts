@@ -43,10 +43,10 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0029 | Accepted | Op-Cn, Op-Ct, Op-If, Op-Pr, Rs-If, Rs-Pr, Rs-Sq, Rs-Sr, Sc-Cn, Sc-Sr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0030 | Accepted | Op-Cn, Op-Pr, Rs-Cn, Rs-Pr, Rs-Sr |
 | ADR-0031 | Accepted | Rs-Sr, St-Rm-P, St-Tx |
-| ADR-0032 | Accepted | Op-Cn, Op-Sr, Rs-Sr |
+| ADR-0032 | Accepted | Op-Cn, Op-Sr, Rs-Sr, St-Rm-P, St-Tx |
 | ADR-0033 | Accepted | Op-Cn, Op-Ct, Op-Sr, Op-Tx, Rs-Cn, Rs-Ct, Rs-Sr, Rs-Tx, Sm-Ov |
 | ADR-0034 | Accepted | Rs-Sr, St-Rm-P, St-Tx |
-| ADR-0035 | Accepted | Sm-Ov |
+| ADR-0035 | Accepted | Sm-Ov, St-Rm-P, St-Tx |
 | ADR-0036 | Accepted | Sc-Pr |
 | ADR-0037 | Accepted | Rs-Tr, Sm-Ov |
 | ADR-0038 | Accepted | Op-Ct, Rs-Pr, Sd-Tx, St-Pr, St-Rm-P, St-Tx |

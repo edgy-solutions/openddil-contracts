@@ -34,7 +34,9 @@ NOTICE = "Not generated: pass --chart and --values to fill this from a bundle."
 PHASES_NOTICE = "Not generated: pass --chart to read the phases from the record, the readiness doc and the chart."
 PHASES_MARKER = "<!-- generated: capability-phases -->"
 PHASES_FILES = (("uaf", "St-Rm-P.md"), ("dodaf202", "CV-3.md"), ("naf4", "Cr.md"))
-STRIPPED = "  TacticalSustainmentCorrelation:\n    adrs: [ADR-0039]\n"
+# The one citation of a real capability. Removing it leaves a capability with a
+# description and no phase.
+STRIPPED = "    adrs: [ADR-0039 §1, ADR-0039 §2]\n    severed: not stated\n    rows: [SV-11]\n"
 LINK = re.compile(r"\[[^\]\n]*\]\(([^)\s]+)\)")
 
 
@@ -276,7 +278,7 @@ class TempTree(unittest.TestCase):
         p = self.arch / "capability-record.yaml"
         text = p.read_text(encoding="utf-8")
         self.assertIn(STRIPPED, text)
-        p.write_text(text.replace(STRIPPED, "  TacticalSustainmentCorrelation: {}\n"), encoding="utf-8", newline="\n")
+        p.write_text(text.replace(STRIPPED, ""), encoding="utf-8", newline="\n")
         return p
 
     def test_a_capability_with_no_phase_is_exit_1_without_a_chart(self):
@@ -495,7 +497,7 @@ class Integration(unittest.TestCase):
         record = (ARCH / "capability-record.yaml").read_text(encoding="utf-8")
         self.assertIn(STRIPPED, record)
         p = self.tmp / "record.yaml"
-        p.write_text(record.replace(STRIPPED, "  TacticalSustainmentCorrelation: {}\n"), encoding="utf-8", newline="\n")
+        p.write_text(record.replace(STRIPPED, ""), encoding="utf-8", newline="\n")
         d = self.tmp / "none-phase"
         rc, _, err = run(TOOL, "--profile", "uaf", "--out", d, "--chart", CHART, "--release", "openddil",
                          "--values", BUNDLE, "--values", OVERLAY, "--record", p)

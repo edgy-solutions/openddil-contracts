@@ -28,6 +28,7 @@ package OpenDDIL {
         occurrence def TierLocalMaintenanceChain :> Isolation;
         occurrence def TierLocalWorkflow :> Isolation;
         occurrence def OneSession :> Isolation;
+        occurrence def EdgeReasoning :> Isolation;
         occurrence def EdgeWorkflow :> Isolation;
 
         abstract occurrence def Correlation :> Capability;

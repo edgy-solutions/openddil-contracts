@@ -19,6 +19,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import check_export  # noqa: E402
+import capability_phases  # noqa: E402
 import check_views  # noqa: E402
 import render_profile as rp  # noqa: E402
 
@@ -44,15 +45,38 @@ def declarations(slots=SLOTS, prov=PROV):
             f'<table><tr><th>Slot</th><th>What it fills</th></tr>{rows}</table>{prov}</section>')
 
 
-def good(views=None, diagrams=FENCES, prov=PROV, decl=None):
+CAPS = list(capability_phases.model_capabilities(TREE.sysml))
+DECISIONS = sorted(f.name for f in (ARCH.parent.parent / "decisions").glob("ADR-*.md"))
+STAMP = "Commit abc1234, 2026-01-02: decisions/{}"
+
+
+def capability_page(name, prov=PROV, what="A description."):
+    return (f'<section id="cap-{name}" class="page capability"><h1>{name}</h1>'
+            f'<h2>What it is</h2><p data-what>{what}</p><p data-derived>From ADR-0038 s1.</p>{prov}</section>')
+
+
+def decision_page(pid, stamp, prov=PROV):
+    return (f'<section id="{pid}" class="page decision"><h1>{pid}</h1>'
+            f'<p class="stamp" data-stamp>{stamp}</p>{prov}</section>')
+
+
+def extra_pages(prov=PROV):
+    pages = [capability_page(c, prov) for c in CAPS]
+    pages += [decision_page(f[:8].lower(), STAMP.format(f), prov) for f in DECISIONS]
+    pages.append(decision_page("decision-roadmap", "Commit abc1234, 2026-01-02: decisions/ROADMAP.md", prov))
+    return pages
+
+
+def good(views=None, diagrams=FENCES, prov=PROV, decl=None, front=""):
     views = list(TREE.views) if views is None else views
-    pages = [f'<section id="front" class="page" data-front><h1>x</h1><a href="#view-{views[0]}">v</a>{prov}</section>']
+    pages = [f'<section id="front" class="page" data-front><h1>x</h1><a href="#view-{views[0]}">v</a>{front}{prov}</section>']
     for i, v in enumerate(views):
         body = SVG * (diagrams if i == 0 else 0)
         if i == 0:
             body += '<details class="exceptions"><summary>Exceptions: 1 row</summary></details>'
         pages.append(f'<section id="view-{v}" class="page view" data-view="{v}"><h1>{v}</h1>{body}{prov}</section>')
     pages.append(declarations(prov=prov) if decl is None else decl)
+    pages += extra_pages(prov)
     return ('<!doctype html><html><head>'
             f'<meta http-equiv="Content-Security-Policy" content="{CSP}"></head><body>'
             + "".join(pages) + "</body></html>")
@@ -73,6 +97,17 @@ class Base(unittest.TestCase):
                                     "--barred", str(barred or self.tmp / "barred.txt")])
         return rc, out.getvalue(), err.getvalue()
 
+    def run_relabel(self, doc, rules_text):
+        f = self.tmp / "e.html"
+        f.write_text(doc, encoding="utf-8")
+        lst = self.tmp / "relabel.txt"
+        lst.write_text(rules_text, encoding="utf-8", newline="\n")
+        out, err = io.StringIO(), io.StringIO()
+        with redirect_stdout(out), redirect_stderr(err):
+            rc = check_export.main(["--export", str(f), "--root", str(ARCH),
+                                    "--barred", str(self.tmp / "barred.txt"), "--relabel", str(lst)])
+        return rc, out.getvalue(), err.getvalue()
+
     def fails(self, doc, word):
         rc, out, err = self.run_check(doc)
         self.assertEqual(rc, 1, err)
@@ -85,11 +120,38 @@ class Green(Base):
         doc = good()
         rc, out, err = self.run_check(doc)
         self.assertEqual(rc, 0, err)
-        self.assertEqual(out.strip(), f"ok: export: {len(TREE.views)} views, equal to check_views; "
+        self.assertEqual(out.strip(), f"ok: export: {len(TREE.views) + 2 + len(CAPS) + len(DECISIONS) + 1} pages, {len(TREE.views)} views, equal to check_views; "
                                       f"{FENCES} diagrams; {len(doc.encode())} bytes; barred: 0 on 2 entries of barred.txt")
 
 
 class Red(Base):
+    def test_capability_page_without_description_fails(self):
+        doc = good().replace("<p data-what>A description.</p>", "<p data-what> </p>", 1)
+        err = self.fails(doc, "capabilities")
+        self.assertIn(f"cap-{CAPS[0]}", err)
+
+    def test_missing_capability_page_fails(self):
+        doc = re.sub(rf'<section id="cap-{CAPS[0]}".*?</section>', "", good(), count=1, flags=re.S)
+        err = self.fails(doc, "capabilities")
+        self.assertIn(f"missing {CAPS[0]}", err)
+
+    def test_decision_page_without_stamp_fails(self):
+        doc = re.sub(r'<p class="stamp" data-stamp>.*?</p>', "", good(), count=1, flags=re.S)
+        self.fails(doc, "decisions")
+
+    def test_decision_page_with_a_malformed_stamp_fails(self):
+        doc = good().replace(STAMP.format(DECISIONS[0]), "decisions/x", 1)
+        self.fails(doc, "decisions")
+
+    def test_missing_decision_page_fails(self):
+        doc = re.sub(r'<section id="decision-roadmap".*?</section>', "", good(), count=1, flags=re.S)
+        err = self.fails(doc, "decisions")
+        self.assertIn("missing decision-roadmap", err)
+
+    def test_a_relative_decision_href_fails_and_is_named(self):
+        err = self.fails(good().replace("<h1>x</h1>", '<h1>x</h1><a href="decisions/x.md">d</a>'), "network")
+        self.assertIn("'decisions/x.md'", err)
+
     def test_1_view_count_and_ids(self):
         views = list(TREE.views)
         self.fails(good(views[:-1]), "views")
@@ -178,6 +240,47 @@ class Red(Base):
         self.assertIn("lists 12 slots, INVENTORY.md's slot table 13", err)
         self.fails(good(decl=declarations([SLOTS[1], SLOTS[0]] + SLOTS[2:])), "declarations")
         self.fails(good(decl=declarations(SLOTS[:-1] + ["spare-slot"])), "declarations")
+
+
+class Relabel(Base):
+    LINE = '<p class="relabel" data-relabel>Decision records are shown verbatim.</p>'
+    RULES = "# c\n\nzebra-host-9\tthe lab\nPat Example\tthe owner\n"
+
+    def test_a_clean_export_passes_and_says_so(self):
+        rc, out, err = self.run_relabel(good(front=self.LINE), self.RULES)
+        self.assertEqual(rc, 0, err)
+        self.assertTrue(out.strip().endswith("relabel: 0 survivors on 2 rules"), out)
+
+    def test_a_planted_survivor_fails_without_naming_it(self):
+        doc = good(front=self.LINE + "<p>ran on Zebra-Host-9 twice, and zebra-host-9</p>")
+        rc, out, err = self.run_relabel(doc, self.RULES)
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL: relabel: rule 1 (line 3 of relabel.txt) survives 2 time(s)", err)
+        self.assertNotIn("zebra", err.lower())
+        self.assertNotIn("rule 2", err)
+
+    def test_an_escaped_survivor_fails(self):
+        doc = good(front=self.LINE + "<p>Pat&#32;Example</p>")
+        rc, out, err = self.run_relabel(doc, self.RULES)
+        self.assertEqual(rc, 1)
+        self.assertIn("rule 2 (line 4 of relabel.txt) survives 1 time(s)", err)
+        self.assertNotIn("Pat", err)
+
+    def test_no_data_relabel_line_fails(self):
+        rc, out, err = self.run_relabel(good(), self.RULES)
+        self.assertEqual(rc, 1)
+        self.assertIn("FAIL: relabel: the front page has no data-relabel line", err)
+
+    def test_without_the_flag_nothing_about_relabel_is_checked(self):
+        rc, out, err = self.run_check(good(front="<p>zebra-host-9</p>"))
+        self.assertEqual(rc, 0, err)
+        self.assertNotIn("relabel", out)
+
+    def test_a_bad_list_is_exit_2_and_names_no_content(self):
+        rc, out, err = self.run_relabel(good(front=self.LINE), "zebra-host-9 no tab here\n")
+        self.assertEqual(rc, 2)
+        self.assertIn("relabel.txt line 1", err)
+        self.assertNotIn("zebra", err)
 
 
 class Input(Base):

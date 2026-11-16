@@ -3,6 +3,10 @@
 ## Status
 
 **ACCEPTED (v2) — approved 2026-10-03.** This replaces PROPOSED (2026-10-02). Extends `openddil:ADR-0031`.
+**Noted 2026-11-11, applies when built:** egress at every tier, with intake at the record's owning tier, is this
+ADR's own stated design (decision 2: per-tier instances are the design; §5.4: storage at the owning tier). Building it
+(`DESIGN-2026-11-10-adr0058-first-increment.md` §7) needs no amendment. Until it is built, one consumer instance serves
+every tier, as decision 2 states.
 **Amended 2026-10-05:** a refusal for an unknown answered record is provisional. See
 [Amendment 2026-10-05](#amendment-2026-10-05-a-refusal-for-an-unknown-answered-record-is-provisional).
 **Amended 2026-10-13:** a record's key names one event; an optional `episode_id` names its episode. See
