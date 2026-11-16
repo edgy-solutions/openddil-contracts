@@ -337,7 +337,7 @@ of golden vectors, never against each other's text:
 - the separators refused;
 - a single-author nation-only label, which must give the `lk1` key and not an `lk2` one;
 - two labels that differ only in `life` (§2b), which must give one key;
-- a `urn:oid:` policy id (§2b), and a policy id that is not a URN, which is refused.
+- a `urn:oid:` policy id (§2b), and two that are refused: a URN in another namespace, and an id that is not a URN.
 
 **Not decided here.**
 - Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
@@ -346,40 +346,54 @@ of golden vectors, never against each other's text:
 ### 2b. What the key leaves out, and what the policy id is (proposed with §2a, 2026-11-16)
 
 Two label rules from the cross-domain readiness proposal (ADR-0061) are folded in here, so that they are ruled with
-the form. Their source is secondary: a vendor white paper's STANAG 4774 example, not the standard (ADR-0061, Sources).
-ADatP-4774 itself is unread.
+the form. Their source is ADatP-4774 Edition A Version 1, read in full on 2026-11-16, and cited here by clause
+(ADR-0061, Sources). The field names are the standard's, except `policy` and the `life` grouping, for the reasons
+given below.
 
 **Label lifecycle fields ride in the body, outside the key.**
-- A label may carry `created` (when the label was applied) and `review` (when its marking is due for review). They
+- A label may carry `CreationDateTime` (when the label was stamped, not when the data was made) and `ReviewDateTime`
+  (when the label is due for review). These are 4774's names (4774 App 1, the label's base type and Table 4). They
   sit in the body under `life`, beside `dims`:
-  `{"policy": <id>, "v": 2, "dims": {...}, "life": {"created": <time>, "review": <time> or null}}`. Times are
-  RFC 3339, in UTC.
+  `{"policy": <id>, "v": 2, "dims": {...}, "life": {"CreationDateTime": <time>, "ReviewDateTime": <time> or null}}`.
+- `life` is this record's grouping. 4774 has none, because one time is an element of the label and the other an
+  attribute on it.
+- Times are written `YYYY-MM-DDThh:mm:ssZ`, with optional fractional seconds: RFC 3339 in UTC, which is also an XML
+  Schema `dateTime`, the type 4774 uses (App 1 Annex A).
+- **A 4774 label needs both.** `CreationDateTime` is mandatory in every 4774 label, and `ReviewDateTime` is mandatory
+  when there is no succession handling (4774 §4.3; App 1 Table 4; Ch 5), which is not taken up here. A label without
+  both times cannot be written as a 4774 label. What a route that writes them does with such a record is ADR-0061's
+  New point A.
 - **They never enter the canonical form or the key,** in `lk1` or in `lk2`. Two labels that differ only in `life` give
   one key. So a record's age mints no new key, no new admitted set and no new shape (§2).
 - **The label table holds no `life`.** Its row is per key, and `life` is per record. A tier reads `life` from the
   record's body, never from the cached row.
-- **The PDP never reads `life`.** A past review time is counted and reported. It is never a refusal. Making it one
-  would be its own decision.
+- **The PDP never reads `life`.** A past `ReviewDateTime` is counted and reported. It is never a refusal. 4774 agrees:
+  a review date in the past does not make the label invalid (App 1, before Table 4; Ch 5).
 - **`life` is optional, and its absence is not a default.** No time is invented. A `life` with an undeclared member,
   or a time that does not parse, is refused at the stamp, like a value that fails its format.
-- `lk1` keys do not change. Whether the `lk1` stamp writes `life` is the compatibility slice's decision. Its keys are
-  the same either way.
-- Basis: the white paper's example label carries a creation time and a review time, and it says the label "contains
-  label lifecycle information (creation data and review date), which is a key feature of STANAG 4774" (secondary).
-  `created` and `review` are this record's names, aligned to that concept and not taken from the standard.
+- **`lk1` keys do not change.** Whether the `lk1` stamp writes `life` is the compatibility slice's decision. Its keys
+  are the same either way. Today's `lk1` `verify` accepts exactly `policy`, `v` and `dims`
+  (the labels library's `lk1` module), so an `lk1` body with `life` fails it until the slice changes that.
 
-**The policy id is a URN. An OID is written in its `urn:oid:` form.**
-- A deployment declares its policy id as a URN (RFC 8141). A policy that is identified by an object identifier is
-  written `urn:oid:<dotted decimal>` (RFC 3061). The white paper's example does the same:
-  `PolicyIdentifier URI="urn:oid:…"`, paired with a short name (secondary).
+**The policy id is the policy's 4774 URI, in the `urn:oid:` form. Its text identifier is declared beside it.**
+- A deployment declares its policy id as `urn:oid:<dotted decimal>` (RFC 3061), matching
+  `^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$`. 4774 allows only the `urn` scheme with the `oid` namespace in the policy's
+  `URI` (4774 App 1 Table 5; Ch 5). The NATO policy's is `urn:oid:1.3.26.1.3.1` (App 2 Table 10).
 - The id must still match the compatibility slice's pattern, `^[a-z0-9][a-z0-9:._-]{0,62}$`
   (`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.1). It is therefore lowercase and at most 63 characters. A
   `urn:oid:` id fits.
-- **A policy id that is not a URN is refused when it is declared,** with the id named.
+- **A policy id that is not a `urn:oid:` URI is refused when it is declared,** with the id named. That includes a URN
+  in another namespace. (The earlier text allowed any URN. The narrowing is ADR-0061's New point E, for ruling.)
+- **The declaration also carries `PolicyIdentifier`, the policy's text identifier,** for example "NATO" (App 2
+  Table 10). A 4774 label must carry it (App 1, ConfidentialityInformationType). It is not in the body and never
+  enters the key. A 4774 label writer looks it up by the URI.
+- The key uses the URI and not the text, because the text is compared case-insensitively (4774 Ch 5) and a key needs
+  one spelling.
+- **The body's member stays `policy`, holding the URI.** This is the one name kept that differs from 4774's. The
+  built `lk1` body is exactly `policy`, `v` and `dims`, and `lk2` keeps that shape.
 - **The id is in the canonical form, so changing it changes every key.**
-  - A deployment whose declared id is not yet a URN keeps that id until it re-declares.
+  - A deployment whose declared id is not yet a `urn:oid:` URI keeps that id until it re-declares.
   - The re-declaration is the slice's backfill (§1.4 there). Nothing rewrites a stored key in place.
-- The policy's short name is not part of the id and never enters the key. Whether the body carries it is open.
 
 ### 3. Derived records: a split by audience for composable rollups, high-water for single derived records
 
@@ -493,13 +507,13 @@ as amended by PR #281, "Classification is a label of declared dimensions"):
 
 | This record | STANAG 4774 / 4778 concept |
 |---|---|
-| The deployment's declared policy, a URN (§2b) | Policy identifier (4774). The example read carries a `urn:oid:` URI (secondary, §2b) |
-| A label's `life`: `created` and `review` (§2b), outside the key | The label's creation and review times (4774), from a secondary source (§2b) |
-| Hierarchical dimension | Classification (4774) |
-| Permissive set | Permissive category (4774) |
-| Restrictive set | Restrictive category (4774) |
-| Exclusionary | No 4774 category type in the sources read. It is carried as a declared policy |
-| The label stamped on the record and carried with it | Metadata binding (4778), as a concept only. `label_key` is not a cryptographic binding. ADR-0061 designs a signed binding and builds none |
+| The deployment's declared policy: a `urn:oid:` URI, with its text identifier declared beside it (§2b) | `PolicyIdentifier`: mandatory text, and an optional `URI` that is `urn:oid:` only (4774 App 1 Table 5; Ch 5) |
+| A label's `life`: `CreationDateTime` and `ReviewDateTime` (§2b), outside the key | The same names, an element and an attribute of the label (4774 §4.3; App 1 Table 4; Ch 5) |
+| Hierarchical dimension | `Classification`, exactly one per label (4774 §4.2; App 1 Table 6) |
+| Permissive set | `Category` with `Type` `PERMISSIVE` (4774 App 1 Table 7) |
+| Restrictive set | `Category` with `Type` `RESTRICTIVE` (4774 App 1 Table 7) |
+| Exclusionary | No 4774 `Category` `Type` (App 1 Table 7 lists only `RESTRICTIVE`, `PERMISSIVE` and `INFORMATIVE`). It is carried as a declared policy |
+| The label stamped on the record and carried with it | Metadata binding (4778), as a concept only. `label_key` is not a cryptographic binding. ADR-0061 designs an outbound binding as a 4778.2 binding data object and builds none |
 
 ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-618). This record keeps that position, and its structured label fills the `policy_label` slot ADR-0029 reserved (ADR-0029:112-121).
 
