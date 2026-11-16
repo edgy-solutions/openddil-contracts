@@ -396,6 +396,16 @@ given below.
 - **A policy exported as 4774 labels** declares `exports_4774: true`. It may declare at most one hierarchical
   dimension and no exclusionary one, checked at load (ADR-0061 New point D, proposed, pending ruling). A policy that
   never exports is not limited.
+- **Authorship is never written into an exported label** (ADR-0061 New point C (iv), the project owner's
+  recommended answer, pending ruling).
+  - A 4774 label's `OriginatorID` is the stamping tier's declared identity. It names who originated the label, not
+    who created the information (4774 App 1).
+  - The author set stays in the record body, as a declared field of the kind. Inside one domain, the key still carries
+    it (§2a).
+  - Why: a guard allows labels by exact match. An author set in an extension element or an informative category would
+    make each distinct set a distinct label, so the labels a guard must allow would multiply. Under (iv) the exported
+    label varies only by its access fields and by the exporting tier.
+  - Alternatives (i) to (iii) are listed in ADR-0061.
 - **The declaration also carries `PolicyIdentifier`, the policy's text identifier,** for example "NATO" (App 2
   Table 10). A 4774 label must carry it (App 1, ConfidentialityInformationType). It is not in the body and never
   enters the key. A 4774 label writer looks it up by the URI.
