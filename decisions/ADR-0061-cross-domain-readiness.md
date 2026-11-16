@@ -10,6 +10,10 @@ spans and logs).
 **Folds into ADR-0055:** the two label rules (Decisions 1 and 2) are written as ADR-0055 §2b on the `lk2` proposal
 branch (PR #38), so that they are ruled with the key form, not after it.
 **Read at:** working trees of 2026-11-16. Line numbers move with them. These are reads, not runs.
+**Reviewed 2026-11-16:**
+- Decision 3 is corrected to a staged rollout: report mode first, then enforcement per kind by declaration.
+- The choices made inside the seven decisions are accepted.
+- The six open questions have proposed answers (Proposed answers, below). They are not ruled.
 
 ## Sources, and how much of each was read
 
@@ -110,10 +114,31 @@ Applies to every kind that a destination `accepts` (ADR-0046 §1), whether or no
 - **Every string is bounded or declared free text.** A string property is bounded when it has an `enum`, a `const`, a
   `pattern`, or a `format` from a declared list (`date-time`, `date`, `uuid` to begin with). Any other string must
   carry `x-free-text: true` and a `maxLength`.
-- **Refused at load.** A kind with an open object, or an undeclared unbounded string, is refused when the kind is
-  loaded, with the kind and the JSON pointer named. A refused kind is not loaded, and routes that carry it do not
-  start.
+- **Every array declares `maxItems`** (proposed answer 4), on the same reasoning as a bounded string.
 - `maxLength` alone does not make a string bounded. A long string with no pattern is free text and must say so.
+
+**Rolled out in stages: report mode first, then enforcement per kind by declaration** (review, 2026-11-16).
+Enforcing all of this at once would refuse a deployment's own records on the next roll, the moment a producer sent
+a field nobody had declared. So each kind is in one of two modes, declared in its schema as `x-closure`.
+- **`report`.** This is the default, and an absent or unknown value is `report`.
+  - The kind loads, and its records are validated and admitted exactly as today.
+  - The load check names every failing pointer: an open object, an undeclared unbounded string, an array with no
+    `maxItems`.
+  - The gate also validates each record against the closed form, and counts the records that form would refuse, per
+    kind and per failing pointer. It refuses none of them.
+  - The pointer named is the schema's (the object or property that would refuse), never an undeclared field's own
+    name. That name comes from the record, so it is content (ADR-0060).
+- **`enforce`.** The closed form is the kind's schema.
+  - A failing kind is refused at load, with the kind and the pointer named. A refused kind is not loaded, and routes
+    that carry it do not start.
+  - A record that fails is refused as `schema_invalid` (ADR-0046 §2). No new reason is needed.
+- **A kind moves to `enforce` only by declaration, once its report is clean.**
+  - A clean report has no failing pointer at load, and no record counted as would-be-refused.
+  - An `enforce` declaration on a kind whose load report still names a pointer is refused at load. The record count
+    is the evidence the declaring person reads. The load cannot check it.
+  - Nothing switches a kind to `enforce` by itself, and nothing switches one back.
+- **An eligible kind (Decision 4) must be in `enforce`.** One in `report` is refused at load. A one-way route
+  (Decision 5) therefore carries only enforced kinds.
 
 Basis: finding 8 (a guard checks declared message formats, secondary) and finding 12.
 
@@ -138,7 +163,7 @@ Basis: finding 8 (secondary). Free text is what a format check cannot judge.
 - A one-way destination may not declare `intake` or `trust_on_behalf_of`. Either is refused at load, because nothing
   comes back.
 - Its transport is a `topic`: the hand-off is the write to a topic that the boundary device reads. An `http` transport
-  is refused for a one-way destination, because HTTP needs an answer. Other one-way transports are open.
+  is refused for a one-way destination, because HTTP needs an answer. A file drop directory is the next candidate (proposed answer 5).
 
 **Only eligible kinds travel one way.**
 - A route that carries a kind that is not eligible (Decision 4) to a one-way destination is refused at route load,
@@ -168,7 +193,12 @@ Basis: finding 8 (secondary). Free text is what a format check cannot judge.
   only records the gate admitted on that route, so it names nothing the destination may not hold.
 - **The sending tier keeps every manifest durably, in a projection table,** not only in a workflow journal. A durable
   record that lives only in a journal is lost when the journal is wiped.
-- Batch size and cadence are open.
+- **Cadence** (proposed answer 1): a manifest is sent when N records or T seconds have passed, whichever comes
+  first. When the route is idle, an empty heartbeat manifest is sent every T seconds, so the far side can tell
+  silence from loss. N and T are declared per route.
+- **An empty manifest's label is open.** The high-water of no entries is no label, and an unlabelled record is
+  served to nobody (ADR-0055 §1a). The heartbeat therefore needs a label declared for it, with an owner: for example,
+  per route, from the destination's entry. That is not decided here.
 
 Basis: finding 8 (unidirectional validation, secondary) and finding 13.
 
@@ -193,7 +223,11 @@ Basis: finding 8 (unidirectional validation, secondary) and finding 13.
 - `label_key` stays a digest. It is never a signature, and the binding never replaces it.
 - No key is generated, no field is added to any kind, and no service signs or checks anything until key management is
   decided. That is open.
-- The signature algorithm is not chosen here.
+- **The algorithm is declared per deployment, never hard-coded** (proposed answer 2), because national approvals of
+  cryptography differ. A receiver accepts only the algorithm its deployment declares, never one that the signature's
+  own header names alone.
+- **Keys are per tier** (proposed answer 2), and `signer` names the tier. Rotation and distribution stay open until a
+  real deployment names its PKI.
 
 **Alignment.** This is the concept of 4778's optional cryptographic binding: a valid label, correctly associated, over
 unmodified data (finding 7, secondary). The XML carriage named by the registry record, an XML digital signature in a
@@ -203,7 +237,7 @@ binding data object (registry), is generated from this design later (Decision 7)
 
 - A kind stays a JSON Schema document (ADR-0046 §3). That is the only source.
 - XML Schema for a kind is generated from its closed JSON Schema, later, and never written by hand. The generator is
-  not chosen.
+  chosen when the first guard requires XML, not before (proposed answer 6).
 - Decisions 3 and 4 make the generation possible: a closed schema with bounded strings has one XML shape.
 - A disagreement between the generated XML Schema and the JSON Schema is a defect in the generator, never a second
   source.
@@ -259,16 +293,20 @@ load check when it is built, which names each failing pointer.
   against them, and correct this record where they differ.
 - Name `created` and `review` from 4774, if 4774 names them differently, before any field freezes.
 
-## Open, for the project owner
+## Proposed answers to the six open questions (review, 2026-11-16; for the project owner to rule)
 
-1. **Manifest cadence:** per number of records, per interval, or both. And whether a gap the far side sees has any
-   path back. On a one-way link it has none, so a gap is reported only at the far side.
-2. **Key management for the signed binding:** who holds a gate's key, how it rotates, and how the far side learns it.
-   And the algorithm.
-3. **Whether the label body carries the policy's short name** (ADR-0055 §2b).
-4. **Whether arrays in an outbound kind must declare `maxItems`.** Decision 3 bounds strings, not arrays.
-5. **One-way transports other than a topic.**
-6. **The XML Schema generator,** and when it is needed.
+1. **Manifest cadence:** whichever comes first, N records or T seconds, plus an empty heartbeat manifest when idle,
+   so the far side can tell silence from loss.
+   - A gap is reported only at the far side, because a one-way link has no path back. That is acceptable.
+   - Left open by this answer: the heartbeat's label (Decision 5).
+2. **Keys and algorithm:** the algorithm is declared per deployment and never hard-coded, because national approvals
+   of cryptography differ. Keys are per tier. Rotation and distribution stay open until a real deployment names its
+   PKI.
+3. **The policy's short name:** not in the label body. It lives in the policy declaration and is looked up.
+4. **Arrays:** `maxItems` is required, on the same reasoning as bounded strings (Decision 3).
+5. **Other one-way transports:** a file drop directory is the next candidate, because many one-way devices work that
+   way. It stays open until a guard needs it.
+6. **The XML Schema generator:** chosen when the first guard requires XML, not before.
 
 ## Consequences
 
@@ -282,8 +320,16 @@ load check when it is built, which names each failing pointer.
 ### Negative
 
 - Closing a kind refuses records that carry an undeclared field. A deployment whose producer adds fields early sees
-  `schema_invalid` where the record passed before.
-- A deployment whose policy id is not a URN must re-declare it, and that is a backfill of every stored key.
+  `schema_invalid` where the record passed before. The staged rollout (Decision 3) limits this to kinds a person has
+  moved to `enforce` after a clean report.
+- Report mode validates each record twice, once as declared and once closed, until its kind is enforced.
+- A deployment whose policy id is not a URN must re-declare it, and once keys are stored, that is a backfill of every
+  stored key.
+  - **Today it costs nothing, because no `label_key` is stored anywhere yet.** As read on 2026-11-16, no service on
+    any default branch writes one. The labels library computes `lk1` keys and stores none. The SQL function that
+    would store them is on an unmerged branch.
+  - No deployment was read for this. The claim is about code, and no code has written a key.
+  - The cost begins when the compatibility slice ships, so the URN rule is cheapest if it is ruled before then.
 - The manifest is a second record per batch on every one-way route.
 
 ### Neutral
