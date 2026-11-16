@@ -346,8 +346,8 @@ of golden vectors, never against each other's text:
 ### 2b. What the key leaves out, and what the policy id is (proposed with §2a, 2026-11-16)
 
 Two label rules from the cross-domain readiness proposal (ADR-0061) are folded in here, so that they are ruled with
-the form. Their source is ADatP-4774 Edition A Version 1, read in full on 2026-11-16, and cited here by clause
-(ADR-0061, Sources). The field names are the standard's, except `policy` and the `life` grouping, for the reasons
+the form. Their source is ADatP-4774 Edition A Version 1, read in full on 2026-11-16. It is paraphrased here and cited
+by clause, never quoted (ADR-0061, Sources). The field names are the standard's, except `policy` and the `life` grouping, for the reasons
 given below.
 
 **Label lifecycle fields ride in the body, outside the key.**
@@ -361,15 +361,23 @@ given below.
   Schema `dateTime`, the type 4774 uses (App 1 Annex A).
 - **A 4774 label needs both.** `CreationDateTime` is mandatory in every 4774 label, and `ReviewDateTime` is mandatory
   when there is no succession handling (4774 §4.3; App 1 Table 4; Ch 5), which is not taken up here. A label without
-  both times cannot be written as a 4774 label. What a route that writes them does with such a record is ADR-0061's
-  New point A.
+  both times cannot be written as a 4774 label.
+- **Under a policy exported as 4774 labels, both times come from a declared rule** (ADR-0061 New point A; the project
+  owner's proposed answer, pending ruling).
+  - Such a policy declares a `review_period`, an ISO 8601 duration in whole days (`P<n>D`).
+  - The stamp writes `CreationDateTime` as the stamp time, and `ReviewDateTime` as that time plus the period. That is
+    a declared rule, not a default.
+  - An exported policy with no `review_period` is refused at load.
+  - A route that writes 4774 labels refuses a record lacking either time as `label_life_missing`, and never fills one
+    in.
+  - Under a policy that is not exported, `life` stays optional.
 - **They never enter the canonical form or the key,** in `lk1` or in `lk2`. Two labels that differ only in `life` give
   one key. So a record's age mints no new key, no new admitted set and no new shape (§2).
 - **The label table holds no `life`.** Its row is per key, and `life` is per record. A tier reads `life` from the
   record's body, never from the cached row.
 - **The PDP never reads `life`.** A past `ReviewDateTime` is counted and reported. It is never a refusal. 4774 agrees:
   a review date in the past does not make the label invalid (App 1, before Table 4; Ch 5).
-- **`life` is optional, and its absence is not a default.** No time is invented. A `life` with an undeclared member,
+- **Otherwise, `life` is optional, and its absence is not a default.** No time is invented. A `life` with an undeclared member,
   or a time that does not parse, is refused at the stamp, like a value that fails its format.
 - **`lk1` keys do not change.** Whether the `lk1` stamp writes `life` is the compatibility slice's decision. Its keys
   are the same either way. Today's `lk1` `verify` accepts exactly `policy`, `v` and `dims`
@@ -383,7 +391,11 @@ given below.
   (`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.1). It is therefore lowercase and at most 63 characters. A
   `urn:oid:` id fits.
 - **A policy id that is not a `urn:oid:` URI is refused when it is declared,** with the id named. That includes a URN
-  in another namespace. (The earlier text allowed any URN. The narrowing is ADR-0061's New point E, for ruling.)
+  in another namespace. (The earlier text allowed any URN. The narrowing is ADR-0061's New point E. The project
+  owner's proposed answer is yes, pending ruling: the standard requires it, and no key is stored yet.)
+- **A policy exported as 4774 labels** declares `exports_4774: true`. It may declare at most one hierarchical
+  dimension and no exclusionary one, checked at load (ADR-0061 New point D, proposed, pending ruling). A policy that
+  never exports is not limited.
 - **The declaration also carries `PolicyIdentifier`, the policy's text identifier,** for example "NATO" (App 2
   Table 10). A 4774 label must carry it (App 1, ConfidentialityInformationType). It is not in the body and never
   enters the key. A 4774 label writer looks it up by the URI.
