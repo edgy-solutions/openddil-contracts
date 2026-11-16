@@ -18,7 +18,9 @@ branch (PR #38), so that they are ruled with the key form, not after it.
 **Revised 2026-11-16, after reading the standards.** ADatP-4774 and ADatP-4778.2 were read, and every statement that
 was marked secondary or registry was checked against them. Each one now cites a clause, or is corrected, or is kept as
 secondary because neither document settles it. The changes are listed under "Corrections after reading the
-standards". Five new points for ruling came out of the reading (New points, below).
+standards". Five new points came out of the reading. The project owner's proposed answers to them are recorded under
+New points, pending ruling. One half of C, provenance, did not fit the text as proposed, and its candidates are listed
+there.
 
 ## Sources, and how much of each was read
 
@@ -32,15 +34,18 @@ standards". Five new points for ruling came out of the reading (New points, belo
 | RFC 3061 (the `urn:oid:` namespace), RFC 8141 (URNs), RFC 8785 (JSON canonicalization), RFC 7515 (JWS), RFC 7444 (the email label header that 4778.2's `Binding-Data` header is based on) | IETF standards | Cited for their names and scope only. Nothing here depends on a clause of them yet |
 
 Statements about what 4774 or 4778.2 contain now cite a clause, for example "4774 App 1 Table 5" or "4778.2 §7.5".
-Short phrases are quoted only where the wording matters. A statement still marked **(secondary)** is one that neither
-document read settles, and it says so.
+- **4774 is paraphrased, never quoted.** Its element, attribute and value names are given as identifiers.
+- **4778.2 is quoted only in short phrases,** where the wording matters.
+- A statement still marked **(secondary)** is one that neither document settles, and it says so.
+
+ADatP-4778.2 is a NATO standardization document. Phrases quoted from it here are acknowledged to NATO.
 
 ## Findings first
 
 ### What the standards say
 
-1. **A 4774 label is XML, and this edition defines no other encoding.** The objective is "common XML-based formats"
-   (4774 §1.2). The syntax uses XML and is based on the RFC 2634 label (4774 §4.4). The schema's namespace is
+1. **A 4774 label is XML, and this edition defines no other encoding.** Its stated objective is common label formats based
+   on XML (4774 §1.2). The syntax uses XML and is based on the RFC 2634 label (4774 §4.4). The schema's namespace is
    `urn:nato:stanag:4774:confidentialitymetadatalabel:1:0` (4774 App 1 Annex A). No JSON or CBOR encoding is defined
    in Edition A Version 1.
 2. **A label's parts, by the standard's names** (4774 App 1).
@@ -54,21 +59,21 @@ document read settles, and it says so.
 3. **The lifecycle times are `CreationDateTime` and `ReviewDateTime`.**
    - `CreationDateTime` is when the label was created, which may differ from when the data was (App 1, the label's
      base type). It is mandatory in every label (App 1 Annex A), and the NATO policy requires it again (4774 Ch 5).
-   - `ReviewDateTime` is when the label is due for review. It is an attribute on the label, and it SHALL be present
-     when there is no `SuccessionHandling` (4774 §4.3; App 1 Table 4; Ch 5).
+   - `ReviewDateTime` is when the label is due for review. It is an attribute on the label, and it is required
+     whenever there is no `SuccessionHandling` (4774 §4.3; App 1 Table 4; Ch 5).
    - A review date in the past does not make the label invalid (App 1, the text before Table 4; Ch 5).
    - Both are XML Schema `dateTime` values (App 1 Annex A).
    - `SuccessionHandling` names a later label and the date it takes over, and keeps the label's history (4774 §4.3).
 4. **The policy is named by a mandatory text identifier, with an optional `urn:oid:` URI.**
    - The content of `PolicyIdentifier` is a textual identifier for the policy (App 1, PolicyIdentifierType). Under the
      NATO policy it is "NATO" (App 2 Table 10).
-   - Its `URI` attribute is optional. If present, it SHALL use the `urn` scheme with the `oid` namespace (App 1 Table 5;
+   - Its `URI` attribute is optional. If present, it must use the `urn` scheme with the `oid` namespace (App 1 Table 5;
      Ch 5). Another URN namespace is not allowed. The NATO policy's URI is `urn:oid:1.3.26.1.3.1` (App 2 Table 10).
      The PUBLIC policy has its own (App 2 Annex C Table 19).
    - App 1 gives the URI's reason as an identification without the ambiguity of a text identifier.
    - Under the NATO policy, values in `ConfidentialityInformation` are compared case-insensitively (Ch 5).
 5. **One classification, and categories of three types.**
-   - A label has exactly one `Classification` (4774 §4.2 b; App 1). Its `URI` attribute SHALL NOT be used (App 1
+   - A label has exactly one `Classification` (4774 §4.2 b; App 1). Its `URI` attribute is not to be used (App 1
      Table 6).
    - A `Category` has a mandatory `Type`, which is `RESTRICTIVE`, `PERMISSIVE` or `INFORMATIVE`, a mandatory
      `TagName`, and an optional `URI` in the `urn:oid:` form (App 1 Tables 7 and 8). Its values are `GenericValue`
@@ -77,7 +82,16 @@ document read settles, and it says so.
    - The NATO policy's tags are Context, Releasable To and Only (permissive), Additional Sensitivity (restrictive), and
      Administrative (informative) (App 2 Table 11).
    - There is no exclusionary type.
+   - The tag names, and how their values are used, are set by the policy in force (App 1, after Table 7).
+   - Releasable To widens dissemination to entities outside the context the information was created in (4774 Table 1;
+     App 2, after Table 11). Under the NATO policy, ownership is shown by the Context category, which holds a single
+     value. When Releasable To is present, Context also carries the value `Releasable` (App 2, the Context rules).
    - `PrivacyMark` is a legacy element, kept for backward compatibility (4774 §4.2 c).
+   - **`OriginatorID` identifies whoever originated the label,** which may not be whoever created the information
+     (App 1, the label's base type). It is a single element. It names a principal in one of a fixed set of forms: an
+     email, DNS, directory, URI, IP, X.400, XMPP or user-principal name (App 1 Table 9). There is no form for a nation,
+     and no way to name several.
+   - The label's schema allows further elements from other namespaces after its own elements (App 1 Annex A).
 6. **A label is checked against a clearance, and a second policy is carried as an alternative label.**
    - A clearance has the same elements as a label, except that it holds several classifications (4774 App 2 Annex A,
      which cites RFC 5913).
@@ -171,8 +185,16 @@ Written as ADR-0055 §2b (PR #38). In short:
   a refusal. 4774 says the same: a past review date does not make the label invalid (finding 3).
 - `life` is optional and never defaulted. An undeclared member or a bad time is refused at the stamp.
 - **A label without both times cannot be written as a 4774 label.** 4774 requires `CreationDateTime` always, and
-  `ReviewDateTime` whenever there is no `SuccessionHandling`, which is not taken up here (finding 3). What a route that
-  writes 4774 labels does with such a record is New point A.
+  `ReviewDateTime` whenever there is no `SuccessionHandling`, which is not taken up here (finding 3).
+- **The review time comes from a declared rule, never a default** (New point A). Proposed:
+  - A policy that is exported as 4774 labels (New point D) declares a `review_period`. It is an ISO 8601 duration in
+    whole days, `P<n>D`, so adding it gives exactly one answer.
+  - Under such a policy, the stamp writes `CreationDateTime` as the stamp time, and `ReviewDateTime` as that time plus
+    the period. The period is a declaration, not a default.
+  - An exported policy that declares no `review_period` is refused at load.
+  - A route that writes 4774 labels refuses, with a new reason `label_life_missing`, any record whose label lacks
+    either time, for example one stamped before the period was declared. It never fills a time in.
+  - Other routes are unaffected, and `life` stays optional on them.
 
 Basis: findings 2 and 3.
 
@@ -321,9 +343,12 @@ it. The decision is now in two parts.
 - A receiver recomputes `label_key` from the body (as today), checks the bound data against the reference, and checks
   the signature. Any mismatch is a refusal.
 
-**A binding inside one domain is open** (New point B). The JWS form, a detached JWS (RFC 7515) over the RFC 8785
-bytes of `{"v": 1, "kind", "kind_version", "key", "label", "label_key", "digest", "signer"}`, is kept only as a
-candidate for tier-to-tier use. It is never sent across a boundary as a 4778 binding.
+**No binding inside one domain; bind at the boundary only** (New point B, proposed).
+- Inside a domain, `label_key` and the PEP already tie a record to its label and enforce it.
+- An XML binding on every internal record would add cost and no benefit.
+- The JWS form is parked: a detached JWS (RFC 7515) over the RFC 8785 bytes of
+  `{"v": 1, "kind", "kind_version", "key", "label", "label_key", "digest", "signer"}`. Nothing builds it, and it is
+  never sent across a boundary as a 4778 binding.
 
 **What stays as it is.**
 - `label_key` stays a digest. It is never a signature, and the binding never replaces it.
@@ -363,12 +388,23 @@ Ch 2 Annex A. The BDO's own schema is ADatP-4778's, which is unread (Owed).
 | An exclusionary dimension | None. 4774 has no exclusionary type (New point D) |
 | `life.CreationDateTime` | `CreationDateTime` element |
 | `life.ReviewDateTime` | `ReviewDateTime` attribute on `ConfidentialityLabel` |
-| The nation dimension's author (`originator_nation`) | Not settled. `OriginatorID` and the NATO policy's Context category are candidates (New point C) |
+| The nation dimension, for access: its authors and its release set | The release dimension's permissive `Category`, whose values are the authors and the release set together (New point C) |
+| The nation dimension, for provenance: who authored the record | Not settled. The reading does not support `OriginatorID` for it (New point C) |
 
 - A dimension's `TagName`, and its optional `urn:oid:` URI, are declared with the dimension. Its values are written
   as declared. Under the NATO policy they are compared case-insensitively (finding 4).
+- **The nation dimension for access** (New point C, proposed).
+  - Today the author branch admits a reader of an author nation, and the release branch admits a reader of a release
+    nation. A receiver sees only the label, so the authors are written into the permissive release category beside
+    the release set. The far side then grants the same access.
+  - If the release set is absent, the authors alone are written. A rollup has no author, so its release set alone is
+    written. Either way the written set never admits anyone the label does not.
+  - The category's `TagName` and any companion values its policy requires are declared with the policy's export. One
+    example of a companion value is the NATO policy's `Releasable` in Context (finding 5).
+  - Under the NATO policy this fits the category: Releasable To is a permissive inclusion set (finding 5).
 - A dimension is never written as an `INFORMATIVE` category. The PDP reads every dimension, and informative
-  categories are not used for access control (finding 5).
+  categories are not used for access control (finding 5). A provenance copy under New point C (ii) would not be a
+  dimension.
 
 ## Alignment, with a source per row
 
@@ -421,7 +457,7 @@ Each statement marked secondary or registry in the earlier text, and what became
 | Each domain has its own policy, and labels are transformed at the boundary | **Corrected in part.** 4774 carries an alternative label beside the original. Transformation stays secondary | 4774 §2.3; Ch 3; App 1 (findings 6, 12) |
 | Decision 1: `created` and `review` | **Renamed** to `CreationDateTime` and `ReviewDateTime` | Finding 3 |
 | Decision 2: any URN | **Narrowed** to `urn:oid:`, with `PolicyIdentifier` declared beside it | Finding 4 |
-| Decision 6: a detached JWS is the binding | **Corrected.** An outbound binding is a 4778.2 BDO. JWS is a candidate only inside one domain | Finding 10 |
+| Decision 6: a detached JWS is the binding | **Corrected.** An outbound binding is a 4778.2 BDO. Nothing is bound inside a domain, and the JWS form is parked (New point B) | Finding 10 |
 | Decision 7: 4774 also has a JSON encoding, so the body may map onto it | **Corrected.** The label is XML and is generated from the body, field by field | Finding 1 |
 | Proposed answer 5: a file drop directory | **Now has a profile:** the `.bdo` sidecar | 4778.2 §9.5 (finding 9) |
 
@@ -429,8 +465,9 @@ Each statement marked secondary or registry in the earlier text, and what became
 
 - **No conformance to STANAG 4774 or 4778 is claimed.** 4774 and the 4778.2 profiles were read, and the alignment
   above cites them. Nothing is built to them, and ADatP-4778 itself is unread.
-- **Not taken up:** `SuccessionHandling`, `OriginatorID`, `PrivacyMark`, `INFORMATIVE` categories, alternative
-  labels, and portion labels. A record carries one label body.
+- **Not taken up:** `SuccessionHandling`, `PrivacyMark`, alternative labels, and portion labels. A record carries one
+  label body. `OriginatorID` and `INFORMATIVE` categories are taken up only if New point C's provenance candidate (i)
+  or (ii) is ruled on.
 - **Nothing is accredited.** An eligible kind is not permitted to cross. It is shaped so that a guard can check it
   (ADR-0055 §7).
 - **No guard, diode or boundary device is chosen.** Nothing here assumes a product.
@@ -466,19 +503,41 @@ Each statement marked secondary or registry in the earlier text, and what became
    label writer and the BDO writer are needed sooner, for the first cross-domain release, because both are XML in the
    standards (findings 1 and 8).
 
-## New points from the reading (for the project owner to rule)
+## New points from the reading (the project owner's proposed answers, pending ruling)
 
-- **A. A label without both times, on a route that writes 4774 labels.** Proposed: the gate refuses the record on that
-  route with a new reason, `label_life_missing`, and never fills a time in. Other routes are unaffected, because
-  `life` stays optional.
-- **B. A binding inside one domain.** Proposed: use the 4778.2 BDO there too, so there is one binding to build and
-  check. The JWS form (Decision 6) is kept as an alternative only if XML signing proves too heavy at a tier.
-- **C. The nation dimension's author in a 4774 label.** `OriginatorID` and the NATO policy's Context category are
-  candidates. Open until a deployment declares a 4774 policy.
-- **D. A policy written as 4774 labels.** Proposed: such a policy declares at most one hierarchical dimension and no
-  exclusionary one, and this is checked when the policy is declared, not when a label is written.
-- **E. `urn:oid:` only.** The order allowed "OID or URN". The standard allows only the `oid` namespace in the policy's
-  URI (finding 4), so Decision 2 now refuses other URNs. This narrowing is for ruling.
+- **A. Both times, by a declared rule.** An exported policy (D) declares a `review_period` (`P<n>D`). The stamp writes
+  `CreationDateTime` as the stamp time and `ReviewDateTime` as that time plus the period, so the review time is a
+  declared rule, not a default in disguise.
+  - An exported policy with no `review_period` is refused at load, so it cannot feed a 4774 route.
+  - A route that writes 4774 labels refuses a record whose label lacks either time, with `label_life_missing`, and
+    never fills one in.
+  - Other routes are unaffected, and `life` stays optional on them (Decision 1).
+- **B. No binding inside one domain.** Inside a domain, `label_key` and the PEP already do the job. An XML binding on
+  every internal record is cost with no benefit. Bind at the boundary only. The JWS candidate stays parked (Decision 6).
+- **C. The nation dimension, split in two.**
+  - **Access: proposed as written in Decision 7.** In the export, the author nations are added to the permissive
+    release category, so the far side grants the same access the author branch does. Checked against the text, this
+    fits. A permissive category is an explicit inclusion set for access control, and Releasable To widens
+    dissemination to named entities (finding 5).
+  - **Provenance: does not fit the text as proposed.** The proposal was to carry authorship in the binding's originator
+    metadata.
+    - 4774's `OriginatorID` identifies whoever originated the label, not who created the information. It is one
+      element, naming one principal in a fixed set of forms, and none of them is a nation (finding 5).
+    - 4778.2's binding data object, as read, has no originator field. "Originator" there is the role of whoever
+      creates the signature, and the signer's certificate identifies the binder (Ch 2 Annexes A and B).
+    - The base ADatP-4778 is unread, and its schema could hold more.
+  - **Candidates for provenance, for ruling.**
+    - (i) `OriginatorID` names the stamping tier, which is what the field describes. Authorship rides in an
+      extension element in a declared namespace, which the label's schema allows (finding 5).
+    - (ii) Authorship rides in a declared `INFORMATIVE` category, which a receiver does not use for access (finding
+      5). This needs the policy to declare the tag.
+    - (iii) Wait for the base ADatP-4778.
+  - Until a candidate is ruled on, the access half stands alone, and the export carries no authorship.
+- **D. A policy exported as 4774 labels** declares `exports_4774: true`. Such a policy declares at most one
+  hierarchical dimension and no exclusionary one, and this is checked at load. Policies that never export are not
+  limited. A route that writes 4774 labels is refused at load unless its policy is exported.
+- **E. `urn:oid:` only.** The standard requires it for the policy's URI (finding 4), and no key is stored yet, so the
+  narrowing costs nothing (Consequences).
 
 ## Consequences
 
