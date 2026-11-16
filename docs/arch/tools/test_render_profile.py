@@ -276,7 +276,7 @@ class TempTree(unittest.TestCase):
         shutil.copytree(REPO / "ontology", self.tmp / "ontology")
         self.tool = TOOL
 
-    def run(self, *args):
+    def render(self, *args):
         """render_profile on the copy, reading the copy's own declaration."""
         env = {**os.environ, "ARCH_KIT_CONFIG": str(self.arch / "arch-kit.yaml")}
         p = subprocess.run([sys.executable, str(self.tool), *map(str, args)],
@@ -292,7 +292,7 @@ class TempTree(unittest.TestCase):
 
     def test_a_capability_with_no_phase_is_exit_1_without_a_chart(self):
         self.strip_a_capability()
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "o")
         self.assertEqual(rc, 1, err)
         self.assertIn("TacticalSustainmentCorrelation has no phase", err)
         self.assertFalse((self.tmp / "o").exists())
@@ -304,13 +304,13 @@ class TempTree(unittest.TestCase):
         self.assertIn("TacticalSustainmentCorrelation has no phase", err)
 
     def test_unreadable_record_is_exit_2(self):
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "o", "--record", self.tmp / "none.yaml")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "o", "--record", self.tmp / "none.yaml")
         self.assertEqual(rc, 2, err)
 
     def test_phases_marker_outside_st_rm_p_is_exit_2(self):
         p = self.arch / "views" / "Op-If.md"
         p.write_text(p.read_text(encoding="utf-8") + "\n" + PHASES_MARKER + "\n", encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
         self.assertIn("capability-phases", err)
 
@@ -318,7 +318,7 @@ class TempTree(unittest.TestCase):
         p = self.arch / "views" / "St-Tx.md"
         p.write_text(p.read_text(encoding="utf-8").replace("model: CapabilityTaxonomy", "model: NoSuchPackage"),
                      encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
         self.assertIn("NoSuchPackage", err)
 
@@ -332,7 +332,7 @@ class TempTree(unittest.TestCase):
         return got
 
     def test_a_status_line_change_moves_every_citing_view_together(self):
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "before")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "before")
         self.assertEqual(rc, 0, err)
         before = self.design_rows(self.tmp / "before")
         views = ["Op-Cn", "Op-Ct", "Op-Tx", "Rs-Cn", "Rs-If", "Rs-Sr", "Sm-Ov", "Sv-Cn"]
@@ -342,7 +342,7 @@ class TempTree(unittest.TestCase):
         text = d.read_text(encoding="utf-8")
         self.assertIn("PLAN ONLY. Nothing built.", text)
         d.write_text(text.replace("PLAN ONLY. Nothing built.", "Design only."), encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "after")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "after")
         self.assertEqual(rc, 0, err)
         after = self.design_rows(self.tmp / "after")
         self.assertEqual(sorted(after), views)
@@ -353,7 +353,7 @@ class TempTree(unittest.TestCase):
         d = self.tmp / "decisions" / "DESIGN-2026-09-06-interface-contracts.md"
         text = d.read_text(encoding="utf-8")
         d.write_text(text.replace("PLAN ONLY. Nothing built.", "Approved."), encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
         self.assertIn("no record it cites fixes the evidence", err)
         self.assertFalse((self.tmp / "o").exists())
@@ -366,7 +366,7 @@ class TempTree(unittest.TestCase):
         vals.write_text("spare-slot: SENTINEL-SPARE-9231\n", encoding="utf-8")
         for prof in ("uaf", "dodaf202", "naf4"):
             d = self.tmp / f"o-{prof}"
-            rc, _, err = self.run("--profile", prof, "--out", d, "--slots", vals)
+            rc, _, err = self.render("--profile", prof, "--out", d, "--slots", vals)
             self.assertEqual(rc, 0, err)
             for f in d.glob("*.md"):
                 self.assertNotIn("SENTINEL-SPARE-9231", f.read_text(encoding="utf-8"), f"{prof}/{f.name}")
@@ -377,7 +377,7 @@ class TempTree(unittest.TestCase):
         old = '      naf4: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:3 gives no NAF 4.0 view."'
         self.assertIn(old, text)
         edit.write_text(text.replace(old, "      dodaf202x: x"), encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "naf4", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "naf4", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
         self.assertIn("Sc-Pr", err)
 
@@ -386,7 +386,7 @@ class TempTree(unittest.TestCase):
         text = edit.read_text(encoding="utf-8")
         self.assertIn("    A8: Standards\n", text)
         edit.write_text(text.replace("    A8: Standards\n", ""), encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "naf4", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "naf4", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
         self.assertIn("A8", err)
 
@@ -394,7 +394,7 @@ class TempTree(unittest.TestCase):
         p = self.arch / "views" / "Op-If.md"
         p.write_text(p.read_text(encoding="utf-8") + "\n<!-- generated: data-exchange -->\n",
                      encoding="utf-8", newline="\n")
-        rc, _, err = self.run("--profile", "uaf", "--out", self.tmp / "o")
+        rc, _, err = self.render("--profile", "uaf", "--out", self.tmp / "o")
         self.assertEqual(rc, 2, err)
 
     def test_model_braces_in_comments_do_not_confuse_matching(self):
@@ -405,7 +405,7 @@ class TempTree(unittest.TestCase):
                             "        /* and a } in a block comment */\n        doc /* \"{\" */", 1)
         m.write_text(text, encoding="utf-8", newline="\n")
         d = self.tmp / "o"
-        rc, _, err = self.run("--profile", "naf4", "--out", d)
+        rc, _, err = self.render("--profile", "naf4", "--out", d)
         self.assertEqual(rc, 0, err)
         block = re.search(r"```sysml\n(.*?)\n```", (d / "L7.md").read_text(encoding="utf-8"), re.S).group(1)
         self.assertIn("a stray { in a line comment", block)
