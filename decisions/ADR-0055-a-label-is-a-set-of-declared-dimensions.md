@@ -147,7 +147,7 @@ dimension is `data_rights_holder`, which is also iagent's form.
 | **Exclusionary** | Values that bar a holder | The viewer holds none of them | No exclusion from this dimension |
 
 **The last column is the default inside a deployment. A boundary may declare otherwise (amendment, drafted
-2026-11-07, not yet ruled).**
+2026-11-07, proposed for ruling 2026-11-15 as [§1b](#1b-boundary-declarations-required-and-empty_means-proposed-for-ruling-2026-11-15)).**
 - A deployment, and each egress destination it declares, may set per dimension:
   - `required`: an empty or absent value at that boundary is withheld there;
   - `empty_means`: what an empty set means at that boundary.
@@ -220,6 +220,77 @@ dimension is `data_rights_holder`, which is also iagent's form.
 - Each default row in Findings 3, and the ingest stamp, becomes a declared source or stops stamping.
 - ADR-0029 §3's "never default", as ADR-0050:5 summarises it, becomes true as written.
 - The order is load before amend (§4, step 0).
+
+### 1b. Boundary declarations: `required` and `empty_means` (proposed for ruling, 2026-11-15)
+
+**Status: proposed for ruling.** It states as a rule the amendment drafted in §1 on 2026-11-07. Nothing is built.
+
+**Why.** The type table's empty-set column is right inside a mesh and can be wrong at an egress. An empty restrictive
+set means "no restriction" in the mesh. At a destination that is a third party, the same record must not leave by
+default. ADR-0056 §8 needs the first case: a hub composing an OEM-bound flow declares `program` as required at that
+boundary.
+
+**Where it is declared.**
+- **On a destination.** A destination's registry entry (ADR-0046 §1, `destinations.yaml`) gains an optional
+  `dimensions` map. Each entry is keyed by a dimension's name and holds `required`, `empty_means`, or both.
+- **As a deployment's default for its destinations.** It has the same shape, and it applies to every destination that
+  does not declare that dimension itself.
+  - It is a default for the deployment's boundaries only. It never changes the in-mesh reading.
+  - Its home (the policy row, or the deployment's own declaration) is open below.
+- **Precedence:** the destination's entry, then the deployment's default, then the type table.
+
+**`required`: the outbound label must carry a value.**
+- At that boundary, a dimension declared `required: true` must be present and non-empty on the label the gate
+  decides. This covers a stored dimension, and a dimension composed only at the boundary, such as `program` (ADR-0056
+  §8).
+- Empty or absent, the record is **withheld, loud**:
+  - the reason is `dimension_missing`, with the dimension and the destination named;
+  - it is counted for the owner, and the gate logs it as it logs any refusal (ADR-0046 §4);
+  - it is never a silent drop.
+
+**`empty_means`: how an empty set reads at that boundary. It may only narrow, never widen.**
+
+| Type | In the mesh (the table above) | A boundary may declare |
+|---|---|---|
+| Hierarchical | Not allowed | Nothing. There is no empty set to read |
+| Permissive set | Released to nobody | Nothing else. It is already the narrowest |
+| Restrictive set | No restriction | `nobody` |
+| Exclusionary | No exclusion | `nobody` |
+
+- `nobody` withholds a record whose set is empty, with the reason `dimension_empty`, named and counted as above.
+- **A widening value is refused when the entry is loaded,** with the dimension named. It is never refused per
+  record. A boundary can never make a record visible that the mesh would withhold.
+- **An entry naming a dimension the policy does not declare is refused at load,** as an inbound undeclared dimension
+  is (§1).
+
+**What does not change.**
+- **The label, its body and its key.** A boundary declaration never enters any of them, and it is not a new policy
+  id. The same record, with the same key, can be admitted at one destination and withheld at another. The
+  declaration is an input to the gate (ADR-0046 §4), never to the stamp.
+- **The in-mesh reading.** No PEP read consults a boundary declaration.
+- **Fail closed.** A record with no value for a stored, declared dimension is already served to nobody anywhere (§1).
+  `required` adds nothing to that case except the boundary's named reason.
+
+**Note for the ruling: the two keys overlap.**
+- On a stored dimension, `required: true` and `empty_means: nobody` withhold the same records. Only the reason differs.
+- They part on a dimension composed at the boundary. There, `required` also withholds an absent value, while
+  `empty_means` reads only an empty one.
+- Proposed: keep both. `required` is for presence, which matters for composed dimensions. `empty_means` is for the
+  meaning of an empty stored set.
+
+**Checks, when built.**
+- The table above, at a boundary, for each type and each declared value.
+- A widening entry, and an entry naming an undeclared dimension, are each refused at load.
+- A required dimension, empty and absent, reads withheld `dimension_missing` at that destination, and admitted at a
+  destination that declares nothing.
+- The record's key is the same before and after the gate.
+
+**Open, not proposed here.**
+- The deployment default's home: the policy row, or the deployment's own declaration.
+- Whether a destination may relax its deployment's default, still never below the type table. Proposed: yes, by an
+  explicit entry only.
+- The peer side. iagent's dimension file has no `required` or `empty_means` key yet (ADR-0056 finding 7). Alignment
+  waits for this ruling.
 
 ### 2. Labels compile to a `label_key` at stamping
 
