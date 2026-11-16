@@ -26,11 +26,53 @@ def test_closure_reasons_shape():
         assert set(r) == {
             "meaning", "confirms_failure", "ends_life", "censors_life",
             "in_reliability", "in_bit_counts", "candidate", "basis",
+            "alignment", "aligned_to",
         }, name
         for flag in ("confirms_failure", "ends_life", "censors_life",
                      "in_reliability", "in_bit_counts", "candidate"):
             assert isinstance(r[flag], bool), (name, flag)
         assert r["meaning"].strip() and r["basis"].strip(), name
+        _assert_aligned(name, r)
+
+
+ALIGNMENTS = {"corresponds", "partial", "framework_chosen"}
+SERIES = re.compile(r"\bS(5000F|3000L|1000D)\b")
+CLAUSE = re.compile(r"(Chap \d|§\d|Table \d)")
+
+
+def _assert_aligned(name, v):
+    # Every value says how it lines up with the S-Series, citing a clause,
+    # and a framework-chosen one still names what it was checked against.
+    assert v["alignment"] in ALIGNMENTS, name
+    text = v["aligned_to"]
+    assert isinstance(text, str) and SERIES.search(text) and CLAUSE.search(text), name
+
+
+def _by_alignment(values):
+    out = {a: [] for a in ALIGNMENTS}
+    for name, v in values.items():
+        out[v["alignment"]].append(name)
+    return out
+
+
+def test_closure_reason_alignment_to_the_s_series():
+    # Aligned 2026-11-16. A change to a class here is a change to the export
+    # mapping, so it is pinned.
+    got = _by_alignment(_load("closure_reasons.yaml")["reasons"])
+    assert got == {
+        "corresponds": ["confirmed", "no_fault_found"],
+        "partial": ["retest_okay", "battle_damage"],
+        "framework_chosen": ["cannot_duplicate"],
+    }
+
+
+def test_repair_type_alignment_to_the_s_series():
+    got = _by_alignment(_load("repair_types.yaml")["types"])
+    assert got == {
+        "corresponds": ["replaced", "adjusted"],
+        "partial": ["overhauled", "serviced", "temporary"],
+        "framework_chosen": ["subpart_replaced"],
+    }
 
 
 def test_only_confirmed_confirms_a_failure():
@@ -89,7 +131,8 @@ def test_repair_types_shape():
     assert types, "no types declared"
     for name, t in types.items():
         assert NAME.match(name), name
-        assert set(t) == {"kind", "meaning", "requires"}, name
+        assert set(t) == {"kind", "meaning", "requires", "alignment", "aligned_to"}, name
+        _assert_aligned(name, t)
         assert t["kind"] in {"replaced", "in_place"}, name
         assert t["meaning"].strip(), name
         assert isinstance(t["requires"], list), name

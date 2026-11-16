@@ -26,6 +26,22 @@
 #   never a local extension. A code with no mapping is refused at intake with
 #   its code named. It is never given a default reason.
 #
+# STANDARDS (aligned 2026-11-16)
+#   Each reason records how it lines up with the ASD S-Series maintenance
+#   feedback terms, read at these issues:
+#     - S5000F Issue 4.0 (in-service data feedback);
+#     - S3000L Issue 3.0 (logistic support analysis);
+#     - S1000D Issue 7 (technical publications; its information codes).
+#   They are cited by chapter, paragraph and table, and paraphrased. Attribute
+#   and value names appear only as identifiers, and no text is copied.
+#   S-Series valid values are recommended, not mandatory. A project may remove
+#   values or add its own, with its own source annotation (S5000F Chap 26 §4;
+#   Chap 27 §5.5). So a reason marked `framework_chosen` is a project value of
+#   that kind: kept because the S-Series has no equivalent, never a replacement
+#   for an S-Series value. A reason marked `corresponds` or `partial` names the
+#   S-Series value a deployment writes when it exports to an S5000F feed.
+#   ISO 14224 is unread (paywalled). Nothing here is aligned to it.
+#
 # NOT A CLOSURE
 #   A cancelled or deferred work order closes nothing and carries no reason
 #   from this list. iagent's architect answered on 2026-11-14 (provisional
@@ -63,6 +79,12 @@
 #   candidate        true for a value proposed but off unless a deployment
 #                    switches it on in its bundle
 #   basis            where the term comes from, and what was read
+#   alignment        corresponds: an S-Series value means the same thing;
+#                    partial: an S-Series value or structure covers part of
+#                    it, and aligned_to says which part; framework_chosen: the
+#                    S-Series has no equivalent, and the value is kept as ours
+#   aligned_to       the S-Series clauses and value identifiers, or for
+#                    framework_chosen, the nearest one and why it does not fit
 # =============================================================================
 
 reasons:
@@ -77,6 +99,14 @@ reasons:
     basis: >-
       MIL-HDBK-2155 failure verification: a reported failure is "verified as
       actual or an explanation provided for lack of verification" (ADR-0059 §4.1).
+    alignment: corresponds
+    aligned_to: >-
+      S5000F Chap 24 §4.105.3.1 shopFindingsFaultConfirmed, value C confirmed
+      (Chap 26 Table 4): the fault was confirmed. S5000F records that finding
+      on a shop findings record after removal (Chap 4 §4.7, §5.5.1). Ours is
+      the closure of the episode from the work order's outcome, so an export
+      writes C on the shop record when there is one, and eventConfirmedStatus
+      C on the event (Chap 24 §4.52.3.2; Chap 26 Table 4) when there is not.
 
   no_fault_found:
     meaning: The indication was examined and no failure was found on any candidate component.
@@ -89,6 +119,12 @@ reasons:
     basis: >-
       Not a handbook term. A closure value name aligned to MIL-HDBK-2155's
       "explanation provided for lack of verification" (ADR-0059 §4.1).
+    alignment: corresponds
+    aligned_to: >-
+      S5000F Chap 24 §4.105.3.1 shopFindingsFaultConfirmed, value N
+      noFaultFound (Chap 26 Table 4). S5000F's no-fault-found report records
+      the inspection or test done when no defect was found (Chap 4 §4.7,
+      §5.5.1). The name is the same term.
 
   cannot_duplicate:
     meaning: The reported symptom could not be reproduced, so it was neither verified nor ruled out.
@@ -101,6 +137,14 @@ reasons:
     basis: >-
       A closure value name. Kept apart from no_fault_found because one says the
       unit was examined and found sound, the other that the symptom was not seen.
+    alignment: framework_chosen
+    aligned_to: >-
+      No S5000F equivalent for hardware. shopFindingsFaultConfirmed has only
+      confirmed and noFaultFound (Chap 24 §4.105.3.1; Chap 26 Table 4), so an
+      export writes N and the distinction from no_fault_found is lost there.
+      The nearest S5000F value, softwareErrorReproducibility N (Chap 26
+      Table 4), describes a software error only. Kept as a project value
+      (Chap 27 §5.5).
 
   retest_okay:
     meaning: A unit removed at one level of repair was tested at the next and passed.
@@ -113,6 +157,14 @@ reasons:
     basis: >-
       MIL-HDBK-2165's "retest okay", for a deployment that repairs at two
       levels (ADR-0059 §4.1). A candidate fourth value, off by default.
+    alignment: partial
+    aligned_to: >-
+      S5000F has no closure value for it, but holds the same facts in two
+      records. A removal (Chap 24 §4.50.3.4 partActionType U, partActionCause
+      F failure) is followed by a shop findings record whose reason for
+      submission is fault investigation and whose finding is N noFaultFound
+      (Chap 24 §4.105.3.1; Chap 26 Table 4; Chap 4 §3.7, §4.7). The name stays
+      MIL-HDBK-2165's.
 
   battle_damage:
     meaning: The component was damaged by hostile action, and the damage, not a failure, is what the maintenance answered.
@@ -129,5 +181,16 @@ reasons:
       reliability count and rate. It is counted under its own reason and
       reported as excluded. A built-in test indication it closes is neither a
       detection nor a false alarm. Remaining-life outputs computed before it
-      are censored at it. No BDAR standard or manual was read for this draft;
-      the name and rules are checked against one before any field freezes.
+      are censored at it. No BDAR doctrine manual was read. S1000D's battle
+      damage repair codes were (see aligned_to), and they set no counting rule.
+    alignment: partial
+    aligned_to: >-
+      S5000F records damage as its own record on the event (Chap 24 §4.42.3.1
+      Damage), and its cause through the damage definition's special event,
+      whose cause category includes CBT combatSpecialEvent (Chap 26 Table 4).
+      S5000F has no closure reason for it. shopFindingsFaultCode D damage
+      (Chap 24 §4.105.3.1) covers damage of any cause, not hostile action
+      only. S1000D Issue 7 Chap 8.4.2 Table 9 codes 680 to 689 name the battle
+      damage repair work: damage assessment (683), utilization degradation
+      (684), repair (685), isolation (686) and the function test after repair
+      (687). The closure value name is ours.

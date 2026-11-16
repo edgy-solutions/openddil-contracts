@@ -51,12 +51,30 @@
 #     temporary repairs and their due dates, alongside modification due dates.
 #     Turning a due item into a work order is iagent's (review answer,
 #     2026-11-16). The producer is not built, and this file does not name it.
-#   No BDAR standard or manual was read for this draft.
+#   No BDAR doctrine manual was read. S1000D's temporary and battle damage
+#   repair codes were (see `temporary`'s aligned_to).
 #
-# NAMES
-#   The names are not taken from a standard, because no maintenance-action
-#   standard was read for this draft. They are checked against one before any
-#   field freezes.
+# NAMES AND STANDARDS (aligned 2026-11-16)
+#   The names were drafted before any maintenance-action standard was read.
+#   On 2026-11-16 each was checked against the ASD S-Series at these issues:
+#     - S5000F Issue 4.0 (in-service data feedback: what a part action
+#       records);
+#     - S3000L Issue 3.0 (logistic support analysis: task information codes);
+#     - S1000D Issue 7 (the information codes S3000L's task codes are taken
+#       from).
+#   Each type records that check in `alignment` and `aligned_to`. They are
+#   cited by chapter, paragraph and table, and paraphrased. Attribute and value
+#   names appear only as identifiers, and no text is copied.
+#   S-Series valid values are recommended, not mandatory. A project may add
+#   its own, with its own source annotation (S5000F Chap 26 §4; Chap 27
+#   §5.5). A type marked `framework_chosen` is such a project value.
+#   - No rename is proposed. Where a type matches an S-Series action, its name
+#     already names that action (replace, overhaul, adjust, service, temporary
+#     repair).
+#   - S5000F records a replacement as part actions per part (uninstall and
+#     install, with a cause), not as one repair type. An export to an S5000F
+#     feed therefore writes one or more part actions from one outcome.
+#   - ISO 14224 is unread (paywalled). Nothing here is aligned to it.
 #
 # CURATION RULES (treat this file as code):
 #   - Changes require a PR with a domain expert reviewer.
@@ -69,6 +87,12 @@
 #   meaning   what was done, in one sentence
 #   requires  the outcome fields an outcome naming this type must carry, each
 #             refused at intake by name when absent. Empty for most types
+#   alignment corresponds: an S-Series value means the same thing; partial:
+#             an S-Series value covers part of it, and aligned_to says which
+#             part; framework_chosen: the S-Series has no equivalent, and the
+#             value is kept as ours
+#   aligned_to the S-Series clauses and value identifiers, or for
+#             framework_chosen, the nearest one and why it does not fit
 # =============================================================================
 
 types:
@@ -76,28 +100,77 @@ types:
     kind: replaced
     meaning: The component was removed and a different one installed in its place.
     requires: []
+    alignment: corresponds
+    aligned_to: >-
+      S1000D Issue 7 Chap 8.4.2 Table 12 code 921, remove and install a new
+      item (the remove and install procedures, codes 520 and 720, combined).
+      S3000L Chap 22 Table 4 taskInformationCode 921 takes the same code.
+      S5000F records it as two part actions, partActionType U uninstall and
+      I install, each with its partActionCause (Chap 24 §4.50.3.4; Chap 26
+      Table 4).
 
   subpart_replaced:
     kind: in_place
     meaning: A part within the component was replaced, and the component kept its identity.
     requires: []
+    alignment: framework_chosen
+    aligned_to: >-
+      No S-Series value says that a part was replaced inside a component that
+      kept its identity. S5000F records it as part actions, uninstall and
+      install, on the sub-part when the sub-part is tracked (Chap 24
+      §4.50.3.4). An untracked sub-part shows only as parts used in the shop
+      report (Chap 4 §5.5.1). Kept as a project value (Chap 27 §5.5).
 
   overhauled:
     kind: in_place
     meaning: The component was restored to a specified condition by a declared procedure.
     requires: []
+    alignment: partial
+    aligned_to: >-
+      S5000F has no part action type for an overhaul. It holds the overhaul's
+      effect as time since overhaul on each part action (Chap 24 §4.50.3.4
+      partActionTimeSinceOverhaul), and the disposition before it as
+      recoveredItemStatus O toBeOverhauled (Chap 26 Table 4). S1000D Issue 7
+      Chap 8.4.2 Table 5 code 288 is the overhaul schedule, not the work.
+      The name and meaning are ours.
 
   adjusted:
     kind: in_place
     meaning: The component was adjusted, aligned or calibrated, with no part replaced.
     requires: []
+    alignment: corresponds
+    aligned_to: >-
+      S1000D Issue 7 Chap 8.4.2 Table 5 code 270, adjust, align and calibrate,
+      with 271 adjust and 272 align beneath it. S3000L Chap 22 Table 4
+      taskInformationCode 270 adjustAlignAndCalibrateProcedure. S5000F has no part
+      action type for it. It is maintenance work done (Chap 24 §4.114.3.5).
 
   serviced:
     kind: in_place
     meaning: The component was cleaned, lubricated, re-seated or reloaded, with no part replaced.
     requires: []
+    alignment: partial
+    aligned_to: >-
+      S5000F partActionType S service (Chap 24 §4.50.3.4; Chap 26 Table 4).
+      S1000D Issue 7 Chap 8.4.2 Table 5 codes 200 servicing, 240 lubrication
+      and 250 clean and apply surface protection cover cleaning and
+      lubricating. Re-seating is S1000D's disconnect and connect (Table 12
+      code 923), and reloading software is S3000L Chap 22 Table 4
+      taskInformationCode 750 loadSoftwareProcedure. Our type joins work the S-Series
+      codes apart. An export names the S-Series code that fits the work done.
 
   temporary:
     kind: in_place
     meaning: A repair made to restore use for now, which a permanent repair is due to replace by a stated date.
     requires: [permanent_repair_due]
+    alignment: partial
+    aligned_to: >-
+      S1000D Issue 7 Chap 8.4.2 Table 9 code 662, temporary repair procedure,
+      under structure repair (660). Codes 680 and 685 cover battle damage
+      repair, which is quick and can leave the product with an operating
+      limit. S3000L Chap 12 §9.2 treats a temporary and a permanent repair as
+      variants of one repair task, told apart by applicability. S5000F has no
+      temporary marker. Its nearest to the due date is faultStatus D
+      deferredRepair with faultDeferredToDate (Chap 24 §4.20.3.1; Chap 26
+      Table 4), which describes the fault, not the repair. The due-date rule is
+      ours.
