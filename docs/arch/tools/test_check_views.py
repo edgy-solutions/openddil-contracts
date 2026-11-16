@@ -7,6 +7,7 @@ The real tree is checked once. Each rule is then proved by copying docs/arch
 and decisions into a temp tree (keeping their relative distance), breaking
 one thing for real, and asserting that rule's FAIL line appears.
 """
+import os
 import re
 import shutil
 import subprocess
@@ -26,8 +27,9 @@ TOOL = kit_path.TOOLS / "check_views.py"
 def run(root, *extra):
     """check_views on root. The default is partial: quotes and floor need a chart, and have their own tests."""
     args = extra or ("--allow-partial", "test")
+    env = {**os.environ, "ARCH_KIT_CONFIG": str(Path(root) / "arch-kit.yaml")}
     p = subprocess.run([sys.executable, str(TOOL), "--root", str(root), *args],
-                       capture_output=True, text=True, encoding="utf-8")
+                       capture_output=True, text=True, encoding="utf-8", env=env)
     return p.returncode, p.stdout, p.stderr
 
 

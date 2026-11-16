@@ -27,6 +27,7 @@ import kit_path  # noqa: E402,F401
 import check_export  # noqa: E402
 import check_views  # noqa: E402
 import render_html  # noqa: E402
+import project  # noqa: E402
 import render_profile as rp  # noqa: E402
 import capability_phases  # noqa: E402
 from capability_phases import CheckError  # noqa: E402
@@ -511,6 +512,8 @@ class BuiltStub(unittest.TestCase):
         a = args()
         a.record = str(root / "capability-record.yaml")
         with mock.patch.object(rp, "ROOT", root), mock.patch.object(render_html, "ROOT", root), \
+                mock.patch.object(project, "ROOT", root), mock.patch.object(project, "REPO", root.parent.parent), \
+                mock.patch.object(project, "DECISIONS", root.parent.parent / "decisions"), \
                 mock.patch.object(render_html, "REPO", root.parent.parent):
             return render_html.build(a, fake, DATE)
 
@@ -603,6 +606,8 @@ class BuiltRelabel(unittest.TestCase):
             lst.write_text(relabel_text, encoding="utf-8", newline="\n")
             a.relabel = [str(lst)]
         with mock.patch.object(rp, "ROOT", root), mock.patch.object(render_html, "ROOT", root), \
+                mock.patch.object(project, "ROOT", root), mock.patch.object(project, "REPO", root.parent.parent), \
+                mock.patch.object(project, "DECISIONS", root.parent.parent / "decisions"), \
                 mock.patch.object(render_html, "REPO", tmp):
             return render_html.build(a, fake, DATE), record
 
