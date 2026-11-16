@@ -159,12 +159,22 @@ For each declaration, in one transaction:
 
 ### 2.5 The generator
 
-- One function, `mint_identity()`, in the registry package. It is RFC 9562 §5.7 UUIDv7: 48 bits of Unix
-  milliseconds, the version and variant bits, and the rest from `os.urandom`. Within one millisecond, `rand_a` is a
-  12-bit counter seeded from random, so ids from one process sort in mint order.
-- `generator` is the fully qualified function name. `generator_version` is a module constant, bumped when the
-  function changes.
-- No dependency is added. If one is preferred, it is pinned in `uv.lock` and named in `generator` the same way.
+**Amended 2026-11-15 (lands only if the project owner rules #33's home): the generator lives in contracts.**
+- One function, `mint_identity()`, in the contracts library `lib/python/openddil_identity` (module `ids`), not in the
+  registry package. It is RFC 9562 §5.7 UUIDv7: 48 bits of Unix milliseconds, the version and variant bits, and the
+  rest from `os.urandom`. Within one millisecond, `rand_a` is a 12-bit counter seeded from random, so ids from one
+  process sort in mint order.
+- The registry imports it and defines no generator of its own. A second generator anywhere is a defect, because two
+  generators would write two names into `generator` for one scheme.
+- `generator` is the library's `GENERATOR` constant, the fully qualified name (`openddil_identity.ids.mint_identity`).
+  `generator_version` is its `GENERATOR_VERSION`, bumped in the library when the function changes. The registry
+  copies both onto the identity row, and never writes its own.
+- The registry takes the library at one pinned contracts commit, and its rows name that version. How the library is
+  packaged for a service is not decided here: `lib/python/` has no package metadata yet.
+- No third-party dependency is added, because the library uses the standard library only.
+- The same library also holds §1.3's `declaration_ref`, §2.3's decision (`decide`), §2.7's `era` and §2.8's refusals
+  (`check_equivalence`), as pure functions. The registry keeps the writes, the SQL and the resolver, which it passes
+  in. Those sections are unchanged by this amendment, except that the function they name is the library's.
 - **The minting tier** comes from a new required setting, `ASSET_REGISTRY_TIER`. The service refuses to start
   without it. There is no default, because a wrong default would name the wrong authority on every row.
 
