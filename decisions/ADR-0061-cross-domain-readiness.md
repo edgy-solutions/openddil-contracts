@@ -19,8 +19,8 @@ branch (PR #38), so that they are ruled with the key form, not after it.
 was marked secondary or registry was checked against them. Each one now cites a clause, or is corrected, or is kept as
 secondary because neither document settles it. The changes are listed under "Corrections after reading the
 standards". Five new points came out of the reading. The project owner's proposed answers to them are recorded under
-New points, pending ruling. One half of C, provenance, did not fit the text as proposed, and its candidates are listed
-there.
+New points, pending ruling. One half of C, provenance, did not fit the text as first proposed. Option (iv) is now
+recommended there, with the alternatives listed.
 
 ## Sources, and how much of each was read
 
@@ -389,7 +389,7 @@ Ch 2 Annex A. The BDO's own schema is ADatP-4778's, which is unread (Owed).
 | `life.CreationDateTime` | `CreationDateTime` element |
 | `life.ReviewDateTime` | `ReviewDateTime` attribute on `ConfidentialityLabel` |
 | The nation dimension, for access: its authors and its release set | The release dimension's permissive `Category`, whose values are the authors and the release set together (New point C) |
-| The nation dimension, for provenance: who authored the record | Not settled. The reading does not support `OriginatorID` for it (New point C) |
+| The nation dimension, for provenance: who authored the record | Nothing in the label. Authorship stays a declared field in the record body. `OriginatorID` is the stamping tier's declared identity (New point C (iv), recommended, pending ruling) |
 
 - A dimension's `TagName`, and its optional `urn:oid:` URI, are declared with the dimension. Its values are written
   as declared. Under the NATO policy they are compared case-insensitively (finding 4).
@@ -466,8 +466,8 @@ Each statement marked secondary or registry in the earlier text, and what became
 - **No conformance to STANAG 4774 or 4778 is claimed.** 4774 and the 4778.2 profiles were read, and the alignment
   above cites them. Nothing is built to them, and ADatP-4778 itself is unread.
 - **Not taken up:** `SuccessionHandling`, `PrivacyMark`, alternative labels, and portion labels. A record carries one
-  label body. `OriginatorID` and `INFORMATIVE` categories are taken up only if New point C's provenance candidate (i)
-  or (ii) is ruled on.
+  label body. Under New point C's recommended (iv), `OriginatorID` is taken up as the stamping tier's identity.
+  `INFORMATIVE` categories and extension elements are taken up only if alternative (i) or (ii) is ruled on instead.
 - **Nothing is accredited.** An eligible kind is not permitted to cross. It is shaped so that a guard can check it
   (ADR-0055 §7).
 - **No guard, diode or boundary device is chosen.** Nothing here assumes a product.
@@ -526,13 +526,22 @@ Each statement marked secondary or registry in the earlier text, and what became
     - 4778.2's binding data object, as read, has no originator field. "Originator" there is the role of whoever
       creates the signature, and the signer's certificate identifies the binder (Ch 2 Annexes A and B).
     - The base ADatP-4778 is unread, and its schema could hold more.
-  - **Candidates for provenance, for ruling.**
-    - (i) `OriginatorID` names the stamping tier, which is what the field describes. Authorship rides in an
-      extension element in a declared namespace, which the label's schema allows (finding 5).
+  - **Recommended for provenance: (iv), pending the project owner's ruling.**
+    - `OriginatorID` is the stamping tier's declared identity, in one of 4774's name forms (finding 5). That is what
+      the field describes: who originated the label.
+    - **Authorship stays in the record body, as a declared field of the kind, never in the exported label.** On an
+      eligible kind the field is bounded like any other (Decisions 3 and 4).
+    - **Why:** a guard allows labels by exact match (finding 11, secondary). Authorship in an extension element or an
+      informative category would make every distinct author set a distinct label. Composites and rollups grow those
+      sets combinatorially, so the labels a guard must allow would multiply.
+    - Under (iv), the label varies only by its access fields and by `OriginatorID`. `OriginatorID` takes one value
+      per exporting tier, a small declared set.
+  - **Alternatives, kept listed.**
+    - (i) `OriginatorID` names the stamping tier, and authorship rides in an extension element in a declared
+      namespace, which the label's schema allows (finding 5).
     - (ii) Authorship rides in a declared `INFORMATIVE` category, which a receiver does not use for access (finding
       5). This needs the policy to declare the tag.
     - (iii) Wait for the base ADatP-4778.
-  - Until a candidate is ruled on, the access half stands alone, and the export carries no authorship.
 - **D. A policy exported as 4774 labels** declares `exports_4774: true`. Such a policy declares at most one
   hierarchical dimension and no exclusionary one, and this is checked at load. Policies that never export are not
   limited. A route that writes 4774 labels is refused at load unless its policy is exported.
