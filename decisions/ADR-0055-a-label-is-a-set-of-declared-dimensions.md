@@ -261,8 +261,8 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
   - With no originator, §2 makes it unlabelled, so it is served to nobody even when that intersection names a nation.
     The labels library's `high_water` fails closed on exactly this case today.
   - A §3a class row is the same case. The built rollup sets no originator on its rows (`aggregator_app.py`, the comment
-    above the row's label), so each row has no `lk1` key. A class row whose contributors share one author is not
-    covered by composite authorship as written below: see "Open for this ruling".
+    above the row's label), so each row has no `lk1` key. A class row is a rollup, and its label carries the rollup
+    marker below, not an author set.
 - **A label over a second dimension,** such as `data_rights_holder` (§5).
 
 **Composite authorship.** In `lk2`, the nation dimension's author is a set.
@@ -270,26 +270,44 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
 - **Two or more values are a composite.** The set records whose records the derivation used. **It grants nobody
   access by itself.** A viewer is admitted on the nation dimension only through the release set. ADR-0029's rule holds
   in effect: the author branch opens only where derivation preserved a single author.
-- **An empty author set is no author.** The record is unlabelled and gets no key, as in §2.
+- **An empty author set is no author.** The record is unlabelled and gets no key, as in §2. A rollup is never written
+  this way: it carries its own marker (below).
 - **High-water fills it** (§3b): the author set is the union of the inputs' authors, and the release is the
   intersection of their effective audiences, unchanged. Inputs that share one author give a set of one.
 - A composite with no release set is refused at the stamp. High-water always gives a set, possibly empty.
 
+**A rollup's label: an explicit "rollup, no author" marker, never an empty author set.**
+- In a rollup the author value grants nothing alone (§3a, ADR-0029:1086-1088). A §3a class row is a rollup, even when
+  its contributors share one author.
+- **Its nation value carries the marker and no author.** It is admitted through the release set only.
+- **An empty author set is never read as a rollup,** and a missing author never becomes one. Without the marker, no
+  author means unlabelled (§2), so the record has no key and is served to nobody. A rollup cannot be mistaken for
+  an unlabelled record, and an unlabelled record cannot be mistaken for a rollup.
+- **The marker and an author together** are refused at the stamp, and give no key.
+- **A rollup with no release set** is refused at the stamp, as a composite is. A release declared empty is keyed and
+  admits nobody.
+- The labels library's second slice (draft #36) writes a class label as an author of `None`, with the author folded
+  into the release. Under this form, that `None` becomes the marker. The change belongs to that PR, not this one.
+
 **The canonical form,** stated in words. The stack's SQL function and the library are both tested against one file
 of golden vectors, never against each other's text:
 - `lk2|<policy_id>|nation|<authors>|<release>`, then `|<name>|<values>` for each further declared dimension.
+  - For a rollup, `<authors>` is the literal `@rollup`. `@` is outside every dimension's value format, so the marker
+    can never be a value.
 - **Order:** nation first, then the other dimensions by name, in byte order. Names are snake_case ASCII (§1), so byte
   order is unambiguous.
 - **Sets:** distinct values, sorted in byte order, joined by `,`.
-  - The author set is never empty.
+  - The author set is never empty. A rollup writes the marker in its place.
   - A release set that is absent writes `~`, and one declared empty writes nothing, as in `lk1`.
   - Any other set dimension declared empty writes nothing.
 - **A hierarchical dimension** writes its one level.
 - **The key** is `lk2:` followed by the hex SHA-256 of the canonical string's UTF-8 bytes.
 - **The body** is `{"policy": <id>, "v": 2, "dims": {...}}`. Nation is `{"author": [sorted], "release": [sorted] or
-  null}`. A set dimension is a sorted array, and a hierarchical one a string.
+  null}`, or for a rollup `{"rollup": true, "release": [sorted]}`, with no `author` key. A set dimension is a sorted
+  array, and a hierarchical one a string.
 - **No key** when:
-  - the author set is empty;
+  - the author set is empty and there is no rollup marker;
+  - the marker and an author are both present;
   - a declared dimension has no value on the record (§1);
   - the record carries a dimension the policy does not declare;
   - any value fails its dimension's format;
@@ -301,36 +319,23 @@ of golden vectors, never against each other's text:
 **Which form a label gets: one form per label, and every `lk1` key is kept.**
 - Under a policy that declares nation only:
   - a label with one author compiles to `lk1`, byte for byte as today;
-  - a composite compiles to `lk2`.
+  - a composite or a rollup compiles to `lk2`.
 - A policy that declares a second dimension compiles every label to `lk2`.
   - Declaring that dimension is a new policy id, so no key already stored is recomputed into the other form.
   - Records stamped under the old id keep their `lk1` keys.
-- The form follows from the policy and the author count, which are both in the body. So every tier picks the same
+- The form follows from the policy, the author count and the marker, which are all in the body. So every tier picks the same
   form, and §2's "the same label gives the same key at every tier" holds.
 
 **Golden vectors.** An `lk2` vector file sits beside `lk1`'s, with at least these cases:
 - a composite with a release;
 - a composite with an empty release;
+- a rollup with a release, and a rollup with an empty release;
+- a rollup over contributors of one author, which must not give that author's single-author key;
+- an empty author set without the marker (no key), and the marker with an author (no key);
 - a second dimension, both empty and with values;
 - a hierarchical dimension;
 - the separators refused;
 - a single-author nation-only label, which must give the `lk1` key and not an `lk2` one.
-
-**Open for this ruling: a class row from one author.**
-- In an aggregate the author value grants nothing alone (§3a, ADR-0029:1086-1088). So a §3a class row whose
-  contributors share one author must not carry that author as a set of one, which would grant access by author.
-- The labels library's second slice (draft #36) writes such a class label as no author, with the author folded into
-  the release set. Under the form above, an empty author set gets no key, so that row is served to nobody: the case
-  this form is meant to close.
-- Two ways to close it:
-  1. **An aggregate claims no author** (ADR-0029's addendum, in its words). An empty author set with a declared
-     release is an aggregate's label: it is keyed, `nation||<release>`, and admits through the release only. An empty
-     author set with no release stays unlabelled, with no key. Composite authorship then covers single derived records
-     (high-water) only.
-  2. **The class row keeps its contributors' authors,** and the body marks it an aggregate, so that no author set of
-     any size grants access on it. The marker enters the canonical string.
-- Proposed: 1. It matches #36's built shape and the addendum's words, and it adds no marker to the form. The
-  golden vectors then add an aggregate label with a release, and an aggregate label with none (no key).
 
 **Not decided here.**
 - Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
