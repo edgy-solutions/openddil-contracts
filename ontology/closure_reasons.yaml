@@ -40,6 +40,12 @@
 #   that kind: kept because the S-Series has no equivalent, never a replacement
 #   for an S-Series value. A reason marked `corresponds` or `partial` names the
 #   S-Series value a deployment writes when it exports to an S5000F feed.
+#   EXPORT OF A FRAMEWORK-CHOSEN VALUE (proposed 2026-11-16): an S5000F export
+#   carries it as itself, a declared project-specific value with the project's
+#   own source annotation (S5000F Chap 26 §4; Chap 27 §5.5), and never maps it
+#   onto the nearest S-Series value. The cost: a receiver without the
+#   project's value list sees only an unknown project value.
+#   Conformance claims to any S-Series specification wait for legal review.
 #   ISO 14224 is unread (paywalled). Nothing here is aligned to it.
 #
 # NOT A CLOSURE
@@ -140,11 +146,12 @@ reasons:
     alignment: framework_chosen
     aligned_to: >-
       No S5000F equivalent for hardware. shopFindingsFaultConfirmed has only
-      confirmed and noFaultFound (Chap 24 §4.105.3.1; Chap 26 Table 4), so an
-      export writes N and the distinction from no_fault_found is lost there.
-      The nearest S5000F value, softwareErrorReproducibility N (Chap 26
-      Table 4), describes a software error only. Kept as a project value
-      (Chap 27 §5.5).
+      confirmed and noFaultFound (Chap 24 §4.105.3.1; Chap 26 Table 4).
+      Mapping it to N would lose the distinction from no_fault_found, so an
+      export carries it as a declared project-specific value instead (Chap 26
+      §4; Chap 27 §5.5; see the header). The nearest S5000F value,
+      softwareErrorReproducibility N (Chap 26 Table 4), describes a software
+      error only.
 
   retest_okay:
     meaning: A unit removed at one level of repair was tested at the next and passed.

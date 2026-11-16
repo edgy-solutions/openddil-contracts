@@ -74,6 +74,12 @@
 #   - S5000F records a replacement as part actions per part (uninstall and
 #     install, with a cause), not as one repair type. An export to an S5000F
 #     feed therefore writes one or more part actions from one outcome.
+#   - Export of a framework-chosen type (proposed 2026-11-16): an S5000F
+#     export carries it as itself, a declared project-specific value with the
+#     project's own source annotation (S5000F Chap 26 §4; Chap 27 §5.5), and
+#     never maps it onto the nearest S-Series value. The cost: a receiver
+#     without the project's value list sees only an unknown project value.
+#   - Conformance claims to any S-Series specification wait for legal review.
 #   - ISO 14224 is unread (paywalled). Nothing here is aligned to it.
 #
 # CURATION RULES (treat this file as code):
@@ -119,7 +125,9 @@ types:
       kept its identity. S5000F records it as part actions, uninstall and
       install, on the sub-part when the sub-part is tracked (Chap 24
       §4.50.3.4). An untracked sub-part shows only as parts used in the shop
-      report (Chap 4 §5.5.1). Kept as a project value (Chap 27 §5.5).
+      report (Chap 4 §5.5.1). Kept as a project value, and an export carries
+      it as a declared project-specific value (Chap 26 §4; Chap 27 §5.5; see
+      the header).
 
   overhauled:
     kind: in_place
