@@ -34,15 +34,32 @@
 #
 # CURATION RULES (treat this file as code):
 #   - Changes require a PR with a domain expert reviewer.
-#   - A change to `confirms_failure` or `ends_life` changes every count and
-#     score read from it. It needs its own decision record.
+#   - A change to `confirms_failure`, `ends_life`, `censors_life`,
+#     `in_reliability` or `in_bit_counts` changes every count and score read
+#     from it. It needs its own decision record.
 #
 # FIELDS
 #   meaning          what a maintainer found, in one sentence
 #   confirms_failure true only for a verified failure. Read by §4.1's
 #                    confirmed counts and by the remaining-life join
 #   ends_life        whether the closure ends the confirmed component's life
-#                    for remaining-life scoring
+#                    as a failure, for remaining-life scoring
+#   censors_life     whether the closure censors the component's life for
+#                    remaining-life scoring: an output computed before it,
+#                    with no confirmed failure between, is censored at the
+#                    closure and never scored as right or wrong. Never true
+#                    with ends_life. What follows the closure is the repair's
+#                    to decide (repair_types.yaml), as for any repair
+#   in_reliability   whether the closure enters §4.1's reliability counts and
+#                    rates: confirmed failures, closures by reason as a
+#                    denominator, and the no-fault-found rate. False only for
+#                    a closure whose cause is outside the component's
+#                    reliability. Such a closure is still counted, under its
+#                    own reason, and reported as excluded
+#   in_bit_counts    whether the episode enters §4.1's built-in test counts:
+#                    detection, isolation and the indications not confirmed.
+#                    False means a built-in test indication closed under this
+#                    reason is neither a detection nor a false alarm
 #   candidate        true for a value proposed but off unless a deployment
 #                    switches it on in its bundle
 #   basis            where the term comes from, and what was read
@@ -53,6 +70,9 @@ reasons:
     meaning: The reported failure was verified on the confirmed component.
     confirms_failure: true
     ends_life: true
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
     candidate: false
     basis: >-
       MIL-HDBK-2155 failure verification: a reported failure is "verified as
@@ -62,6 +82,9 @@ reasons:
     meaning: The indication was examined and no failure was found on any candidate component.
     confirms_failure: false
     ends_life: false
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
     candidate: false
     basis: >-
       Not a handbook term. A closure value name aligned to MIL-HDBK-2155's
@@ -71,6 +94,9 @@ reasons:
     meaning: The reported symptom could not be reproduced, so it was neither verified nor ruled out.
     confirms_failure: false
     ends_life: false
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
     candidate: false
     basis: >-
       A closure value name. Kept apart from no_fault_found because one says the
@@ -80,7 +106,28 @@ reasons:
     meaning: A unit removed at one level of repair was tested at the next and passed.
     confirms_failure: false
     ends_life: false
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
     candidate: true
     basis: >-
       MIL-HDBK-2165's "retest okay", for a deployment that repairs at two
       levels (ADR-0059 §4.1). A candidate fourth value, off by default.
+
+  battle_damage:
+    meaning: The component was damaged by hostile action, and the damage, not a failure, is what the maintenance answered.
+    confirms_failure: false
+    ends_life: false
+    censors_life: true
+    in_reliability: false
+    in_bit_counts: false
+    candidate: false
+    basis: >-
+      Added from battle damage assessment and repair (BDAR) on 2026-11-16, on
+      the project owner's order. Damage from hostile action says nothing about
+      the component's reliability, so it is not a failure and is outside every
+      reliability count and rate. It is counted under its own reason and
+      reported as excluded. A built-in test indication it closes is neither a
+      detection nor a false alarm. Remaining-life outputs computed before it
+      are censored at it. No BDAR standard or manual was read for this draft;
+      the name and rules are checked against one before any field freezes.

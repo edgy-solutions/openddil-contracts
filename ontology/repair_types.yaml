@@ -35,6 +35,20 @@
 #   that neither file declares is refused at intake with its name. It is never
 #   read as a default type.
 #
+# `temporary` CARRIES THE PERMANENT REPAIR'S DUE DATE
+#   Added from battle damage assessment and repair (BDAR) on 2026-11-16, on the
+#   project owner's order. A temporary repair restores use for now and is owed
+#   a permanent one. An outcome naming `temporary` must carry
+#   `permanent_repair_due`, a date. Without it, the outcome is refused at
+#   intake with the field named, and no due date is ever defaulted.
+#   - `temporary` is never a renewal. A renewal declaration naming it is
+#     refused: a temporary repair never starts a new life.
+#   - It says how long the repair is meant to hold, not what was done. Whether
+#     it also names the work (a second type) is open.
+#   - What tracks the permanent repair to its due date, and what an overdue one
+#     raises, is not decided here.
+#   No BDAR standard or manual was read for this draft.
+#
 # NAMES
 #   The names are not taken from a standard, because no maintenance-action
 #   standard was read for this draft. They are checked against one before any
@@ -49,25 +63,37 @@
 #   kind      replaced: the component left the asset and another took its
 #             place; in_place: the same component stayed, and work was done on it
 #   meaning   what was done, in one sentence
+#   requires  the outcome fields an outcome naming this type must carry, each
+#             refused at intake by name when absent. Empty for most types
 # =============================================================================
 
 types:
   replaced:
     kind: replaced
     meaning: The component was removed and a different one installed in its place.
+    requires: []
 
   subpart_replaced:
     kind: in_place
     meaning: A part within the component was replaced, and the component kept its identity.
+    requires: []
 
   overhauled:
     kind: in_place
     meaning: The component was restored to a specified condition by a declared procedure.
+    requires: []
 
   adjusted:
     kind: in_place
     meaning: The component was adjusted, aligned or calibrated, with no part replaced.
+    requires: []
 
   serviced:
     kind: in_place
     meaning: The component was cleaned, lubricated, re-seated or reloaded, with no part replaced.
+    requires: []
+
+  temporary:
+    kind: in_place
+    meaning: A repair made to restore use for now, which a permanent repair is due to replace by a stated date.
+    requires: [permanent_repair_due]
