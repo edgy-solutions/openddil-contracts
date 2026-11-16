@@ -304,7 +304,7 @@ of golden vectors, never against each other's text:
 - **The key** is `lk2:` followed by the hex SHA-256 of the canonical string's UTF-8 bytes.
 - **The body** is `{"policy": <id>, "v": 2, "dims": {...}}`. Nation is `{"author": [sorted], "release": [sorted] or
   null}`, or for a rollup `{"rollup": true, "release": [sorted]}`, with no `author` key. A set dimension is a sorted
-  array, and a hierarchical one a string.
+  array, and a hierarchical one a string. The body may also carry `life` (§2b), which is outside the canonical form.
 - **No key** when:
   - the author set is empty and there is no rollup marker;
   - the marker and an author are both present;
@@ -335,11 +335,51 @@ of golden vectors, never against each other's text:
 - a second dimension, both empty and with values;
 - a hierarchical dimension;
 - the separators refused;
-- a single-author nation-only label, which must give the `lk1` key and not an `lk2` one.
+- a single-author nation-only label, which must give the `lk1` key and not an `lk2` one;
+- two labels that differ only in `life` (§2b), which must give one key;
+- a `urn:oid:` policy id (§2b), and a policy id that is not a URN, which is refused.
 
 **Not decided here.**
 - Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
 - The §3a ruling, which is separate.
+
+### 2b. What the key leaves out, and what the policy id is (proposed with §2a, 2026-11-16)
+
+Two label rules from the cross-domain readiness proposal (ADR-0061) are folded in here, so that they are ruled with
+the form. Their source is secondary: a vendor white paper's STANAG 4774 example, not the standard (ADR-0061, Sources).
+ADatP-4774 itself is unread.
+
+**Label lifecycle fields ride in the body, outside the key.**
+- A label may carry `created` (when the label was applied) and `review` (when its marking is due for review). They
+  sit in the body under `life`, beside `dims`:
+  `{"policy": <id>, "v": 2, "dims": {...}, "life": {"created": <time>, "review": <time> or null}}`. Times are
+  RFC 3339, in UTC.
+- **They never enter the canonical form or the key,** in `lk1` or in `lk2`. Two labels that differ only in `life` give
+  one key. So a record's age mints no new key, no new admitted set and no new shape (§2).
+- **The label table holds no `life`.** Its row is per key, and `life` is per record. A tier reads `life` from the
+  record's body, never from the cached row.
+- **The PDP never reads `life`.** A past review time is counted and reported. It is never a refusal. Making it one
+  would be its own decision.
+- **`life` is optional, and its absence is not a default.** No time is invented. A `life` with an undeclared member,
+  or a time that does not parse, is refused at the stamp, like a value that fails its format.
+- `lk1` keys do not change. Whether the `lk1` stamp writes `life` is the compatibility slice's decision. Its keys are
+  the same either way.
+- Basis: the white paper's example label carries a creation time and a review time, and it says the label "contains
+  label lifecycle information (creation data and review date), which is a key feature of STANAG 4774" (secondary).
+  `created` and `review` are this record's names, aligned to that concept and not taken from the standard.
+
+**The policy id is a URN. An OID is written in its `urn:oid:` form.**
+- A deployment declares its policy id as a URN (RFC 8141). A policy that is identified by an object identifier is
+  written `urn:oid:<dotted decimal>` (RFC 3061). The white paper's example does the same:
+  `PolicyIdentifier URI="urn:oid:…"`, paired with a short name (secondary).
+- The id must still match the compatibility slice's pattern, `^[a-z0-9][a-z0-9:._-]{0,62}$`
+  (`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.1). It is therefore lowercase and at most 63 characters. A
+  `urn:oid:` id fits.
+- **A policy id that is not a URN is refused when it is declared,** with the id named.
+- **The id is in the canonical form, so changing it changes every key.**
+  - A deployment whose declared id is not yet a URN keeps that id until it re-declares.
+  - The re-declaration is the slice's backfill (§1.4 there). Nothing rewrites a stored key in place.
+- The policy's short name is not part of the id and never enters the key. Whether the body carries it is open.
 
 ### 3. Derived records: a split by audience for composable rollups, high-water for single derived records
 
@@ -453,12 +493,13 @@ as amended by PR #281, "Classification is a label of declared dimensions"):
 
 | This record | STANAG 4774 / 4778 concept |
 |---|---|
-| The deployment's declared policy | Policy identifier (4774) |
+| The deployment's declared policy, a URN (§2b) | Policy identifier (4774). The example read carries a `urn:oid:` URI (secondary, §2b) |
+| A label's `life`: `created` and `review` (§2b), outside the key | The label's creation and review times (4774), from a secondary source (§2b) |
 | Hierarchical dimension | Classification (4774) |
 | Permissive set | Permissive category (4774) |
 | Restrictive set | Restrictive category (4774) |
 | Exclusionary | No 4774 category type in the sources read. It is carried as a declared policy |
-| The label stamped on the record and carried with it | Metadata binding (4778), as a concept only. `label_key` is not a cryptographic binding |
+| The label stamped on the record and carried with it | Metadata binding (4778), as a concept only. `label_key` is not a cryptographic binding. ADR-0061 designs a signed binding and builds none |
 
 ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-618). This record keeps that position, and its structured label fills the `policy_label` slot ADR-0029 reserved (ADR-0029:112-121).
 
