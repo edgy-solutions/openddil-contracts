@@ -43,10 +43,14 @@
 #   intake with the field named, and no due date is ever defaulted.
 #   - `temporary` is never a renewal. A renewal declaration naming it is
 #     refused: a temporary repair never starts a new life.
-#   - It says how long the repair is meant to hold, not what was done. Whether
-#     it also names the work (a second type) is open.
-#   - What tracks the permanent repair to its due date, and what an overdue one
-#     raises, is not decided here.
+#   - It says how long the repair is meant to hold. The work done on a
+#     temporary repair is identified by its repair type plus the work order
+#     reference, never by a note (review answer, 2026-11-16).
+#   - The permanent repair is tracked as a due item in the maintainer's day
+#     (DESIGN-2026-11-10-adr0058-first-increment §5), from a producer that reads
+#     temporary repairs and their due dates, alongside modification due dates.
+#     Turning a due item into a work order is iagent's (review answer,
+#     2026-11-16). The producer is not built, and this file does not name it.
 #   No BDAR standard or manual was read for this draft.
 #
 # NAMES
