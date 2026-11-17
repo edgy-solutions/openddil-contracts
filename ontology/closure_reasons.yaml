@@ -1,0 +1,204 @@
+# =============================================================================
+# Closure reasons: why a failure episode closed (ADR-0059 §4.1, §4.4)
+# =============================================================================
+# STATUS: ACCEPTED, ruled by the project owner 2026-11-16 (proposed
+# 2026-11-14). Nothing reads this file yet. It is
+# drafted so that the maintenance action record's completion contract can cite
+# it by name, and no outcome field is bound to it until that contract is merged.
+#
+# A closure reason says what the maintenance that answered an episode found.
+# The built-in test counts (ADR-0059 §4.1) and the remaining-life scoring
+# (DESIGN-2026-11-11-remaining-life-output-kind §5.2) are read from it, so the
+# values are declared here, once, rather than in a service.
+#
+# WHO SETS IT
+#   - A confirmed closure carries its reason in the completed work order's
+#     outcome, which returns through iagent (ADR-0059 §4.4). Only those
+#     closures count as `confirmed`.
+#   - A closure recorded at a tier, by a person or a workflow step, is
+#     declared-local and unconfirmed. It carries a reason from this list too,
+#     is counted under that reason, and is never counted as confirmed.
+#
+# CLOSED VOCABULARY
+#   Counts are summed at each tier and composed up the tiers (ADR-0059 §4.1),
+#   so a reason must mean the same thing at every tier and in every deployment.
+#   A deployment does not add values. It maps its maintenance system's codes to
+#   these in its own bundle. Adding a reason is an amendment to this contract,
+#   never a local extension. A code with no mapping is refused at intake with
+#   its code named. It is never given a default reason.
+#
+# STANDARDS (aligned 2026-11-16)
+#   Each reason records how it lines up with the ASD S-Series maintenance
+#   feedback terms, read at these issues:
+#     - S5000F Issue 4.0 (in-service data feedback);
+#     - S3000L Issue 3.0 (logistic support analysis);
+#     - S1000D Issue 7 (technical publications; its information codes).
+#   They are cited by chapter, paragraph and table, and paraphrased. Attribute
+#   and value names appear only as identifiers, and no text is copied.
+#   S-Series valid values are recommended, not mandatory. A project may remove
+#   values or add its own, with its own source annotation (S5000F Chap 26 §4;
+#   Chap 27 §5.5). So a reason marked `framework_chosen` is a project value of
+#   that kind: kept because the S-Series has no equivalent, never a replacement
+#   for an S-Series value. A reason marked `corresponds` or `partial` names the
+#   S-Series value a deployment writes when it exports to an S5000F feed.
+#   EXPORT OF A FRAMEWORK-CHOSEN VALUE (accepted 2026-11-16): an S5000F export
+#   carries it as itself, a declared project-specific value with the project's
+#   own source annotation (S5000F Chap 26 §4; Chap 27 §5.5), and never maps it
+#   onto the nearest S-Series value. The cost: a receiver without the
+#   project's value list sees only an unknown project value.
+#   Conformance claims to any S-Series specification wait for legal review.
+#   ISO 14224 is unread (paywalled). Nothing here is aligned to it.
+#
+# NOT A CLOSURE
+#   A cancelled or deferred work order closes nothing and carries no reason
+#   from this list. iagent's architect answered on 2026-11-14 (provisional
+#   until checked) that it still returns a completion record, whose outcome
+#   says cancelled or deferred and which closes nothing.
+#
+# CURATION RULES (treat this file as code):
+#   - Changes require a PR with a domain expert reviewer.
+#   - A change to `confirms_failure`, `ends_life`, `censors_life`,
+#     `in_reliability` or `in_bit_counts` changes every count and score read
+#     from it. It needs its own decision record.
+#
+# FIELDS
+#   meaning          what a maintainer found, in one sentence
+#   confirms_failure true only for a verified failure. Read by §4.1's
+#                    confirmed counts and by the remaining-life join
+#   ends_life        whether the closure ends the confirmed component's life
+#                    as a failure, for remaining-life scoring
+#   censors_life     whether the closure censors the component's life for
+#                    remaining-life scoring: an output computed before it,
+#                    with no confirmed failure between, is censored at the
+#                    closure and never scored as right or wrong. Never true
+#                    with ends_life. What follows the closure is the repair's
+#                    to decide (repair_types.yaml), as for any repair
+#   in_reliability   whether the closure enters §4.1's reliability counts and
+#                    rates: confirmed failures, closures by reason as a
+#                    denominator, and the no-fault-found rate. False only for
+#                    a closure whose cause is outside the component's
+#                    reliability. Such a closure is still counted, under its
+#                    own reason, and reported as excluded
+#   in_bit_counts    whether the episode enters §4.1's built-in test counts:
+#                    detection, isolation and the indications not confirmed.
+#                    False means a built-in test indication closed under this
+#                    reason is neither a detection nor a false alarm
+#   candidate        true for a value proposed but off unless a deployment
+#                    switches it on in its bundle
+#   basis            where the term comes from, and what was read
+#   alignment        corresponds: an S-Series value means the same thing;
+#                    partial: an S-Series value or structure covers part of
+#                    it, and aligned_to says which part; framework_chosen: the
+#                    S-Series has no equivalent, and the value is kept as ours
+#   aligned_to       the S-Series clauses and value identifiers, or for
+#                    framework_chosen, the nearest one and why it does not fit
+# =============================================================================
+
+reasons:
+  confirmed:
+    meaning: The reported failure was verified on the confirmed component.
+    confirms_failure: true
+    ends_life: true
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
+    candidate: false
+    basis: >-
+      MIL-HDBK-2155 failure verification: a reported failure is "verified as
+      actual or an explanation provided for lack of verification" (ADR-0059 §4.1).
+    alignment: corresponds
+    aligned_to: >-
+      S5000F Chap 24 §4.105.3.1 shopFindingsFaultConfirmed, value C confirmed
+      (Chap 26 Table 4): the fault was confirmed. S5000F records that finding
+      on a shop findings record after removal (Chap 4 §4.7, §5.5.1). Ours is
+      the closure of the episode from the work order's outcome, so an export
+      writes C on the shop record when there is one, and eventConfirmedStatus
+      C on the event (Chap 24 §4.52.3.2; Chap 26 Table 4) when there is not.
+
+  no_fault_found:
+    meaning: The indication was examined and no failure was found on any candidate component.
+    confirms_failure: false
+    ends_life: false
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
+    candidate: false
+    basis: >-
+      Not a handbook term. A closure value name aligned to MIL-HDBK-2155's
+      "explanation provided for lack of verification" (ADR-0059 §4.1).
+    alignment: corresponds
+    aligned_to: >-
+      S5000F Chap 24 §4.105.3.1 shopFindingsFaultConfirmed, value N
+      noFaultFound (Chap 26 Table 4). S5000F's no-fault-found report records
+      the inspection or test done when no defect was found (Chap 4 §4.7,
+      §5.5.1). The name is the same term.
+
+  cannot_duplicate:
+    meaning: The reported symptom could not be reproduced, so it was neither verified nor ruled out.
+    confirms_failure: false
+    ends_life: false
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
+    candidate: false
+    basis: >-
+      A closure value name. Kept apart from no_fault_found because one says the
+      unit was examined and found sound, the other that the symptom was not seen.
+    alignment: framework_chosen
+    aligned_to: >-
+      No S5000F equivalent for hardware. shopFindingsFaultConfirmed has only
+      confirmed and noFaultFound (Chap 24 §4.105.3.1; Chap 26 Table 4).
+      Mapping it to N would lose the distinction from no_fault_found, so an
+      export carries it as a declared project-specific value instead (Chap 26
+      §4; Chap 27 §5.5; see the header). The nearest S5000F value,
+      softwareErrorReproducibility N (Chap 26 Table 4), describes a software
+      error only.
+
+  retest_okay:
+    meaning: A unit removed at one level of repair was tested at the next and passed.
+    confirms_failure: false
+    ends_life: false
+    censors_life: false
+    in_reliability: true
+    in_bit_counts: true
+    candidate: true
+    basis: >-
+      MIL-HDBK-2165's "retest okay", for a deployment that repairs at two
+      levels (ADR-0059 §4.1). A candidate fourth value, off by default.
+    alignment: partial
+    aligned_to: >-
+      S5000F has no closure value for it, but holds the same facts in two
+      records. A removal (Chap 24 §4.50.3.4 partActionType U, partActionCause
+      F failure) is followed by a shop findings record whose reason for
+      submission is fault investigation and whose finding is N noFaultFound
+      (Chap 24 §4.105.3.1; Chap 26 Table 4; Chap 4 §3.7, §4.7). The name stays
+      MIL-HDBK-2165's.
+
+  battle_damage:
+    meaning: The component was damaged by hostile action, and the damage, not a failure, is what the maintenance answered.
+    confirms_failure: false
+    ends_life: false
+    censors_life: true
+    in_reliability: false
+    in_bit_counts: false
+    candidate: false
+    basis: >-
+      Added from battle damage assessment and repair (BDAR) on 2026-11-16, on
+      the project owner's order. Damage from hostile action says nothing about
+      the component's reliability, so it is not a failure and is outside every
+      reliability count and rate. It is counted under its own reason and
+      reported as excluded. A built-in test indication it closes is neither a
+      detection nor a false alarm. Remaining-life outputs computed before it
+      are censored at it. No BDAR doctrine manual was read. S1000D's battle
+      damage repair codes were (see aligned_to), and they set no counting rule.
+    alignment: partial
+    aligned_to: >-
+      S5000F records damage as its own record on the event (Chap 24 §4.42.3.1
+      Damage), and its cause through the damage definition's special event,
+      whose cause category includes CBT combatSpecialEvent (Chap 26 Table 4).
+      S5000F has no closure reason for it. shopFindingsFaultCode D damage
+      (Chap 24 §4.105.3.1) covers damage of any cause, not hostile action
+      only. S1000D Issue 7 Chap 8.4.2 Table 9 codes 680 to 689 name the battle
+      damage repair work: damage assessment (683), utilization degradation
+      (684), repair (685), isolation (686) and the function test after repair
+      (687). The closure value name is ours.

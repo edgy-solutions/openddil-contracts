@@ -57,6 +57,7 @@ ADR_RE = re.compile(r"ADR-\d{4}")
 # under ontology/ needs a row here, and every path has to resolve.
 DICTIONARY = [
     ("asset_identity_aliases.yaml", "aliases.dis"),
+    ("closure_reasons.yaml", "reasons"),
     ("dis_appearance.yaml", "populating_sources"),
     ("dis_appearance.yaml", "appearance"),
     ("dis_condition.yaml", "level_order"),
@@ -68,6 +69,7 @@ DICTIONARY = [
     ("dis_entity_types.yaml", "mappings"),
     ("platform_reference.yaml", "platforms"),
     ("platform_variant_aliases.yaml", "aliases.dis"),
+    ("repair_types.yaml", "types"),
 ]
 
 
