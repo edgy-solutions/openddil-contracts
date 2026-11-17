@@ -1,6 +1,6 @@
 """Golden vectors for the class row (rollup marker) form.
 
-Status: Builds on the PROPOSED ADR-0055 §2a (#38) rollup marker, not a ruled form.
+Status: Builds on the ADR-0055 §2a rollup marker, accepted 2026-11-16.
 """
 
 import json

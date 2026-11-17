@@ -1,10 +1,10 @@
 """The ADR-0055 section 3a audience split, with the withheld tally.
 
-Status: Builds on the PROPOSED ADR-0055 §3a ruling (an unlabelled contributor forms no class and is counted in a withheld
-tally). It is not a ruled behaviour: the built regional rollup keeps an empty-audience class, and which one
-stands is an owed ruling.
+Status: Builds on ADR-0055 §3a as written, ACCEPTED 2026-11-16 (an unlabelled contributor forms no class and is
+counted in a withheld tally). The built regional rollup still keeps an empty-audience class, so it differs from
+the ruling until it is changed.
 
-The class row's label form builds on the PROPOSED ADR-0055 §2a (#38), not a ruled one: a rollup's nation value carries
+The class row's label form builds on ADR-0055 §2a, accepted 2026-11-16: a rollup's nation value carries
 an explicit "rollup, no author" marker, {"rollup": True, "release": [...]}, and no author key. An empty author set is
 never read as a rollup.
 

@@ -1,11 +1,11 @@
 """The downgrade record (ADR-0055 section 3 "Both rules", check 6).
 
-Status: Builds on the PROPOSED ADR-0055 §3a ruling (an unlabelled contributor forms no class and is counted in a withheld
-tally). It is not a ruled behaviour: the built regional rollup keeps an empty-audience class, and which one
-stands is an owed ruling.
+Status: Builds on ADR-0055 §3a as written, ACCEPTED 2026-11-16 (an unlabelled contributor forms no class and is
+counted in a withheld tally). The built regional rollup still keeps an empty-audience class, so it differs from
+the ruling until it is changed.
 
-A floor may be in class form: on a permissive dimension with an author, the PROPOSED ADR-0055 §2a (#38) rollup marker
-{"rollup": True, "release": [...]}, which has no author and counts by its release only. A label in marker form never
+A floor may be in class form: on a permissive dimension with an author, the ADR-0055 §2a rollup marker (accepted
+2026-11-16), {"rollup": True, "release": [...]}, which has no author and counts by its release only. A label in marker form never
 validates, so a downgrade cannot hand out a rollup label.
 
 A downgrade is a record of four things: the label it gives, the reason, the

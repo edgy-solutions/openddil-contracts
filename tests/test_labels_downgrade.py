@@ -1,8 +1,8 @@
 """Tests for openddil_labels.downgrade, named after ADR-0055 check 6.
 
-Status: Builds on the PROPOSED ADR-0055 §3a ruling (an unlabelled contributor forms no class and is counted in a withheld
-tally). It is not a ruled behaviour: the built regional rollup keeps an empty-audience class, and which one
-stands is an owed ruling.
+Status: Builds on ADR-0055 §3a as written, ACCEPTED 2026-11-16 (an unlabelled contributor forms no class and is
+counted in a withheld tally). The built regional rollup still keeps an empty-audience class, so it differs from
+the ruling until it is changed.
 """
 
 import inspect
