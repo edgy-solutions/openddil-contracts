@@ -15,7 +15,7 @@ import pathlib
 import sys
 
 from .admission import Refused
-from .model import Declaration, Dimension
+from .lk2 import declaration_from_data
 from .rollup import admits_class, class_label, split_by_audience
 
 POLICY_ID = "example:policy-1"
@@ -47,17 +47,12 @@ def declaration_data():
 
 
 def load_declaration(data):
-    """Build a Declaration from declaration_data()'s shape."""
-    makers = {
-        "permissive": lambda d: Dimension.permissive(
-            d["name"], d["vocabulary"], d["owner"], has_author=d["has_author"]
-        ),
-        "restrictive": lambda d: Dimension.restrictive(d["name"], d["vocabulary"], d["owner"]),
-        "exclusionary": lambda d: Dimension.exclusionary(d["name"], d["vocabulary"], d["owner"]),
-        "hierarchical": lambda d: Dimension.hierarchical(d["name"], d["vocabulary"], d["owner"]),
-    }
-    dims = tuple(makers[d["type"]](d) for d in data["dimensions"])
-    return Declaration(data["policy_id"], dims)
+    """Build a Declaration from declaration_data()'s shape.
+
+    Delegates to lk2.declaration_from_data: every dimension must have a bool has_author, and true
+    only on a permissive dimension.
+    """
+    return declaration_from_data(data)
 
 
 def _lab(author, release, holders=("H1",)):

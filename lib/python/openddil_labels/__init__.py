@@ -2,7 +2,7 @@
 
 Implements the first slice of ADR-0055 (SPEC-labels.md): model, admission and
 the lk1 key, and the second slice (SPEC-labels-split.md): the §3a split and the
-downgrade record.
+downgrade record, and the third slice (ADR-0055 §2a/§2b): the lk2 key.
 
 Nothing calls this module yet.
 """
@@ -30,6 +30,30 @@ from .downgrade import (
     record_downgrade,
 )
 from .lk1 import NATION_RE, POLICY_RE, canonical_lk1, compile_lk1, generate_vectors, verify
+from .lk2 import (
+    AUTHOR_EMPTY,
+    DECLARATION_NOT_LK2,
+    FORM_IS_LK1,
+    LIFE_MALFORMED,
+    LIFE_MEMBERS,
+    NO_POLICY,
+    POLICY_ID_NOT_URN_OID,
+    RELEASE_ABSENT,
+    ROLLUP_WITH_AUTHOR,
+    TIME_RE,
+    URN_OID_RE,
+    VALUE_RE,
+    NoKey,
+    canonical_lk2,
+    check_lk2_declaration,
+    check_policy_id,
+    compile_label,
+    compile_lk2,
+    declaration_from_data,
+    verify_label,
+    verify_lk2,
+)
+from .lk2 import generate_vectors as generate_lk2_vectors
 from .model import (
     EXCLUSIONARY,
     HIERARCHICAL,
@@ -39,9 +63,31 @@ from .model import (
     Dimension,
     normalise_name,
 )
-from .rollup import NO_LABEL, RollupClass, Split, admits_class, class_label, split_by_audience
+from .rollup import NO_LABEL, RollupClass, Split, admits_class, class_key, class_label, split_by_audience
 
 __all__ = [
+    "AUTHOR_EMPTY",
+    "DECLARATION_NOT_LK2",
+    "FORM_IS_LK1",
+    "LIFE_MALFORMED",
+    "LIFE_MEMBERS",
+    "NO_POLICY",
+    "POLICY_ID_NOT_URN_OID",
+    "RELEASE_ABSENT",
+    "ROLLUP_WITH_AUTHOR",
+    "TIME_RE",
+    "URN_OID_RE",
+    "VALUE_RE",
+    "NoKey",
+    "canonical_lk2",
+    "check_lk2_declaration",
+    "check_policy_id",
+    "compile_label",
+    "compile_lk2",
+    "declaration_from_data",
+    "generate_lk2_vectors",
+    "verify_label",
+    "verify_lk2",
     "DOWNGRADE_LOWERS_NOTHING",
     "DOWNGRADE_NO_INPUTS",
     "DOWNGRADE_NO_OWNER",
@@ -52,6 +98,7 @@ __all__ = [
     "RollupClass",
     "Split",
     "admits_class",
+    "class_key",
     "class_label",
     "record_downgrade",
     "split_by_audience",

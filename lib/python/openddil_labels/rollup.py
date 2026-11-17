@@ -15,9 +15,10 @@ class").
 
 What this slice does not do:
 
-- No key for a class row. Its nation value is the rollup marker with no
-  author, and lk1 keys only author|release; the key form for a marker row is owed
-  (it sits with the lk2 ruling). class_label returns a label, never a key.
+- class_key gives a class row its lk2 key, per ADR-0055 §2a (accepted 2026-11-16). A
+  declaration whose id is not urn:oid: gets policy_id_not_urn_oid, so
+  vectors/class_label.json, declared under example:policy-1, has no keys until it
+  re-declares. class_label still returns a label, never a key.
 - No sums or rows, and no stamping. The caller computes rows from each class's
   members.
 
@@ -28,7 +29,8 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 
-from .admission import Refused, Valid, _is_str_collection, _viewer_entries, validate
+from .admission import VALUE_MALFORMED, Refused, Valid, _is_str_collection, _viewer_entries, validate
+from .lk2 import NoKey, compile_lk2
 from .model import EXCLUSIONARY, HIERARCHICAL, PERMISSIVE, RESTRICTIVE, normalise_name
 
 NO_LABEL = "no_label"
@@ -169,6 +171,20 @@ def _class_form(label, declaration):
             return None
         out[dim.name] = sorted(set(v))
     return out
+
+
+def class_key(class_label, declaration):
+    """(label_key, body) for a class row, or a NoKey. Never raises.
+
+    A class row always carries the rollup marker, so its form is lk2, never lk1.
+    """
+    try:
+        form = _class_form(class_label, declaration)
+        if form is None:
+            return NoKey(VALUE_MALFORMED, None)
+        return compile_lk2(form, declaration, life=None)
+    except Exception:
+        return NoKey(VALUE_MALFORMED, None)
 
 
 def admits_class(viewer, class_label, declaration):
