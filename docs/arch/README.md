@@ -54,6 +54,10 @@ Every view has a Sources table with a Decision and an Evidence column. In every 
 
 [`model/openddil.sysml`](model/openddil.sysml) holds the structure in SysML v2 textual notation. A view pulls a package in with a `<!-- model: Package -->` marker, and the renderer inlines it. GitHub does not render SysML, so anything meant to be looked at as a picture is Mermaid in the view. On 2026-11-02 the file parsed with every name resolved under OMG's SysML v2 pilot implementation 0.63.1. [`sysml-model.yml`](../../.github/workflows/sysml-model.yml) repeats that parse on any change under `model/`, with the parser pinned, and also requires the parser to refuse a copy with a syntax fault and a copy with an unresolved reference.
 
+## Where the tools live
+
+The tools are [arch-kit](https://github.com/edgy-solutions/arch-kit), pinned in `.github/workflows/check-views.yml` to commit `2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b` (phase 1, step S6d). The commands below name `docs/arch/tools/<tool>.py`, which is where the tools were before they moved. Today the same tool is `arch-kit --config docs/arch/arch-kit.yaml <tool>`, run from the repository root with the kit installed (`pip install` of a kit checkout). `docs/arch/tools/` keeps only this repository's tests and their data, its sample lists, `kit_path.py` and `refresh_specimen.py`; the tests need `ARCH_KIT` set to a kit checkout. The old tools, as they were at `db08b35`, are kept in git history for the golden job: it builds the export with them and with the pinned kit, and `docs/arch/golden-allow.txt` names every difference, with its reason (`scripts/golden.sh`, `scripts/golden_compare.py`).
+
 ## Running the tools
 
 Python 3.10 or later with PyYAML, and `helm` for a real render. Nothing here reaches a cluster.
