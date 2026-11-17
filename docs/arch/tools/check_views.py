@@ -11,6 +11,8 @@ Usage:
         --chart DIR --values FILE [--values FILE ...] --release NAME \
         --readiness FILE --barred FILE [--barred FILE ...]
     python docs/arch/tools/check_views.py [--root docs/arch] --allow-partial REASON
+    --record FILE (either form) checks a deployment's own capability record
+    in place of <root>/capability-record.yaml.
 
 Rules: exports, appendix-a, view-files, slots, links, sources-table,
 marks, model, capabilities, trace, outputs, generated, phases, derived,
@@ -76,8 +78,9 @@ class InputError(Exception):
 class Tree:
     """Everything the rules read, loaded once."""
 
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, record: Path | None = None):
         self.root = root
+        self.record = record or root / "capability-record.yaml"
         self.profiles = self.yaml(root / "profiles.yaml")
         self.slots = self.yaml(root / "slots.yaml")
         self.views: dict = self.profiles.get("views") or {}
@@ -566,7 +569,7 @@ def rule_phases(t: Tree) -> list[str]:
     if total == 1 and PHASES_HOME not in where:
         fails.append(f"phases: the capability-phases marker is not in {PHASES_HOME}")
     try:
-        record = capability_phases.load_record(t.root / "capability-record.yaml")
+        record = capability_phases.load_record(t.record)
         capabilities = capability_phases.model_capabilities(t.sysml)
     except capability_phases.InputError as e:
         raise InputError(str(e))
@@ -583,7 +586,7 @@ def rule_derived(t: Tree) -> list[str]:
             fails.append(f"derived: {mk} appears {sum(where.values())} times, in "
                          f"{', '.join(sorted(where)) or 'no view'}; expected once, in {home}")
         try:
-            derived.build(mk, t.root, t.root / "capability-record.yaml", t.sysml, t.masked)
+            derived.build(mk, t.root, t.record, t.sysml, t.masked)
         except capability_phases.CheckError as e:
             fails += [f for f in str(e).splitlines() if f]
         except data_exchange.InputError as e:
@@ -594,7 +597,7 @@ def rule_derived(t: Tree) -> list[str]:
 def rule_quotes(t: Tree, a: argparse.Namespace) -> list[str]:
     """The evidence the table prints, and the record's own text, carry no barred value."""
     try:
-        record = capability_phases.load_record(t.root / "capability-record.yaml")
+        record = capability_phases.load_record(t.record)
         capabilities = capability_phases.model_capabilities(t.sysml)
         decisions = t.root.parent.parent / "decisions"
         readiness = t.text(Path(a.readiness))
@@ -608,14 +611,14 @@ def rule_quotes(t: Tree, a: argparse.Namespace) -> list[str]:
         raise InputError(str(e))
     except capability_phases.CheckError as e:
         raise InputError(str(e))
-    cells["the record"] = [t.text(t.root / "capability-record.yaml")]
+    cells["the record"] = [t.text(t.record)]
     return capability_phases.scan_barred(cells, barred)
 
 
 def rule_floor(t: Tree, a: argparse.Namespace) -> list[str]:
     """The render's workloads, kinds, flags and routes are claimed, and what claims them is built."""
     try:
-        record = capability_phases.load_record(t.root / "capability-record.yaml")
+        record = capability_phases.load_record(t.record)
         capabilities = capability_phases.model_capabilities(t.sysml)
         statuses = capability_phases.statuses_of(record, t.root.parent.parent / "decisions")
         items, _ = capability_floor.render_inputs(a.chart, a.values, a.release)
@@ -645,6 +648,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--release", help="the Helm release name")
     ap.add_argument("--readiness", help="the readiness document the evidence quotes come from")
     ap.add_argument("--barred", action="append", default=[], help="a barred list file (repeatable)")
+    ap.add_argument("--record", help="the capability record to check (default: <root>/capability-record.yaml). "
+                    "A deployment's own record, as passed to render_html.py --record")
     ap.add_argument("--allow-partial", metavar="REASON", help="run without quotes and floor, and say why")
     a = ap.parse_args(argv)
     missing = [flag for flag, dest in PARTIAL_FLAGS if not getattr(a, dest)]
@@ -658,7 +663,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {', '.join(missing)} not given; give them, or --allow-partial REASON", file=sys.stderr)
         return EXIT_INPUT
     try:
-        tree = Tree(Path(a.root))
+        tree = Tree(Path(a.root), Path(a.record) if a.record else None)
         fails: list[str] = []
         for check in CHECKS:
             fails += check(tree)

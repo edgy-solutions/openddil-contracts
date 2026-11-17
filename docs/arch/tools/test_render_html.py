@@ -243,6 +243,23 @@ class Markdown(unittest.TestCase):
             render_html.make_mmdc(str(HERE / "no-such-mmdc"), None)
 
 
+class NameRecord(unittest.TestCase):
+    LINK = "[capability-record.yaml](../capability-record.yaml)"
+
+    def test_default_record_is_unchanged(self):
+        d = ARCH / "capability-record.yaml"
+        self.assertEqual(capability_phases.name_record(f"a {self.LINK} b", d, d), f"a {self.LINK} b")
+
+    def test_other_record_replaces_every_link(self):
+        out = capability_phases.name_record(f"{self.LINK} and {self.LINK}", Path("other.yaml"), ARCH / "capability-record.yaml")
+        self.assertEqual(out.count("`capability-record.yaml`, the deployment's own"), 2)
+        self.assertNotIn("](", out)
+
+    def test_other_record_without_the_link_is_a_check_error(self):
+        with self.assertRaises(CheckError):
+            capability_phases.name_record("reworded", Path("other.yaml"), ARCH / "capability-record.yaml")
+
+
 class Args(unittest.TestCase):
     def test_chart_values_release_and_out_are_required(self):
         base = ["--out", "x.html", "--chart", "c", "--values", "v", "--release", "r"]
