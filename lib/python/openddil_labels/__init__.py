@@ -64,7 +64,7 @@ from .model import (
     Dimension,
     normalise_name,
 )
-from .rollup import NO_LABEL, RollupClass, Split, admits_class, class_label, split_by_audience
+from .rollup import NO_LABEL, RollupClass, Split, admits_class, class_key, class_label, split_by_audience
 
 __all__ = [
     "AUTHOR_EMPTY",
@@ -100,6 +100,7 @@ __all__ = [
     "RollupClass",
     "Split",
     "admits_class",
+    "class_key",
     "class_label",
     "record_downgrade",
     "split_by_audience",
