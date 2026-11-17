@@ -1,7 +1,8 @@
 # =============================================================================
 # Repair types: what was done to a component to close an episode
 # =============================================================================
-# STATUS: PROPOSED 2026-11-14. Provisional. Nothing reads this file yet. It is
+# STATUS: ACCEPTED, ruled by the project owner 2026-11-16 (proposed
+# 2026-11-14). Nothing reads this file yet. It is
 # drafted so that the maintenance action record's completion contract can cite
 # it by name, and no outcome field is bound to it until that contract is merged.
 #
@@ -74,7 +75,7 @@
 #   - S5000F records a replacement as part actions per part (uninstall and
 #     install, with a cause), not as one repair type. An export to an S5000F
 #     feed therefore writes one or more part actions from one outcome.
-#   - Export of a framework-chosen type (proposed 2026-11-16): an S5000F
+#   - Export of a framework-chosen type (accepted 2026-11-16): an S5000F
 #     export carries it as itself, a declared project-specific value with the
 #     project's own source annotation (S5000F Chap 26 §4; Chap 27 §5.5), and
 #     never maps it onto the nearest S-Series value. The cost: a receiver

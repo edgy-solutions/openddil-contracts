@@ -1,7 +1,8 @@
 # =============================================================================
 # Closure reasons: why a failure episode closed (ADR-0059 §4.1, §4.4)
 # =============================================================================
-# STATUS: PROPOSED 2026-11-14. Provisional. Nothing reads this file yet. It is
+# STATUS: ACCEPTED, ruled by the project owner 2026-11-16 (proposed
+# 2026-11-14). Nothing reads this file yet. It is
 # drafted so that the maintenance action record's completion contract can cite
 # it by name, and no outcome field is bound to it until that contract is merged.
 #
@@ -40,7 +41,7 @@
 #   that kind: kept because the S-Series has no equivalent, never a replacement
 #   for an S-Series value. A reason marked `corresponds` or `partial` names the
 #   S-Series value a deployment writes when it exports to an S5000F feed.
-#   EXPORT OF A FRAMEWORK-CHOSEN VALUE (proposed 2026-11-16): an S5000F export
+#   EXPORT OF A FRAMEWORK-CHOSEN VALUE (accepted 2026-11-16): an S5000F export
 #   carries it as itself, a declared project-specific value with the project's
 #   own source annotation (S5000F Chap 26 §4; Chap 27 §5.5), and never maps it
 #   onto the nearest S-Series value. The cost: a receiver without the

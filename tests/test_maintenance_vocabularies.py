@@ -2,7 +2,8 @@
 test_maintenance_vocabularies.py — the closure reason and repair type
 vocabularies (ontology/closure_reasons.yaml, ontology/repair_types.yaml).
 
-Proposed 2026-11-14 and provisional: nothing reads them yet. These tests hold
+Accepted 2026-11-16, ruled by the project owner (proposed 2026-11-14).
+Nothing reads them yet. These tests hold
 the rules their headers state, so a later edit cannot quietly break one.
 """
 import pathlib
