@@ -95,3 +95,14 @@ export:
     min_pages: 30
     min_tables: 30
     min_tokens: 1000
+decisions:
+  index:
+    register: FOLLOW-UPS.md              # the register index: one row per register id
+    readme: README.md                    # the document index: every document is referenced here
+    register_homes: [ADR-*.md, GENERALIZATION-DEBT.md]     # where register ids are declared, and their status tokens
+    indexed: [ADR-*.md, AUDIT-*.md, PLAN-*.md, DESIGN-*.md, BRIEF-*.md,
+              GENERALIZATION-DEBT.md, PRINCIPLES.md, FOLLOW-UPS.md, EXCHANGE-LEDGER.md]   # each must be in readme
+    local_prefix: openddil               # a `local_prefix:ADR-NNNN` citation must resolve to a document here
+    foreign:                             # other repositories this corpus cites, in order
+      - prefix: iagent
+        pin_check: scripts/check-iagent-citation-pins.sh   # repository-relative
