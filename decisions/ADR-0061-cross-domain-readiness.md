@@ -2,25 +2,25 @@
 
 ## Status
 
-**PROPOSED — 2026-11-16. Design only. Nothing here is built.** Ordered 2026-11-16 by the project owner, with the seven
-decisions below named in the order.
+**ACCEPTED, ruled by the project owner 2026-11-16. Design only. Nothing here is built.** Proposed 2026-11-16. Ordered
+2026-11-16 by the project owner, with the seven decisions below named in the order.
 **Builds on:** ADR-0055 (a label is a set of declared dimensions; §6, alignment by concept name; §7, the accreditation
 boundary); ADR-0046 (destinations, routes and kinds); ADR-0029 (the releasability label); ADR-0060 (opaque ids in
 spans and logs).
 **Folds into ADR-0055:** the two label rules (Decisions 1 and 2) are written as ADR-0055 §2b on the `lk2` proposal
-branch (PR #38), so that they are ruled with the key form, not after it.
+branch (PR #38), so that they are ruled with the key form, not after it. Both were ruled 2026-11-16.
 **Read at:** working trees of 2026-11-16. Line numbers move with them. These are reads, not runs.
 **Reviewed 2026-11-16:**
 - Decision 3 is corrected to a staged rollout: report mode first, then enforcement per kind by declaration.
 - The choices made inside the seven decisions are accepted.
-- The six open questions have proposed answers (Proposed answers, below). They are not ruled.
+- The six open questions' answers (Answers, below) are ruled as written, 2026-11-16.
 
 **Revised 2026-11-16, after reading the standards.** ADatP-4774 and ADatP-4778.2 were read, and every statement that
 was marked secondary or registry was checked against them. Each one now cites a clause, or is corrected, or is kept as
 secondary because neither document settles it. The changes are listed under "Corrections after reading the
-standards". Five new points came out of the reading. The project owner's proposed answers to them are recorded under
-New points, pending ruling. One half of C, provenance, did not fit the text as first proposed. Option (iv) is now
-recommended there, with the alternatives listed.
+standards". Five new points came out of the reading. The project owner's answers to them are recorded under
+New points, and are ruled as written, 2026-11-16. One half of C, provenance, did not fit the text as first proposed.
+Option (iv) is ruled there. The alternatives stay listed.
 
 ## Sources, and how much of each was read
 
@@ -186,7 +186,7 @@ Written as ADR-0055 §2b (PR #38). In short:
 - `life` is optional and never defaulted. An undeclared member or a bad time is refused at the stamp.
 - **A label without both times cannot be written as a 4774 label.** 4774 requires `CreationDateTime` always, and
   `ReviewDateTime` whenever there is no `SuccessionHandling`, which is not taken up here (finding 3).
-- **The review time comes from a declared rule, never a default** (New point A). Proposed:
+- **The review time comes from a declared rule, never a default** (New point A). Ruled:
   - A policy that is exported as 4774 labels (New point D) declares a `review_period`. It is an ISO 8601 duration in
     whole days, `P<n>D`, so adding it gives exactly one answer.
   - Under such a policy, the stamp writes `CreationDateTime` as the stamp time, and `ReviewDateTime` as that time plus
@@ -225,7 +225,7 @@ Applies to every kind that a destination `accepts` (ADR-0046 §1), whether or no
 - **Every string is bounded or declared free text.** A string property is bounded when it has an `enum`, a `const`, a
   `pattern`, or a `format` from a declared list (`date-time`, `date`, `uuid` to begin with). Any other string must
   carry `x-free-text: true` and a `maxLength`.
-- **Every array declares `maxItems`** (proposed answer 4), on the same reasoning as a bounded string.
+- **Every array declares `maxItems`** (answer 4), on the same reasoning as a bounded string.
 - `maxLength` alone does not make a string bounded. A long string with no pattern is free text and must say so.
 
 **Rolled out in stages: report mode first, then enforcement per kind by declaration** (review, 2026-11-16).
@@ -275,7 +275,7 @@ Basis: finding 11 (secondary). Free text is what a format check cannot judge.
   comes back.
 - Its transport is a `topic`: the hand-off is the write to a topic that the boundary device reads. An `http` transport
   is refused for a one-way destination, because HTTP needs an answer. A file drop is the next candidate, and 4778.2
-  has a profile for it (proposed answer 5).
+  has a profile for it (answer 5).
 - **No 4778.2 profile covers a message topic** (findings 8 and 9). How a binding rides on a topic record is decided
   when a boundary device that reads topics is named. The nearest profiles are the HTTP header (4778.2 §7.5) and the
   sidecar file (§9.5).
@@ -308,7 +308,7 @@ Basis: finding 11 (secondary). Free text is what a format check cannot judge.
   only records the gate admitted on that route, so it names nothing the destination may not hold.
 - **The sending tier keeps every manifest durably, in a projection table,** not only in a workflow journal. A durable
   record that lives only in a journal is lost when the journal is wiped.
-- **Cadence** (proposed answer 1): a manifest is sent when N records or T seconds have passed, whichever comes
+- **Cadence** (answer 1): a manifest is sent when N records or T seconds have passed, whichever comes
   first. When the route is idle, an empty heartbeat manifest is sent every T seconds, so the far side can tell
   silence from loss. N and T are declared per route.
 - **An empty manifest's label is open.** The high-water of no entries is no label, and an unlabelled record is
@@ -343,7 +343,7 @@ it. The decision is now in two parts.
 - A receiver recomputes `label_key` from the body (as today), checks the bound data against the reference, and checks
   the signature. Any mismatch is a refusal.
 
-**No binding inside one domain; bind at the boundary only** (New point B, proposed).
+**No binding inside one domain; bind at the boundary only** (New point B, ruled).
 - Inside a domain, `label_key` and the PEP already tie a record to its label and enforce it.
 - An XML binding on every internal record would add cost and no benefit.
 - The JWS form is parked: a detached JWS (RFC 7515) over the RFC 8785 bytes of
@@ -354,11 +354,11 @@ it. The decision is now in two parts.
 - `label_key` stays a digest. It is never a signature, and the binding never replaces it.
 - No key is generated, no field is added to any kind, and no service signs or checks anything until key management is
   decided. That is open.
-- **The algorithm is declared per deployment, never hard-coded** (proposed answer 2). It is chosen from 4778.2's
+- **The algorithm is declared per deployment, never hard-coded** (answer 2). It is chosen from 4778.2's
   mandatory and optional lists, never a prohibited one, and a national or organizational policy may narrow it further
   (finding 10). A receiver accepts only the algorithm its deployment declares, never one that the signature names
   alone.
-- **Keys are per tier** (proposed answer 2). An XML Signature names its key by X.509 certificate (finding 10), so a
+- **Keys are per tier** (answer 2). An XML Signature names its key by X.509 certificate (finding 10), so a
   tier's key is a certificate. Whether certificates ride in each binding is declared per route: 4778.2 includes them in
   high-throughput systems and, for CMS, omits them on low-bandwidth tactical links (finding 10). Rotation and
   distribution stay open until a real deployment names its PKI.
@@ -370,7 +370,7 @@ Ch 2 Annex A. The BDO's own schema is ADatP-4778's, which is unread (Owed).
 
 - A kind stays a JSON Schema document (ADR-0046 §3). That is the only source.
 - XML Schema for a kind is generated from its closed JSON Schema, later, and never written by hand. The generator is
-  chosen when the first guard requires XML payloads, not before (proposed answer 6). A JSON record can be bound as it
+  chosen when the first guard requires XML payloads, not before (answer 6). A JSON record can be bound as it
   is (finding 8), so a kind needs no XML form to cross.
 - Decisions 3 and 4 make the generation possible: a closed schema with bounded strings has one XML shape.
 - A disagreement between the generated XML Schema and the JSON Schema is a defect in the generator, never a second
@@ -389,11 +389,11 @@ Ch 2 Annex A. The BDO's own schema is ADatP-4778's, which is unread (Owed).
 | `life.CreationDateTime` | `CreationDateTime` element |
 | `life.ReviewDateTime` | `ReviewDateTime` attribute on `ConfidentialityLabel` |
 | The nation dimension, for access: its authors and its release set | The release dimension's permissive `Category`, whose values are the authors and the release set together (New point C) |
-| The nation dimension, for provenance: who authored the record | Nothing in the label. Authorship stays a declared field in the record body. `OriginatorID` is the stamping tier's declared identity (New point C (iv), recommended, pending ruling) |
+| The nation dimension, for provenance: who authored the record | Nothing in the label. Authorship stays a declared field in the record body. `OriginatorID` is the stamping tier's declared identity (New point C (iv), ruled 2026-11-16) |
 
 - A dimension's `TagName`, and its optional `urn:oid:` URI, are declared with the dimension. Its values are written
   as declared. Under the NATO policy they are compared case-insensitively (finding 4).
-- **The nation dimension for access** (New point C, proposed).
+- **The nation dimension for access** (New point C, ruled).
   - Today the author branch admits a reader of an author nation, and the release branch admits a reader of a release
     nation. A receiver sees only the label, so the authors are written into the permissive release category beside
     the release set. The far side then grants the same access.
@@ -459,14 +459,14 @@ Each statement marked secondary or registry in the earlier text, and what became
 | Decision 2: any URN | **Narrowed** to `urn:oid:`, with `PolicyIdentifier` declared beside it | Finding 4 |
 | Decision 6: a detached JWS is the binding | **Corrected.** An outbound binding is a 4778.2 BDO. Nothing is bound inside a domain, and the JWS form is parked (New point B) | Finding 10 |
 | Decision 7: 4774 also has a JSON encoding, so the body may map onto it | **Corrected.** The label is XML and is generated from the body, field by field | Finding 1 |
-| Proposed answer 5: a file drop directory | **Now has a profile:** the `.bdo` sidecar | 4778.2 §9.5 (finding 9) |
+| Answer 5: a file drop directory | **Now has a profile:** the `.bdo` sidecar | 4778.2 §9.5 (finding 9) |
 
 ## What this does not establish
 
 - **No conformance to STANAG 4774 or 4778 is claimed.** 4774 and the 4778.2 profiles were read, and the alignment
   above cites them. Nothing is built to them, and ADatP-4778 itself is unread.
 - **Not taken up:** `SuccessionHandling`, `PrivacyMark`, alternative labels, and portion labels. A record carries one
-  label body. Under New point C's recommended (iv), `OriginatorID` is taken up as the stamping tier's identity.
+  label body. Under New point C's ruled (iv), `OriginatorID` is taken up as the stamping tier's identity.
   `INFORMATIVE` categories and extension elements are taken up only if alternative (i) or (ii) is ruled on instead.
 - **Nothing is accredited.** An eligible kind is not permitted to cross. It is shaped so that a guard can check it
   (ADR-0055 §7).
@@ -482,7 +482,7 @@ Each statement marked secondary or registry in the earlier text, and what became
   is listed. Its text did not extract cleanly, so no status per algorithm is cited from it.
 - Findings 11 to 13 stay secondary until a boundary device is named and its documents are read.
 
-## Proposed answers to the six open questions (review, 2026-11-16; revised after reading; for the project owner to rule)
+## Answers to the six open questions (review, 2026-11-16; revised after reading; ruled as written 2026-11-16)
 
 1. **Manifest cadence:** whichever comes first, N records or T seconds, plus an empty heartbeat manifest when idle,
    so the far side can tell silence from loss.
@@ -503,7 +503,7 @@ Each statement marked secondary or registry in the earlier text, and what became
    label writer and the BDO writer are needed sooner, for the first cross-domain release, because both are XML in the
    standards (findings 1 and 8).
 
-## New points from the reading (the project owner's proposed answers, pending ruling)
+## New points from the reading (the project owner's answers, ruled 2026-11-16)
 
 - **A. Both times, by a declared rule.** An exported policy (D) declares a `review_period` (`P<n>D`). The stamp writes
   `CreationDateTime` as the stamp time and `ReviewDateTime` as that time plus the period, so the review time is a
@@ -515,7 +515,7 @@ Each statement marked secondary or registry in the earlier text, and what became
 - **B. No binding inside one domain.** Inside a domain, `label_key` and the PEP already do the job. An XML binding on
   every internal record is cost with no benefit. Bind at the boundary only. The JWS candidate stays parked (Decision 6).
 - **C. The nation dimension, split in two.**
-  - **Access: proposed as written in Decision 7.** In the export, the author nations are added to the permissive
+  - **Access: as written in Decision 7.** In the export, the author nations are added to the permissive
     release category, so the far side grants the same access the author branch does. Checked against the text, this
     fits. A permissive category is an explicit inclusion set for access control, and Releasable To widens
     dissemination to named entities (finding 5).
@@ -526,7 +526,7 @@ Each statement marked secondary or registry in the earlier text, and what became
     - 4778.2's binding data object, as read, has no originator field. "Originator" there is the role of whoever
       creates the signature, and the signer's certificate identifies the binder (Ch 2 Annexes A and B).
     - The base ADatP-4778 is unread, and its schema could hold more.
-  - **Recommended for provenance: (iv), pending the project owner's ruling.**
+  - **Ruled for provenance: (iv), 2026-11-16.**
     - `OriginatorID` is the stamping tier's declared identity, in one of 4774's name forms (finding 5). That is what
       the field describes: who originated the label.
     - **Authorship stays in the record body, as a declared field of the kind, never in the exported label.** On an
