@@ -159,7 +159,8 @@ For each declaration, in one transaction:
 
 ### 2.5 The generator
 
-**Amended 2026-11-15 (lands only if the project owner rules #33's home): the generator lives in contracts.**
+**Amended 2026-11-15, ACCEPTED, ruled by the project owner 2026-11-16 (#33's home): the generator lives in
+contracts.**
 - One function, `mint_identity()`, in the contracts library `lib/python/openddil_identity` (module `ids`), not in the
   registry package. It is RFC 9562 §5.7 UUIDv7: 48 bits of Unix milliseconds, the version and variant bits, and the
   rest from `os.urandom`. Within one millisecond, `rand_a` is a 12-bit counter seeded from random, so ids from one
