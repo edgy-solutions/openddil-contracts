@@ -106,3 +106,19 @@ decisions:
     foreign:                             # other repositories this corpus cites, in order
       - prefix: iagent
         pin_check: scripts/check-iagent-citation-pins.sh   # repository-relative
+derived:
+  dictionary:
+    dir: ontology                # relative to the repository root
+    terms:                       # (file, path) pairs, in the order the table shows them
+      - {file: asset_identity_aliases.yaml, path: aliases.dis}
+      - {file: dis_appearance.yaml, path: populating_sources}
+      - {file: dis_appearance.yaml, path: appearance}
+      - {file: dis_condition.yaml, path: level_order}
+      - {file: dis_condition.yaml, path: source_order}
+      - {file: dis_condition.yaml, path: appearance}
+      - {file: dis_condition.yaml, path: emission.populating_sources}
+      - {file: dis_condition.yaml, path: emission.baselines}
+      - {file: dis_condition.yaml, path: data_health}
+      - {file: dis_entity_types.yaml, path: mappings}
+      - {file: platform_reference.yaml, path: platforms}
+      - {file: platform_variant_aliases.yaml, path: aliases.dis}
