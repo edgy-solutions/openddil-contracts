@@ -5,7 +5,8 @@ implementer spec in three slices (3a, 3b, 3c), each with its own checks. Design 
 nothing measured for this increment. ADR-0058 is PROPOSED. This spec builds the part of it that has no card declaration
 yet: what each tier's UI shows of work owned by iagent, and what it shows of the reports its own people filed. Ordered
 2026-11-10, with its scope; sliced, and the closed-episode projection chosen over a ledger stamp, 2026-11-11.
-**Amendment proposed 2026-11-14 (§3.1, §3.2, §9 3a check 3):** "work recorded" reads from the completion record, a new
+**Amendment ACCEPTED, ruled by the project owner 2026-11-16 (proposed 2026-11-14; §3.1, §3.2, §9 3a check 3):**
+"work recorded" reads from the completion record, a new
 intake kind that names its release record. Ordered by the project owner on 2026-11-14, after iagent's architect's
 answers of that date. Those answers are an unchecked draft, so the kind's fields and versions are provisional until
 iagent's checked copy is placed and its completion contract (due 2026-11-27) is merged.
@@ -276,7 +277,8 @@ OpenDDIL's side to them.
   the release record it completes, and the release joins the episode through its case (§3.2). No OpenDDIL row holds a
   work order reference as a join key. A completion record that names no release record at this tier is listed as unmatched, and
   is never matched by asset or by time. A refused completion record is a state with its reason, as a refused release
-  is. Its fields, and the closure reason and repair type vocabularies it cites, are provisional (see the status line).
+  is. Its fields are provisional (see the status line). The closure reason and repair type vocabularies it cites were
+  accepted 2026-11-16.
   - **A cancelled or deferred work order** returns a completion record whose outcome says so and which closes nothing
     (iagent's answer to Q13, 2026-11-14). It reads "work recorded: cancelled" or "deferred", with its time, and the
     episode stays as it was.
