@@ -1,0 +1,868 @@
+{
+  "admits_class": [
+    {
+      "admitted": true,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL",
+            "BDR"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "rollup_viewer_holds_release_value",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "BDR"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL",
+            "BDR"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "rollup_viewer_holds_none",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "CYR"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "rollup_viewer_holds_nothing",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": []
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [],
+          "rollup": true
+        }
+      },
+      "name": "rollup_empty_release_viewer_atl",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [],
+          "rollup": true
+        }
+      },
+      "name": "rollup_empty_release_viewer_all",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL",
+          "BDR",
+          "CYR"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": null,
+          "release": [
+            "ATL"
+          ]
+        }
+      },
+      "name": "old_form_author_none",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": [],
+          "release": [
+            "ATL"
+          ]
+        }
+      },
+      "name": "empty_author_set_without_marker",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": "ATL",
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "marker_with_author",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": null,
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "marker_with_author_none",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": [],
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "marker_with_empty_author",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": 1
+        }
+      },
+      "name": "rollup_is_integer_one",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": "true"
+        }
+      },
+      "name": "rollup_is_string_true",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": false
+        }
+      },
+      "name": "rollup_is_false",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ]
+        }
+      },
+      "name": "rollup_missing",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "rollup": true
+        }
+      },
+      "name": "rollup_no_release",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": null,
+          "rollup": true
+        }
+      },
+      "name": "rollup_release_none",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": false,
+      "class_label": {
+        "data_rights_holder": [
+          "H1",
+          "H2"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "restrictive_dimension_unmet",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    },
+    {
+      "admitted": true,
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "restrictive_dimension_met",
+      "viewer": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": [
+          "ATL"
+        ]
+      }
+    }
+  ],
+  "class_label": [
+    {
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL",
+            "BDR"
+          ],
+          "rollup": true
+        }
+      },
+      "label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": "ATL",
+          "release": [
+            "BDR"
+          ]
+        }
+      },
+      "name": "single_author_with_release",
+      "refused": null
+    },
+    {
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": "ATL",
+          "release": null
+        }
+      },
+      "name": "single_author_no_release",
+      "refused": null
+    },
+    {
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": "ATL",
+          "release": []
+        }
+      },
+      "name": "single_author_empty_release",
+      "refused": null
+    },
+    {
+      "class_label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL",
+            "CYR"
+          ],
+          "rollup": true
+        }
+      },
+      "label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": "ATL",
+          "release": [
+            "ATL",
+            "CYR"
+          ]
+        }
+      },
+      "name": "author_already_in_release",
+      "refused": null
+    },
+    {
+      "class_label": null,
+      "label": null,
+      "name": "null_label",
+      "refused": "no_label"
+    },
+    {
+      "class_label": null,
+      "label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "author": "ZZZ",
+          "release": []
+        }
+      },
+      "name": "invalid_label_out_of_vocabulary",
+      "refused": "value_out_of_vocabulary"
+    },
+    {
+      "class_label": null,
+      "label": {
+        "data_rights_holder": [
+          "H1"
+        ],
+        "nation": {
+          "release": [
+            "ATL"
+          ],
+          "rollup": true
+        }
+      },
+      "name": "invalid_label_marker_form_is_not_a_label",
+      "refused": "value_malformed"
+    },
+    {
+      "class_label": null,
+      "label": {
+        "nation": {
+          "author": "ATL",
+          "release": []
+        }
+      },
+      "name": "invalid_label_missing_dimension",
+      "refused": "dimension_missing"
+    }
+  ],
+  "declaration": {
+    "dimensions": [
+      {
+        "has_author": true,
+        "name": "nation",
+        "owner": "nation-steward",
+        "type": "permissive",
+        "vocabulary": [
+          "ATL",
+          "BDR",
+          "CYR"
+        ]
+      },
+      {
+        "has_author": false,
+        "name": "data_rights_holder",
+        "owner": "rights-steward",
+        "type": "restrictive",
+        "vocabulary": [
+          "H1",
+          "H2"
+        ]
+      }
+    ],
+    "policy_id": "example:policy-1"
+  },
+  "split": [
+    {
+      "classes": [
+        {
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "release": [
+                "ATL"
+              ],
+              "rollup": true
+            }
+          },
+          "members": [
+            "c1",
+            "c2",
+            "c3"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "c1",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": null
+            }
+          }
+        },
+        {
+          "id": "c2",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": []
+            }
+          }
+        },
+        {
+          "id": "c3",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": [
+                "ATL"
+              ]
+            }
+          }
+        }
+      ],
+      "name": "rollup_over_one_author",
+      "withheld": 0,
+      "withheld_by_reason": []
+    },
+    {
+      "classes": [
+        {
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "release": [
+                "ATL"
+              ],
+              "rollup": true
+            }
+          },
+          "members": [
+            "a1",
+            "a2"
+          ]
+        },
+        {
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "release": [
+                "BDR"
+              ],
+              "rollup": true
+            }
+          },
+          "members": [
+            "b1"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "a1",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": []
+            }
+          }
+        },
+        {
+          "id": "a2",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": []
+            }
+          }
+        },
+        {
+          "id": "b1",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "BDR",
+              "release": []
+            }
+          }
+        }
+      ],
+      "name": "two_authors_two_classes",
+      "withheld": 0,
+      "withheld_by_reason": []
+    },
+    {
+      "classes": [
+        {
+          "label": {
+            "data_rights_holder": [
+              "H1",
+              "H2"
+            ],
+            "nation": {
+              "release": [
+                "ATL"
+              ],
+              "rollup": true
+            }
+          },
+          "members": [
+            "h1"
+          ]
+        },
+        {
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "release": [
+                "ATL",
+                "BDR"
+              ],
+              "rollup": true
+            }
+          },
+          "members": [
+            "a1"
+          ]
+        },
+        {
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "release": [
+                "BDR"
+              ],
+              "rollup": true
+            }
+          },
+          "members": [
+            "b1"
+          ]
+        }
+      ],
+      "contributors": [
+        {
+          "id": "a1",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": [
+                "BDR"
+              ]
+            }
+          }
+        },
+        {
+          "id": "b1",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "BDR",
+              "release": []
+            }
+          }
+        },
+        {
+          "id": "u1",
+          "label": null
+        },
+        {
+          "id": "u2",
+          "label": {
+            "data_rights_holder": [
+              "H1"
+            ],
+            "nation": {
+              "author": "ZZZ",
+              "release": []
+            }
+          }
+        },
+        {
+          "id": "u3",
+          "label": {}
+        },
+        {
+          "id": "h1",
+          "label": {
+            "data_rights_holder": [
+              "H1",
+              "H2"
+            ],
+            "nation": {
+              "author": "ATL",
+              "release": []
+            }
+          }
+        }
+      ],
+      "name": "mixed_with_withheld",
+      "withheld": 3,
+      "withheld_by_reason": [
+        [
+          "dimension_missing",
+          1
+        ],
+        [
+          "no_label",
+          1
+        ],
+        [
+          "value_out_of_vocabulary",
+          1
+        ]
+      ]
+    }
+  ]
+}

@@ -7,6 +7,10 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
+- **ACCEPTED, ruled by the project owner 2026-11-16: `lk2`, with composite authorship (§2a), and what the key leaves
+  out (§2b).** Proposed for ruling 2026-11-15.
+- **ACCEPTED, ruled by the project owner 2026-11-16: §3a as written, not as built** (§3a, "The built rollup
+  differs"). Proposed for ruling 2026-11-15.
 - **§1a is signed by the project owner, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
 
 ## Findings first
@@ -147,7 +151,8 @@ dimension is `data_rights_holder`, which is also iagent's form.
 | **Exclusionary** | Values that bar a holder | The viewer holds none of them | No exclusion from this dimension |
 
 **The last column is the default inside a deployment. A boundary may declare otherwise (amendment, drafted
-2026-11-07, not yet ruled).**
+2026-11-07, ACCEPTED as [§1b](#1b-boundary-declarations-required-and-empty_means-accepted-2026-11-16), ruled by the project
+owner 2026-11-16).**
 - A deployment, and each egress destination it declares, may set per dimension:
   - `required`: an empty or absent value at that boundary is withheld there;
   - `empty_means`: what an empty set means at that boundary.
@@ -221,6 +226,77 @@ dimension is `data_rights_holder`, which is also iagent's form.
 - ADR-0029 §3's "never default", as ADR-0050:5 summarises it, becomes true as written.
 - The order is load before amend (§4, step 0).
 
+### 1b. Boundary declarations: `required` and `empty_means` (accepted 2026-11-16)
+
+**Status: ACCEPTED, ruled by the project owner 2026-11-16.** Proposed for ruling 2026-11-15. It states as a rule the amendment drafted in §1 on 2026-11-07. Nothing is built.
+
+**Why.** The type table's empty-set column is right inside a mesh and can be wrong at an egress. An empty restrictive
+set means "no restriction" in the mesh. At a destination that is a third party, the same record must not leave by
+default. ADR-0056 §8 needs the first case: a hub composing an OEM-bound flow declares `program` as required at that
+boundary.
+
+**Where it is declared.**
+- **On a destination.** A destination's registry entry (ADR-0046 §1, `destinations.yaml`) gains an optional
+  `dimensions` map. Each entry is keyed by a dimension's name and holds `required`, `empty_means`, or both.
+- **As a deployment's default for its destinations.** It has the same shape, and it applies to every destination that
+  does not declare that dimension itself.
+  - It is a default for the deployment's boundaries only. It never changes the in-mesh reading.
+  - Its home (the policy row, or the deployment's own declaration) is open below.
+- **Precedence:** the destination's entry, then the deployment's default, then the type table.
+
+**`required`: the outbound label must carry a value.**
+- At that boundary, a dimension declared `required: true` must be present and non-empty on the label the gate
+  decides. This covers a stored dimension, and a dimension composed only at the boundary, such as `program` (ADR-0056
+  §8).
+- Empty or absent, the record is **withheld, loud**:
+  - the reason is `dimension_missing`, with the dimension and the destination named;
+  - it is counted for the owner, and the gate logs it as it logs any refusal (ADR-0046 §4);
+  - it is never a silent drop.
+
+**`empty_means`: how an empty set reads at that boundary. It may only narrow, never widen.**
+
+| Type | In the mesh (the table above) | A boundary may declare |
+|---|---|---|
+| Hierarchical | Not allowed | Nothing. There is no empty set to read |
+| Permissive set | Released to nobody | Nothing else. It is already the narrowest |
+| Restrictive set | No restriction | `nobody` |
+| Exclusionary | No exclusion | `nobody` |
+
+- `nobody` withholds a record whose set is empty, with the reason `dimension_empty`, named and counted as above.
+- **A widening value is refused when the entry is loaded,** with the dimension named. It is never refused per
+  record. A boundary can never make a record visible that the mesh would withhold.
+- **An entry naming a dimension the policy does not declare is refused at load,** as an inbound undeclared dimension
+  is (§1).
+
+**What does not change.**
+- **The label, its body and its key.** A boundary declaration never enters any of them, and it is not a new policy
+  id. The same record, with the same key, can be admitted at one destination and withheld at another. The
+  declaration is an input to the gate (ADR-0046 §4), never to the stamp.
+- **The in-mesh reading.** No PEP read consults a boundary declaration.
+- **Fail closed.** A record with no value for a stored, declared dimension is already served to nobody anywhere (§1).
+  `required` adds nothing to that case except the boundary's named reason.
+
+**Note for the ruling: the two keys overlap.**
+- On a stored dimension, `required: true` and `empty_means: nobody` withhold the same records. Only the reason differs.
+- They part on a dimension composed at the boundary. There, `required` also withholds an absent value, while
+  `empty_means` reads only an empty one.
+- Proposed: keep both. `required` is for presence, which matters for composed dimensions. `empty_means` is for the
+  meaning of an empty stored set.
+
+**Checks, when built.**
+- The table above, at a boundary, for each type and each declared value.
+- A widening entry, and an entry naming an undeclared dimension, are each refused at load.
+- A required dimension, empty and absent, reads withheld `dimension_missing` at that destination, and admitted at a
+  destination that declares nothing.
+- The record's key is the same before and after the gate.
+
+**Open, not proposed here.**
+- The deployment default's home: the policy row, or the deployment's own declaration.
+- Whether a destination may relax its deployment's default, still never below the type table. Proposed: yes, by an
+  explicit entry only.
+- The peer side. iagent's dimension file has no `required` or `empty_means` key yet (ADR-0056 finding 7). Alignment
+  waited for this ruling, made 2026-11-16.
+
 ### 2. Labels compile to a `label_key` at stamping
 
 The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it to a `label_key`:
@@ -249,6 +325,172 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
 - **The distinction applies only to `releasable_to` on a record that has an originator.** There, `{ATL}/{}` and `{ATL}/absent` give two keys.
 - **A record with no originator is unlabelled, whatever `releasable_to` holds.** NULL/NULL and NULL/`{}` compile to no key at all, not to two keys, and the record is served to nobody (§1).
 
+### 2a. `lk2`: more than one author, or more than one dimension (accepted 2026-11-16)
+
+**Why a second form.** The first form, `lk1`, keys nation only, with one author
+(`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.2). Two kinds of label get no `lk1` key:
+- **A record with more than one author.**
+  - A single derived record over inputs from two nations has no author under ADR-0029's addendum ("an aggregate has
+    no author; it claims none"). Its release is the intersection of effective audiences (§3b).
+  - With no originator, §2 makes it unlabelled, so it is served to nobody even when that intersection names a nation.
+    The labels library's `high_water` fails closed on exactly this case today.
+  - A §3a class row is the same case. The built rollup sets no originator on its rows (`aggregator_app.py`, the comment
+    above the row's label), so each row has no `lk1` key. A class row is a rollup, and its label carries the rollup
+    marker below, not an author set.
+- **A label over a second dimension,** such as `data_rights_holder` (§5).
+
+**Composite authorship.** In `lk2`, the nation dimension's author is a set.
+- **One value is single authorship.** It grants access as the author value does today (§1).
+- **Two or more values are a composite.** The set records whose records the derivation used. **It grants nobody
+  access by itself.** A viewer is admitted on the nation dimension only through the release set. ADR-0029's rule holds
+  in effect: the author branch opens only where derivation preserved a single author.
+- **An empty author set is no author.** The record is unlabelled and gets no key, as in §2. A rollup is never written
+  this way: it carries its own marker (below).
+- **High-water fills it** (§3b): the author set is the union of the inputs' authors, and the release is the
+  intersection of their effective audiences, unchanged. Inputs that share one author give a set of one.
+- A composite with no release set is refused at the stamp. High-water always gives a set, possibly empty.
+
+**A rollup's label: an explicit "rollup, no author" marker, never an empty author set.**
+- In a rollup the author value grants nothing alone (§3a, ADR-0029:1086-1088). A §3a class row is a rollup, even when
+  its contributors share one author.
+- **Its nation value carries the marker and no author.** It is admitted through the release set only.
+- **An empty author set is never read as a rollup,** and a missing author never becomes one. Without the marker, no
+  author means unlabelled (§2), so the record has no key and is served to nobody. A rollup cannot be mistaken for
+  an unlabelled record, and an unlabelled record cannot be mistaken for a rollup.
+- **The marker and an author together** are refused at the stamp, and give no key.
+- **A rollup with no release set** is refused at the stamp, as a composite is. A release declared empty is keyed and
+  admits nobody.
+- The labels library's second slice (draft #36) writes a class label as an author of `None`, with the author folded
+  into the release. Under this form, that `None` becomes the marker. The change belongs to that PR, not this one.
+
+**The canonical form,** stated in words. The stack's SQL function and the library are both tested against one file
+of golden vectors, never against each other's text:
+- `lk2|<policy_id>|nation|<authors>|<release>`, then `|<name>|<values>` for each further declared dimension.
+  - For a rollup, `<authors>` is the literal `@rollup`. `@` is outside every dimension's value format, so the marker
+    can never be a value.
+- **Order:** nation first, then the other dimensions by name, in byte order. Names are snake_case ASCII (§1), so byte
+  order is unambiguous.
+- **Sets:** distinct values, sorted in byte order, joined by `,`.
+  - The author set is never empty. A rollup writes the marker in its place.
+  - A release set that is absent writes `~`, and one declared empty writes nothing, as in `lk1`.
+  - Any other set dimension declared empty writes nothing.
+- **A hierarchical dimension** writes its one level.
+- **The key** is `lk2:` followed by the hex SHA-256 of the canonical string's UTF-8 bytes.
+- **The body** is `{"policy": <id>, "v": 2, "dims": {...}}`. Nation is `{"author": [sorted], "release": [sorted] or
+  null}`, or for a rollup `{"rollup": true, "release": [sorted]}`, with no `author` key. A set dimension is a sorted
+  array, and a hierarchical one a string. The body may also carry `life` (§2b), which is outside the canonical form.
+- **No key** when:
+  - the author set is empty and there is no rollup marker;
+  - the marker and an author are both present;
+  - a declared dimension has no value on the record (§1);
+  - the record carries a dimension the policy does not declare;
+  - any value fails its dimension's format;
+  - there is no policy row.
+- **Formats exclude the separators.** Nation keeps `^[A-Z]{3}$`. Every other dimension's values must match
+  `^[A-Za-z0-9][A-Za-z0-9._:-]{0,62}$`, checked when the dimension is declared. So `|`, `,` and `~` never appear
+  inside a value.
+
+**Which form a label gets: one form per label, and every `lk1` key is kept.**
+- Under a policy that declares nation only:
+  - a label with one author compiles to `lk1`, byte for byte as today;
+  - a composite or a rollup compiles to `lk2`.
+- A policy that declares a second dimension compiles every label to `lk2`.
+  - Declaring that dimension is a new policy id, so no key already stored is recomputed into the other form.
+  - Records stamped under the old id keep their `lk1` keys.
+- The form follows from the policy, the author count and the marker, which are all in the body. So every tier picks the same
+  form, and §2's "the same label gives the same key at every tier" holds.
+
+**Golden vectors.** An `lk2` vector file sits beside `lk1`'s, with at least these cases:
+- a composite with a release;
+- a composite with an empty release;
+- a rollup with a release, and a rollup with an empty release;
+- a rollup over contributors of one author, which must not give that author's single-author key;
+- an empty author set without the marker (no key), and the marker with an author (no key);
+- a second dimension, both empty and with values;
+- a hierarchical dimension;
+- the separators refused;
+- a single-author nation-only label, which must give the `lk1` key and not an `lk2` one;
+- two labels that differ only in `life` (§2b), which must give one key;
+- a `urn:oid:` policy id (§2b), and two that are refused: a URN in another namespace, and an id that is not a URN.
+
+**Not decided here.**
+- Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
+- The §3a ruling, which is separate.
+
+### 2b. What the key leaves out, and what the policy id is (accepted with §2a, 2026-11-16)
+
+Two label rules from the cross-domain readiness proposal (ADR-0061) are folded in here, so that they are ruled with
+the form. Their source is ADatP-4774 Edition A Version 1, read in full on 2026-11-16. It is paraphrased here and cited
+by clause, never quoted (ADR-0061, Sources). The field names are the standard's, except `policy` and the `life` grouping, for the reasons
+given below.
+
+**Label lifecycle fields ride in the body, outside the key.**
+- A label may carry `CreationDateTime` (when the label was stamped, not when the data was made) and `ReviewDateTime`
+  (when the label is due for review). These are 4774's names (4774 App 1, the label's base type and Table 4). They
+  sit in the body under `life`, beside `dims`:
+  `{"policy": <id>, "v": 2, "dims": {...}, "life": {"CreationDateTime": <time>, "ReviewDateTime": <time> or null}}`.
+- `life` is this record's grouping. 4774 has none, because one time is an element of the label and the other an
+  attribute on it.
+- Times are written `YYYY-MM-DDThh:mm:ssZ`, with optional fractional seconds: RFC 3339 in UTC, which is also an XML
+  Schema `dateTime`, the type 4774 uses (App 1 Annex A).
+- **A 4774 label needs both.** `CreationDateTime` is mandatory in every 4774 label, and `ReviewDateTime` is mandatory
+  when there is no succession handling (4774 §4.3; App 1 Table 4; Ch 5), which is not taken up here. A label without
+  both times cannot be written as a 4774 label.
+- **Under a policy exported as 4774 labels, both times come from a declared rule** (ADR-0061 New point A; ruled by the
+  project owner 2026-11-16).
+  - Such a policy declares a `review_period`, an ISO 8601 duration in whole days (`P<n>D`).
+  - The stamp writes `CreationDateTime` as the stamp time, and `ReviewDateTime` as that time plus the period. That is
+    a declared rule, not a default.
+  - An exported policy with no `review_period` is refused at load.
+  - A route that writes 4774 labels refuses a record lacking either time as `label_life_missing`, and never fills one
+    in.
+  - Under a policy that is not exported, `life` stays optional.
+- **They never enter the canonical form or the key,** in `lk1` or in `lk2`. Two labels that differ only in `life` give
+  one key. So a record's age mints no new key, no new admitted set and no new shape (§2).
+- **The label table holds no `life`.** Its row is per key, and `life` is per record. A tier reads `life` from the
+  record's body, never from the cached row.
+- **The PDP never reads `life`.** A past `ReviewDateTime` is counted and reported. It is never a refusal. 4774 agrees:
+  a review date in the past does not make the label invalid (App 1, before Table 4; Ch 5).
+- **Otherwise, `life` is optional, and its absence is not a default.** No time is invented. A `life` with an undeclared member,
+  or a time that does not parse, is refused at the stamp, like a value that fails its format.
+- **`lk1` keys do not change.** Whether the `lk1` stamp writes `life` is the compatibility slice's decision. Its keys
+  are the same either way. Today's `lk1` `verify` accepts exactly `policy`, `v` and `dims`
+  (the labels library's `lk1` module), so an `lk1` body with `life` fails it until the slice changes that.
+
+**The policy id is the policy's 4774 URI, in the `urn:oid:` form. Its text identifier is declared beside it.**
+- A deployment declares its policy id as `urn:oid:<dotted decimal>` (RFC 3061), matching
+  `^urn:oid:[0-2](\.(0|[1-9][0-9]*))+$`. 4774 allows only the `urn` scheme with the `oid` namespace in the policy's
+  `URI` (4774 App 1 Table 5; Ch 5). The NATO policy's is `urn:oid:1.3.26.1.3.1` (App 2 Table 10).
+- The id must still match the compatibility slice's pattern, `^[a-z0-9][a-z0-9:._-]{0,62}$`
+  (`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.1). It is therefore lowercase and at most 63 characters. A
+  `urn:oid:` id fits.
+- **A policy id that is not a `urn:oid:` URI is refused when it is declared,** with the id named. That includes a URN
+  in another namespace. (The earlier text allowed any URN. The narrowing is ADR-0061's New point E. The project
+  owner ruled yes on 2026-11-16: the standard requires it, and no key is stored yet.)
+- **A policy exported as 4774 labels** declares `exports_4774: true`. It may declare at most one hierarchical
+  dimension and no exclusionary one, checked at load (ADR-0061 New point D, ruled 2026-11-16). A policy that
+  never exports is not limited.
+- **Authorship is never written into an exported label** (ADR-0061 New point C, option (iv), ruled by
+  the project owner 2026-11-16).
+  - A 4774 label's `OriginatorID` is the stamping tier's declared identity. It names who originated the label, not
+    who created the information (4774 App 1).
+  - The author set stays in the record body, as a declared field of the kind. Inside one domain, the key still carries
+    it (§2a).
+  - Why: a guard allows labels by exact match. An author set in an extension element or an informative category would
+    make each distinct set a distinct label, so the labels a guard must allow would multiply. Under (iv) the exported
+    label varies only by its access fields and by the exporting tier.
+  - Alternatives (i) to (iii) are listed in ADR-0061.
+- **The declaration also carries `PolicyIdentifier`, the policy's text identifier,** for example "NATO" (App 2
+  Table 10). A 4774 label must carry it (App 1, ConfidentialityInformationType). It is not in the body and never
+  enters the key. A 4774 label writer looks it up by the URI.
+- The key uses the URI and not the text, because the text is compared case-insensitively (4774 Ch 5) and a key needs
+  one spelling.
+- **The body's member stays `policy`, holding the URI.** This is the one name kept that differs from 4774's. The
+  built `lk1` body is exactly `policy`, `v` and `dims`, and `lk2` keeps that shape.
+- **The id is in the canonical form, so changing it changes every key.**
+  - A deployment whose declared id is not yet a `urn:oid:` URI keeps that id until it re-declares.
+  - The re-declaration is the slice's backfill (§1.4 there). Nothing rewrites a stored key in place.
+
 ### 3. Derived records: a split by audience for composable rollups, high-water for single derived records
 
 There are two rules, chosen by what is derived.
@@ -272,6 +514,26 @@ A **composable rollup** is an aggregate over many contributors whose parts a rea
 - Each row is also high-water within its class, because every contributor in a class has one label.
 
 **Status.** This is the rule the regional rollup already builds, and no record decided it before this one (Findings 4). It generalises from the nation audience to the full label.
+
+**The built rollup differs on unlabelled contributors (accepted 2026-11-16).**
+- **What is built.** The rollup puts a contributor with no label into a class whose audience is empty, and emits that
+  class as a row releasable to nobody. Its own comment calls the empty string "a real class"
+  (`openddil-tactical-agents/regional/aggregator_app.py`, `_class_key`). There is no withheld tally.
+- **Where the two meet.** A labelled contributor's effective audience always holds its originator, so it is never
+  empty. The built empty class therefore holds exactly the unlabelled contributors.
+- **The proposal: this section as written.** The second slice builds §3a's rule, not the built one:
+  - a contributor with no label forms no class and is excluded from every row;
+  - it is counted in a withheld-contributor tally.
+- **The tally is its own record, never a field on a class row.** There is one per rollup, served to the rollup's
+  owner. It counts the excluded contributors and gives no other fact about them. A class row's readers see only their
+  class.
+- **What changes for a reader.** The row releasable to nobody disappears. No viewer could read it, so no viewer loses
+  a value. Anything that counts rows, or reads the row by its class key, sees one row fewer.
+- **The old row is retired, not left behind.** The rollup's topics are compacted and keyed by class, so the last
+  empty-class row would stay on them indefinitely. The change writes one tombstone for that key, at every tier that
+  emitted it, and the acceptance run reads the key gone.
+- **Not decided here.** Class rows have no single author, so under `lk1` they compile to no key (§2, and the
+  composite-authorship proposal). That ruling is separate, and the two can land in either order.
 
 **Limit.** An aggregate that cannot be combined across classes is not a composable rollup. A median, a single fleet status or a ranking each come out as one record, so §3b applies.
 
@@ -361,12 +623,13 @@ as amended by PR #281, "Classification is a label of declared dimensions"):
 
 | This record | STANAG 4774 / 4778 concept |
 |---|---|
-| The deployment's declared policy | Policy identifier (4774) |
-| Hierarchical dimension | Classification (4774) |
-| Permissive set | Permissive category (4774) |
-| Restrictive set | Restrictive category (4774) |
-| Exclusionary | No 4774 category type in the sources read. It is carried as a declared policy |
-| The label stamped on the record and carried with it | Metadata binding (4778), as a concept only. `label_key` is not a cryptographic binding |
+| The deployment's declared policy: a `urn:oid:` URI, with its text identifier declared beside it (§2b) | `PolicyIdentifier`: mandatory text, and an optional `URI` that is `urn:oid:` only (4774 App 1 Table 5; Ch 5) |
+| A label's `life`: `CreationDateTime` and `ReviewDateTime` (§2b), outside the key | The same names, an element and an attribute of the label (4774 §4.3; App 1 Table 4; Ch 5) |
+| Hierarchical dimension | `Classification`, exactly one per label (4774 §4.2; App 1 Table 6) |
+| Permissive set | `Category` with `Type` `PERMISSIVE` (4774 App 1 Table 7) |
+| Restrictive set | `Category` with `Type` `RESTRICTIVE` (4774 App 1 Table 7) |
+| Exclusionary | No 4774 `Category` `Type` (App 1 Table 7 lists only `RESTRICTIVE`, `PERMISSIVE` and `INFORMATIVE`). It is carried as a declared policy |
+| The label stamped on the record and carried with it | Metadata binding (4778), as a concept only. `label_key` is not a cryptographic binding. ADR-0061 designs an outbound binding as a 4778.2 binding data object and builds none |
 
 ADR-0029 already adopts the concepts and not the standards (ADR-0029:39-45, 616-618). This record keeps that position, and its structured label fills the `policy_label` slot ADR-0029 reserved (ADR-0029:112-121).
 

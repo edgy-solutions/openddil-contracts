@@ -112,6 +112,7 @@ derived:
     dir: ontology                # relative to the repository root
     terms:                       # (file, path) pairs, in the order the table shows them
       - {file: asset_identity_aliases.yaml, path: aliases.dis}
+      - {file: closure_reasons.yaml, path: reasons}
       - {file: dis_appearance.yaml, path: populating_sources}
       - {file: dis_appearance.yaml, path: appearance}
       - {file: dis_condition.yaml, path: level_order}
@@ -123,3 +124,4 @@ derived:
       - {file: dis_entity_types.yaml, path: mappings}
       - {file: platform_reference.yaml, path: platforms}
       - {file: platform_variant_aliases.yaml, path: aliases.dis}
+      - {file: repair_types.yaml, path: types}

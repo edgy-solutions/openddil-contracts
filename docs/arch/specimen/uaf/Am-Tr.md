@@ -6,7 +6,7 @@ Every decision record against the views that cite it, generated from [`decisions
 
 The findings come first: each accepted or proposed record that no view cites, with its category and the reason, read from [adr-exemptions.yaml](../../adr-exemptions.yaml). A record that is neither cited nor listed there fails the render. So does an entry for a record that a view now cites, an entry with no reason, or a category outside the four. A record whose status is neither accepted nor proposed, such as a superseded one, is listed and is not required.
 
-51 decision records. 50 accepted or proposed: 46 cited by a view, 4 exempt. 1 not required.
+52 decision records. 51 accepted or proposed: 47 cited by a view, 4 exempt. 1 not required.
 
 | Not cited | Status | Category | Reason |
 |---|---|---|---|
@@ -72,6 +72,7 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0058 | Proposed | St-Rm-P, St-Tx |
 | ADR-0059 | Proposed | Am-If, Sd-Tx, St-Tx |
 | ADR-0060 | Proposed | Sd-Tx |
+| ADR-0061 | Accepted | St-Rm-P |
 
 The categories: a rule is a rule on how code is written, kept by review, with nothing the running system does that [Operational-Constraints](../../views/Op-Ct.md) could state; infrastructure is a store or a setting under a capability that a view already cites; process is how the work is done and checked; alignment is how the system is placed, restated by a record that a view cites.
 
