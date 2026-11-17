@@ -621,8 +621,8 @@ class BuiltRelabel(unittest.TestCase):
         page = re.search(rf'<section id="cap-{self.first}".*?</section>', doc, re.S).group(0)
         self.assertIn(f'href="#{want}"', page)
         line = re.search(r'<p class="relabel" data-relabel>(.*?)</p>', doc, re.S).group(1)
-        m = re.fullmatch(r"Decision records are shown with (\d+) names replaced by neutral labels at export "
-                         r"\(1 rules\)\. The records in the repository are unchanged\.", line)
+        m = re.fullmatch(r"Names are replaced by neutral labels at export: (\d+) in this page "
+                         r"\(1 rules\)\. The sources in the repository are unchanged\.", line)
         self.assertTrue(m, line)
         self.assertGreaterEqual(int(m.group(1)), 4)
 
