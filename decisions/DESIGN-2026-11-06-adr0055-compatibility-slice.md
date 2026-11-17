@@ -79,7 +79,7 @@ One SQL function, `IMMUTABLE` apart from its read of `label_policy` (so it is de
 canonical := 'lk1' || '|' || policy_id
           || '|nation|' || originator_nation
           || '|' || CASE WHEN releasable_to IS NULL THEN '~'
-                         ELSE coalesce((SELECT string_agg(DISTINCT x, ',' ORDER BY x COLLATE "C")
+                         ELSE coalesce((SELECT string_agg(DISTINCT x COLLATE "C", ',' ORDER BY x COLLATE "C")
                                         FROM unnest(releasable_to) x), '')
                     END
 label_key := 'lk1:' || encode(sha256(convert_to(canonical, 'UTF8')), 'hex')
@@ -100,6 +100,19 @@ label     := jsonb_build_object('policy', policy_id, 'v', 1,
   `{ATL,BDR,ATL}` give one key.
 - `sha256()` needs postgres 11 or later. The migration asserts `server_version_num >= 110000` and fails otherwise.
 - The `lk1` prefix is the canonical form's version. A change to the form is `lk2`, never an edit to `lk1`.
+- **Corrected 2026-11-16: the collation is on the aggregate's argument as well as its `ORDER BY`.**
+  - This text first wrote `string_agg(DISTINCT x, ',' ORDER BY x COLLATE "C")`. Postgres refuses that, because with
+    `DISTINCT` an `ORDER BY` expression must appear in the argument list.
+  - The corrected form above is confirmed in CI on Postgres 17 and on Postgres 15, in a step that allows no skips.
+    The run was the stack's PR #2 (`feat/lk1-sql-function` at 5383945), schema checks run 43949112291, in its
+    `tests (postgres 17)` and `tests (postgres 15)` jobs.
+  - There, `test_sql_string_agg_corrected_form_matches_function_and_vectors` passed: the form gives the same release
+    string as the migration's function, for every golden vector with a release set, and sorts by byte order.
+    `test_sql_string_agg_design_original_form_is_refused` passed too.
+  - The form's output is unchanged: sorted, distinct, in `"C"` collation. The original expression never ran, so no key
+    was computed from it. This is a correction to the text, not a change to `lk1`.
+  - The migration on that branch sorts the release set with a subquery, not with `string_agg(DISTINCT …)`. Either
+    form satisfies this section if it matches the golden vectors.
 
 ### 1.3 The columns, the label table and the trigger
 
