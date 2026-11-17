@@ -204,7 +204,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 
 ### 9. `required` and `empty_means`, per deployment and per boundary
 
-This is the ADR-0055 amendment drafted on 2026-11-07, proposed for ruling as ADR-0055 §1b. It is cited here and not
+This is the ADR-0055 amendment drafted on 2026-11-07, ACCEPTED as ADR-0055 §1b, ruled by the project owner 2026-11-16. It is cited here and not
 restated. One
 line: a deployment, and each egress destination it declares, may set `required` and `empty_means` per dimension, and a
 required dimension that is empty at that boundary is withheld as `dimension_missing`.

@@ -147,7 +147,8 @@ dimension is `data_rights_holder`, which is also iagent's form.
 | **Exclusionary** | Values that bar a holder | The viewer holds none of them | No exclusion from this dimension |
 
 **The last column is the default inside a deployment. A boundary may declare otherwise (amendment, drafted
-2026-11-07, proposed for ruling 2026-11-15 as [§1b](#1b-boundary-declarations-required-and-empty_means-proposed-for-ruling-2026-11-15)).**
+2026-11-07, ACCEPTED as [§1b](#1b-boundary-declarations-required-and-empty_means-accepted-2026-11-16), ruled by the project
+owner 2026-11-16).**
 - A deployment, and each egress destination it declares, may set per dimension:
   - `required`: an empty or absent value at that boundary is withheld there;
   - `empty_means`: what an empty set means at that boundary.
@@ -221,9 +222,9 @@ dimension is `data_rights_holder`, which is also iagent's form.
 - ADR-0029 §3's "never default", as ADR-0050:5 summarises it, becomes true as written.
 - The order is load before amend (§4, step 0).
 
-### 1b. Boundary declarations: `required` and `empty_means` (proposed for ruling, 2026-11-15)
+### 1b. Boundary declarations: `required` and `empty_means` (accepted 2026-11-16)
 
-**Status: proposed for ruling.** It states as a rule the amendment drafted in §1 on 2026-11-07. Nothing is built.
+**Status: ACCEPTED, ruled by the project owner 2026-11-16.** Proposed for ruling 2026-11-15. It states as a rule the amendment drafted in §1 on 2026-11-07. Nothing is built.
 
 **Why.** The type table's empty-set column is right inside a mesh and can be wrong at an egress. An empty restrictive
 set means "no restriction" in the mesh. At a destination that is a third party, the same record must not leave by
@@ -290,7 +291,7 @@ boundary.
 - Whether a destination may relax its deployment's default, still never below the type table. Proposed: yes, by an
   explicit entry only.
 - The peer side. iagent's dimension file has no `required` or `empty_means` key yet (ADR-0056 finding 7). Alignment
-  waits for this ruling.
+  waited for this ruling, made 2026-11-16.
 
 ### 2. Labels compile to a `label_key` at stamping
 
