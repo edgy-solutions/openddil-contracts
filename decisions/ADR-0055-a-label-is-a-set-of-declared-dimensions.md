@@ -7,8 +7,8 @@
 **PROPOSED — 2026-11-06. Design only. Nothing here is built, nothing is deployed, and nothing has been measured.**
 - It generalises [ADR-0029](ADR-0029-coalition-releasability-abac-enforcement.md)'s two nation fields into a label of declared dimensions. It does not supersede ADR-0029. ADR-0029's predicate, its addendum and its gate stay true for the nation dimension.
 - The number is provisional until the record is accepted.
-- **Proposed for ruling 2026-11-15: `lk2`, with composite authorship (§2a).** Provisional until the project owner
-  rules it.
+- **ACCEPTED, ruled by the project owner 2026-11-16: `lk2`, with composite authorship (§2a), and what the key leaves
+  out (§2b).** Proposed for ruling 2026-11-15.
 - **§1a is signed by the project owner, 2026-11-06, and is decided.** The rest of the record stays PROPOSED until it is accepted after review. The ADR-0050 amendment §1a implies is ruled the same date, in load-before-amend order.
 
 ## Findings first
@@ -251,7 +251,7 @@ The stamp that writes a label today, at ingress (ADR-0029 §3), also compiles it
 - **The distinction applies only to `releasable_to` on a record that has an originator.** There, `{ATL}/{}` and `{ATL}/absent` give two keys.
 - **A record with no originator is unlabelled, whatever `releasable_to` holds.** NULL/NULL and NULL/`{}` compile to no key at all, not to two keys, and the record is served to nobody (§1).
 
-### 2a. `lk2`: more than one author, or more than one dimension (proposed for ruling, 2026-11-15)
+### 2a. `lk2`: more than one author, or more than one dimension (accepted 2026-11-16)
 
 **Why a second form.** The first form, `lk1`, keys nation only, with one author
 (`DESIGN-2026-11-06-adr0055-compatibility-slice.md` §1.2). Two kinds of label get no `lk1` key:
@@ -343,7 +343,7 @@ of golden vectors, never against each other's text:
 - Whether a hierarchical or exclusionary dimension needs anything beyond its value in the form. None is declared yet.
 - The §3a ruling, which is separate.
 
-### 2b. What the key leaves out, and what the policy id is (proposed with §2a, 2026-11-16)
+### 2b. What the key leaves out, and what the policy id is (accepted with §2a, 2026-11-16)
 
 Two label rules from the cross-domain readiness proposal (ADR-0061) are folded in here, so that they are ruled with
 the form. Their source is ADatP-4774 Edition A Version 1, read in full on 2026-11-16. It is paraphrased here and cited
@@ -362,8 +362,8 @@ given below.
 - **A 4774 label needs both.** `CreationDateTime` is mandatory in every 4774 label, and `ReviewDateTime` is mandatory
   when there is no succession handling (4774 §4.3; App 1 Table 4; Ch 5), which is not taken up here. A label without
   both times cannot be written as a 4774 label.
-- **Under a policy exported as 4774 labels, both times come from a declared rule** (ADR-0061 New point A; the project
-  owner's proposed answer, pending ruling).
+- **Under a policy exported as 4774 labels, both times come from a declared rule** (ADR-0061 New point A; ruled by the
+  project owner 2026-11-16).
   - Such a policy declares a `review_period`, an ISO 8601 duration in whole days (`P<n>D`).
   - The stamp writes `CreationDateTime` as the stamp time, and `ReviewDateTime` as that time plus the period. That is
     a declared rule, not a default.
@@ -392,12 +392,12 @@ given below.
   `urn:oid:` id fits.
 - **A policy id that is not a `urn:oid:` URI is refused when it is declared,** with the id named. That includes a URN
   in another namespace. (The earlier text allowed any URN. The narrowing is ADR-0061's New point E. The project
-  owner's proposed answer is yes, pending ruling: the standard requires it, and no key is stored yet.)
+  owner ruled yes on 2026-11-16: the standard requires it, and no key is stored yet.)
 - **A policy exported as 4774 labels** declares `exports_4774: true`. It may declare at most one hierarchical
-  dimension and no exclusionary one, checked at load (ADR-0061 New point D, proposed, pending ruling). A policy that
+  dimension and no exclusionary one, checked at load (ADR-0061 New point D, ruled 2026-11-16). A policy that
   never exports is not limited.
-- **Authorship is never written into an exported label** (ADR-0061 New point C (iv), the project owner's
-  recommended answer, pending ruling).
+- **Authorship is never written into an exported label** (ADR-0061 New point C, option (iv), ruled by
+  the project owner 2026-11-16).
   - A 4774 label's `OriginatorID` is the stamping tier's declared identity. It names who originated the label, not
     who created the information (4774 App 1).
   - The author set stays in the record body, as a declared field of the kind. Inside one domain, the key still carries
