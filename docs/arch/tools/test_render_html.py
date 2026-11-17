@@ -27,6 +27,7 @@ import kit_path  # noqa: E402,F401
 import check_export  # noqa: E402
 import check_views  # noqa: E402
 import render_html  # noqa: E402
+import declared  # noqa: E402
 import project  # noqa: E402
 import render_profile as rp  # noqa: E402
 import capability_phases  # noqa: E402
@@ -538,7 +539,7 @@ class BuiltStub(unittest.TestCase):
     def test_every_capability_name_in_the_cv2_and_roadmap_tables_is_linked(self):
         caps = list(capability_phases.model_capabilities(
             (self.root / "model" / "openddil.sysml").read_text(encoding="utf-8")))
-        for vid in render_html.CAP_NAME_VIEWS:
+        for vid in declared.views("test_render_html")["capability_links"]:
             sec = section(self.doc, vid)
             for name in caps:
                 if vid == "St-Rm-P" or name in sec:
