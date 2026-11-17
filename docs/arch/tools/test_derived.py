@@ -19,11 +19,14 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import kit_path  # noqa: E402,F401
 import capability_phases as cp  # noqa: E402
+import declared  # noqa: E402
 import derived  # noqa: E402
 from render_profile import mask_sysml  # noqa: E402
 
 ARCH = HERE.parent
 REPO = ARCH.parent.parent
+DECLARED = declared.dictionary("test_derived")  # the consumer's own declaration, read through the kit
+DICT = (DECLARED.terms, DECLARED.dir)
 
 ROADMAP = """\
 | # | increment | what isolates | home | depends on |
@@ -92,8 +95,8 @@ class RealTree(unittest.TestCase):
                                        "| Capability |"))
 
     def test_dictionary_has_one_row_per_declared_term(self):
-        rows = body(derived.dictionary(REPO / "ontology"))
-        self.assertEqual(len(rows), len(derived.DICTIONARY))
+        rows = body(derived.dictionary(REPO / "ontology", *DICT))
+        self.assertEqual(len(rows), len(DECLARED.terms))
 
 
 SEVERED_MODEL = """\
@@ -210,34 +213,34 @@ class Dictionary(unittest.TestCase):
     def test_file_with_no_row_is_refused(self):
         (self.onto / "new_terms.yaml").write_text("terms: []\n", encoding="utf-8")
         with self.assertRaisesRegex(cp.CheckError, "ontology/new_terms.yaml has no dictionary row"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_missing_file_is_refused(self):
-        name = derived.DICTIONARY[0][0]
+        name = DECLARED.terms[0][0]
         (self.onto / name).unlink()
         with self.assertRaisesRegex(cp.CheckError, f"names ontology/{name}, which does not exist"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_missing_term_is_refused(self):
         name, path = "platform_reference.yaml", "platforms"
         (self.onto / name).write_text("other: []\n", encoding="utf-8")
         with self.assertRaisesRegex(cp.CheckError, f"ontology/{name} has no {path}"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_empty_term_counts_zero(self):
         (self.onto / "platform_reference.yaml").write_text("platforms: []\n", encoding="utf-8")
-        rows = body(derived.dictionary(self.onto))
+        rows = body(derived.dictionary(self.onto, *DICT))
         self.assertIn("| platform_reference.yaml | platforms | empty list | 0 | none |", rows)
 
     def test_single_value_is_refused(self):
         (self.onto / "platform_reference.yaml").write_text("platforms: 3\n", encoding="utf-8")
         with self.assertRaisesRegex(cp.CheckError, "is a single value, not a term"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_no_entry_value_reaches_the_table(self):
         (self.onto / "platform_reference.yaml").write_text(
             "platforms:\n  - name: PLANTED-ENTRY-VALUE\n    code: 7\n", encoding="utf-8")
-        table = derived.dictionary(self.onto)
+        table = derived.dictionary(self.onto, *DICT)
         self.assertIn("| platform_reference.yaml | platforms | records | 1 | code, name |", table)
         self.assertNotIn("PLANTED-ENTRY-VALUE", table)
 
