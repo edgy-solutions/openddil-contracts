@@ -46,7 +46,8 @@ legacy_policy_composite author_empty_no_marker author_null_no_marker marker_with
 second_dim_empty second_dim_values second_dim_missing second_dim_null dimension_undeclared hierarchical_level
 hierarchical_as_list rollup_with_two_dims separator_pipe separator_comma separator_tilde separator_at
 value_empty_string value_too_long value_space nation_author_malformed life_a life_b life_extra_member
-life_missing_review life_bad_time life_offset life_lowercase_z life_feb_30 life_on_lk1_form no_policy""".split()
+life_missing_review life_bad_time life_offset life_lowercase_z life_feb_30 life_on_lk1_form
+life_on_lk1_legacy_policy life_malformed_on_lk1_form no_policy""".split()
 
 
 def decl_of(v):
@@ -82,7 +83,9 @@ def test_every_vector_recomputes():
             assert verify_lk2(key, body, declaration=None)
             assert verify_lk2(key, body, declaration=decl)
         else:
-            assert lk1.verify(key, body)
+            bare = {k: x for k, x in body.items() if k != "life"}
+            assert lk1.verify(key, bare)
+        assert ("life" in body) == (v["life"] is not None), v["name"]
         assert verify_label(key, body, declaration=None)
         assert verify_label(key, body, declaration=decl)
 
@@ -109,6 +112,8 @@ def test_expected_outcomes():
         "hierarchical_level": ("lk2", None),
         "life_a": ("lk2", None),
         "life_b": ("lk2", None),
+        "life_on_lk1_form": ("lk1", None),
+        "life_on_lk1_legacy_policy": ("lk1", None),
     }
     for name, (form, tail) in expect.items():
         v = BY_NAME[name]
@@ -142,7 +147,7 @@ def test_expected_outcomes():
         "life_offset": ("life_malformed", None),
         "life_lowercase_z": ("life_malformed", None),
         "life_feb_30": ("life_malformed", None),
-        "life_on_lk1_form": ("lk1_life_undecided", None),
+        "life_malformed_on_lk1_form": ("life_malformed", None),
         "no_policy": ("no_policy", None),
     }
     for name, (reason, dim) in no_key.items():
@@ -402,10 +407,29 @@ def test_life_refused(life):
     assert compile_label(COMP, DECLS["nation_only"], life=life) == NoKey(LIFE_MALFORMED, None)
 
 
-def test_life_on_lk1_form_is_undecided():
+def test_life_on_lk1_form_keeps_lk1_key():
+    # Ruled 2026-11-17: an lk1 label with life gets its lk1 key; life never enters any key.
     one = {"nation": {"author": "ATL", "release": ["BDR"]}}
-    assert compile_label(one, DECLS["nation_only"], life=LIFE_OK) == NoKey("lk1_life_undecided", None)
-    assert compile_label(one, DECLS["nation_only"], life="garbage") == NoKey("lk1_life_undecided", None)
+    decl = DECLS["nation_only"]
+    key, bare = lk1.compile_lk1(decl.policy_id, "ATL", ["BDR"])
+    got_key, body = compile_label(one, decl, life=LIFE_OK)
+    assert got_key == key == compile_label(one, decl, life=None)[0]
+    assert body == dict(bare, life=LIFE_OK)
+    assert compile_label(one, decl, life=None) == (key, bare)
+    assert verify_label(key, body, declaration=None)
+    assert verify_label(key, body, declaration=decl)
+    # lk1.verify itself is unchanged: exactly policy, v and dims
+    assert not lk1.verify(key, body)
+    assert lk1.verify(key, bare)
+    # a malformed life is refused on the lk1 form too
+    assert compile_label(one, decl, life="garbage") == NoKey(LIFE_MALFORMED, None)
+    assert compile_label(one, decl, life=dict(LIFE_OK, Extra="x")) == NoKey(LIFE_MALFORMED, None)
+    for bad in (None, {}, dict(LIFE_OK, Extra="x"), dict(LIFE_OK, CreationDateTime="2026-11-16")):
+        assert not verify_label(key, dict(bare, life=bad), declaration=None)
+    # the legacy-id lk1 key is unchanged by life
+    legacy = BY_NAME["life_on_lk1_legacy_policy"]
+    assert legacy["label_key"] == BY_NAME["lk1_keeps_key_legacy_policy"]["label_key"]
+    assert legacy["label"]["life"] == legacy["life"]
 
 
 def test_garbage_never_raises():
@@ -456,7 +480,7 @@ def test_set_dimension_normalisation():
 
 
 def test_exports():
-    names = """AUTHOR_EMPTY DECLARATION_NOT_LK2 FORM_IS_LK1 LIFE_MALFORMED LIFE_MEMBERS LK1_LIFE_UNDECIDED NO_POLICY
+    names = """AUTHOR_EMPTY DECLARATION_NOT_LK2 FORM_IS_LK1 LIFE_MALFORMED LIFE_MEMBERS NO_POLICY
     POLICY_ID_NOT_URN_OID RELEASE_ABSENT ROLLUP_WITH_AUTHOR TIME_RE URN_OID_RE VALUE_RE NoKey canonical_lk2
     check_lk2_declaration check_policy_id compile_label compile_lk2 declaration_from_data verify_label
     verify_lk2""".split()

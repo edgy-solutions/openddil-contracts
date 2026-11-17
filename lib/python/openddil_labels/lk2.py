@@ -9,6 +9,11 @@ The key compiler checks format only, never vocabulary. The key is a function of
 the policy id and the body alone, so verify_lk2 and the stack's SQL function
 need no vocabulary. Admission (admission.validate) stays the vocabulary check.
 
+life never enters any key, lk1 or lk2 (ruled 2026-11-17). A one-author
+nation-only label that carries life keeps its lk1 key: compile_label returns the
+lk1 body with life beside its three members. verify_label accepts that body;
+lk1.verify, unchanged, still accepts exactly policy, v and dims.
+
 No parameter has a default (ADR-0055 section 1a): where there is no life or no
 declaration, the caller passes None explicitly. Absence is passed, never defaulted.
 
@@ -42,7 +47,6 @@ ROLLUP_WITH_AUTHOR = "rollup_with_author"
 RELEASE_ABSENT = "release_absent"
 LIFE_MALFORMED = "life_malformed"
 FORM_IS_LK1 = "form_is_lk1"
-LK1_LIFE_UNDECIDED = "lk1_life_undecided"
 
 _COLLECTIONS = (list, tuple, set, frozenset)
 
@@ -307,9 +311,12 @@ def compile_label(dims, declaration, *, life):
                 return parsed
             form, authors, release = parsed
             if form == "author" and len(authors) == 1:
+                if life is not None and not _life_ok(life):
+                    return NoKey(LIFE_MALFORMED, None)
+                key, body = compile_lk1(declaration.policy_id, authors[0], release)
                 if life is not None:
-                    return NoKey(LK1_LIFE_UNDECIDED, None)
-                return compile_lk1(declaration.policy_id, authors[0], release)
+                    body["life"] = {m: life[m] for m in LIFE_MEMBERS}
+                return key, body
         return compile_lk2(dims, declaration, life=life)
     except Exception:
         return NoKey(VALUE_MALFORMED, None)
@@ -356,11 +363,19 @@ def verify_lk2(label_key, body, *, declaration):
 
 
 def verify_label(label_key, body, *, declaration):
-    """Dispatch on the key prefix. Never raises."""
+    """Dispatch on the key prefix. Never raises.
+
+    An lk1 body may carry life beside policy, v and dims: life is checked, then
+    left out, and the rest goes to lk1.verify. life never enters the key.
+    """
     try:
         if not isinstance(label_key, str):
             return False
         if label_key.startswith("lk1:"):
+            if isinstance(body, dict) and "life" in body:
+                if not _life_ok(body["life"]):
+                    return False
+                body = {k: v for k, v in body.items() if k != "life"}
             return verify_lk1(label_key, body)
         if label_key.startswith("lk2:"):
             return verify_lk2(label_key, body, declaration=declaration)
@@ -568,7 +583,15 @@ def _vector_cases():
         ("life_offset", no, comp, life(CreationDateTime="2026-11-16T09:30:00+00:00"), {}),
         ("life_lowercase_z", no, comp, life(CreationDateTime="2026-11-16T09:30:00z"), {}),
         ("life_feb_30", no, comp, life(CreationDateTime="2026-02-30T09:30:00Z"), {}),
-        ("life_on_lk1_form", no, {"nation": atl_bdr}, _LIFE_A, {}),
+        ("life_on_lk1_form", no, {"nation": atl_bdr}, _LIFE_A, {"same_key_as": "single_author_atl_bdr"}),
+        (
+            "life_on_lk1_legacy_policy",
+            "legacy_nation_only",
+            {"nation": atl_bdr},
+            _LIFE_B,
+            {"same_key_as": "lk1_keeps_key_legacy_policy"},
+        ),
+        ("life_malformed_on_lk1_form", no, {"nation": atl_bdr}, life(Extra="x"), {}),
         ("no_policy", None, comp, None, {}),
     ]
 

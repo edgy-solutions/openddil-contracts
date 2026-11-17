@@ -1290,6 +1290,82 @@
       "no_key_dimension": null
     },
     {
+      "canonical": "lk1|urn:oid:1.3.6.1.4.1.32473.1|nation|ATL|BDR",
+      "declaration": "nation_only",
+      "dims": {
+        "nation": {
+          "author": "ATL",
+          "release": [
+            "BDR"
+          ]
+        }
+      },
+      "form": "lk1",
+      "label": {
+        "dims": {
+          "nation": {
+            "author": "ATL",
+            "release": [
+              "BDR"
+            ]
+          }
+        },
+        "life": {
+          "CreationDateTime": "2026-11-16T09:30:00Z",
+          "ReviewDateTime": null
+        },
+        "policy": "urn:oid:1.3.6.1.4.1.32473.1",
+        "v": 1
+      },
+      "label_key": "lk1:9c812fa596395e8e08e2e8f0fce50e799cde5ff6b7d2a48ddc7b44933b9de1cc",
+      "life": {
+        "CreationDateTime": "2026-11-16T09:30:00Z",
+        "ReviewDateTime": null
+      },
+      "name": "life_on_lk1_form",
+      "no_key": null,
+      "no_key_dimension": null,
+      "same_key_as": "single_author_atl_bdr"
+    },
+    {
+      "canonical": "lk1|example:policy-1|nation|ATL|BDR",
+      "declaration": "legacy_nation_only",
+      "dims": {
+        "nation": {
+          "author": "ATL",
+          "release": [
+            "BDR"
+          ]
+        }
+      },
+      "form": "lk1",
+      "label": {
+        "dims": {
+          "nation": {
+            "author": "ATL",
+            "release": [
+              "BDR"
+            ]
+          }
+        },
+        "life": {
+          "CreationDateTime": "2026-11-16T10:45:12.250Z",
+          "ReviewDateTime": "2027-11-16T10:45:12.250Z"
+        },
+        "policy": "example:policy-1",
+        "v": 1
+      },
+      "label_key": "lk1:f02cd2ad668e692dc6ee63b3e98b1c1e7cf4f9397fd7cb56e6132be3edf9aa08",
+      "life": {
+        "CreationDateTime": "2026-11-16T10:45:12.250Z",
+        "ReviewDateTime": "2027-11-16T10:45:12.250Z"
+      },
+      "name": "life_on_lk1_legacy_policy",
+      "no_key": null,
+      "no_key_dimension": null,
+      "same_key_as": "lk1_keeps_key_legacy_policy"
+    },
+    {
       "canonical": null,
       "declaration": "nation_only",
       "dims": {
@@ -1305,10 +1381,11 @@
       "label_key": null,
       "life": {
         "CreationDateTime": "2026-11-16T09:30:00Z",
+        "Extra": "x",
         "ReviewDateTime": null
       },
-      "name": "life_on_lk1_form",
-      "no_key": "lk1_life_undecided",
+      "name": "life_malformed_on_lk1_form",
+      "no_key": "life_malformed",
       "no_key_dimension": null
     },
     {
