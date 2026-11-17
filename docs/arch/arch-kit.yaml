@@ -9,6 +9,7 @@ model:
   file: model/openddil.sysml # relative to paths.root
   package: OpenDDIL
 exchange:
+  reader: helm-annotations
   annotations:
     produces: openddil.io/produces-topics
     groups: openddil.io/consumer-groups
