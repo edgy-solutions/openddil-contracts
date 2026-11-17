@@ -16,6 +16,9 @@ was not read is never used to decide anything here.
 kinds, in [DESIGN-2026-11-11-remaining-life-output-kind.md](DESIGN-2026-11-11-remaining-life-output-kind.md); the
 built-in test record kind (§5) in [DESIGN-2026-11-11-bit-record-kind.md](DESIGN-2026-11-11-bit-record-kind.md). Both
 accepted as proposed.
+**Amendment proposed 2026-11-15 (§4.4, Decision 5, What this does not establish):** the record that crosses back today
+is written at release, not at completion, so it confirms no closure. A confirmed closure comes only from a completion
+record that names the release record it completes. Neither is built. Provisional until the project owner rules it.
 **Builds on:** ADR-0038 §1 (the ISO 13374 reading) and C1, C2 and C7; ADR-0051 (failure records, usage meters,
 composable rollups); ADR-0057 (the declared analytic unit); ADR-0020 (derived values and the confidence staircase);
 ADR-0013 (the quantity and its unit); ADR-0046 (declared kinds at the gate); ADR-0056 (one identity per thing).
@@ -236,10 +239,39 @@ as C2 requires (finding 8). ADR-0057's status now says the set opens when this k
 ### 4.4 Where a closure reason comes from
 
 **Ruled 2026-11-11.** A confirmed component and a closure reason come from one place: the maintenance management
-information system's completed work order. It returns through iagent as the outcome of its maintenance action record,
-the workflow's registered output artifact. iagent's ruling R-114 (2026-10-02) has the completed record cross back to
-OpenDDIL as the plain wire response, not as an ingest kind.
-- **Confirmed:** a closure carried by that outcome is a confirmed closure. Only these closures count in §4.1's
+information system's completed work order. It returns through iagent as a completion record (amended 2026-11-15,
+below).
+
+**Amended 2026-11-15 (proposed): the record received today is a release, not a completion.** iagent's architect
+answered this section's question, and iagent checked the answer against its code on 2026-11-14.
+- **What crosses back today is written at release.** iagent writes its maintenance action record when the workflow's
+  outcome is `released` (`_write_action_record`, `agent_fleet/restate_analyst/workflow_runner.py`, iagent 31c5acd4).
+  It records what was decided, not that the work was done. It confirms no closure and closes no episode.
+- **A confirmed closure needs a completion record.** That is a second record, written when the case reaches a terminal
+  stage, which names the release record it completes. Neither the completion step nor the record is built.
+- **Every case that reaches a terminal stage returns one.** A cancelled or deferred case returns a completion record
+  whose outcome says so. It closes nothing.
+- **Its fields are iagent's architect's ruled shape,** each one a field of the contract that iagent owes:
+  - the confirmed component, as the identity OpenDDIL sent, with its alias scheme where it is an alias (ADR-0056);
+  - the closure reason, from a declared vocabulary that OpenDDIL owns. A maintenance system's own codes are mapped
+    onto it by a deployment row;
+  - the work order reference, with the id of the system it came from;
+  - the completion time, in UTC;
+  - the meter reading with its unit, and the failure mode, when the completion step collected them. When absent, the
+    record says absent. It never defaults;
+  - the repair type, from a declared vocabulary that OpenDDIL owns;
+  - the episode it closes: the episode id OpenDDIL sent, beside iagent's case id.
+- **The two vocabularies are proposed, not merged:** `ontology/closure_reasons.yaml` and `ontology/repair_types.yaml`
+  (PR #34).
+- **How OpenDDIL reads it is proposed, not merged:** "work recorded" is read from the completion record as an intake
+  kind that names its release record (`DESIGN-2026-11-10-adr0058-first-increment.md` §3.1, PR #35).
+- **The transport.** iagent's ruling R-114 (2026-10-02) describes iagent's side: the record crosses back as a plain
+  wire response, not as an iagent ingest kind. On OpenDDIL's side, every record that crosses inbound is admitted by
+  the intake as a declared kind (ADR-0046 §5). The completion record is no exception.
+- **Owed by iagent by 2026-11-27:** the completion record's contract. iagent sends it to OpenDDIL for review before
+  it is fixed. Until it is merged, no outcome field is bound here, and the confirmed counts of §4.1 and the join of
+  §4.3 have no source.
+- **Confirmed:** a closure carried by a completion record's outcome is a confirmed closure. Only these closures count in §4.1's
   confirmed counts and in §4.3's join.
 - **Declared at the tier:** a closure recorded at a tier, by a person or a workflow step, is declared-local and
   unconfirmed. It is kept and shown, and it counts under its own reason, never as `confirmed`. A later outcome from the
@@ -249,7 +281,7 @@ OpenDDIL as the plain wire response, not as an ingest kind.
 
 **A question for iagent's architect:** which fields the maintenance action record's outcome carries. At least the
 confirmed component, the closure reason from §4.1's vocabulary, the work order reference, and the time of completion.
-Until it is answered, no outcome field is bound here.
+**Answered 2026-11-14** (the amendment above): the fields belong to a completion record, not to the release record.
 
 ## 5. The built-in test kind: a proposed seam
 
@@ -430,9 +462,10 @@ is named as required.
    - remaining useful life as an output kind (§4.2);
    - the scoring harness (§4.3).
 4. Configuration management and condition monitoring are written out in full (§6).
-5. A closure is confirmed only by the completed work order's outcome, through iagent (§4.4). A closure recorded at a tier
-   is declared-local and unconfirmed. A release never closes an episode. The outcome's fields are a question for iagent's
-   architect.
+5. A closure is confirmed only by the completed work order's outcome, carried by iagent's completion record (§4.4,
+   amended 2026-11-15, proposed). The record that crosses back at release confirms nothing. A closure recorded at a
+   tier is declared-local and unconfirmed. A release never closes an episode. The completion record's contract is owed
+   by iagent.
 6. The analyzer is configuration status accounting. It is not state detection, and its advice is not condition advice.
 7. ADR-0057's output kinds open when the remaining-life kind is specified (§4.2).
 8. Network state is an observed input with provenance, never managed (§7). An NMS disagreement with the heartbeats is
@@ -455,8 +488,8 @@ is named as required.
 - The definitions of ISO 14224's terms, ISO 13374's blocks, and anything in MIL-STD-1309, ROMAIN or ISO 15926: all
   unread.
 - That ISO 13381-1:2025 keeps the 2015 terms.
-- Which fields the maintenance action record's outcome carries, and whether every work order returns a closure reason
-  and a confirmed component. That is the question to iagent's architect (§4.4).
+- The completion record's contract. Its fields are ruled in shape (§4.4, amended 2026-11-15), and the contract is
+  owed by iagent. Whether every maintenance system can supply a closure reason and a confirmed component is unread.
 - What any network management system reports, or how often. None was read, and FCAPS's text was not read (§7).
 - The upstream metrics of the third-party services (§7.5).
 

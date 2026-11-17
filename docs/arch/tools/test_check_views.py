@@ -7,6 +7,7 @@ The real tree is checked once. Each rule is then proved by copying docs/arch
 and decisions into a temp tree (keeping their relative distance), breaking
 one thing for real, and asserting that rule's FAIL line appears.
 """
+import os
 import re
 import shutil
 import subprocess
@@ -394,6 +395,63 @@ class DecisionLinks(unittest.TestCase):
         rc, got = self.lines()
         self.assertEqual(rc, 1)
         self.assertTrue(any("99" in l for l in got), got)
+
+
+class RecordFlag(unittest.TestCase):
+    """--record: a deployment's own capability record, read in place of <root>/capability-record.yaml."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.root = copy_tree(self.tmp / "tree")
+        shutil.copytree(REPO / ".github", self.tmp / "tree" / ".github")  # the links rule resolves workflow files
+        self.rec = self.tmp / "own-record.yaml"
+        shutil.copyfile(ARCH / "capability-record.yaml", self.rec)
+
+    def test_a_copy_outside_the_tree_passes(self):
+        rc, out, err = run(self.root, "--record", str(self.rec), "--allow-partial", "test")
+        self.assertEqual(rc, 0, err)
+
+    def test_the_flag_is_read_not_the_root_copy(self):
+        text = self.rec.read_text(encoding="utf-8")
+        self.assertIn("adrs: [ADR-0038", text)
+        self.rec.write_text(text.replace("adrs: [ADR-0038", "adrs: [ADR-9999", 1),
+                            encoding="utf-8", newline=chr(10))
+        rc, out, err = run(self.root, "--record", str(self.rec), "--allow-partial", "test")
+        self.assertEqual(rc, 1, err)
+        self.assertTrue(any(l.startswith("FAIL: phases:") for l in err.splitlines()), err)
+        rc, out, err = run(self.root)
+        self.assertEqual(rc, 0, err)
+
+    def test_a_missing_record_is_bad_input_and_names_the_path(self):
+        gone = self.tmp / "nowhere.yaml"
+        rc, out, err = run(self.root, "--record", str(gone), "--allow-partial", "test")
+        self.assertEqual(rc, 2, err)
+        self.assertIn(str(gone), err)
+        self.assertNotIn("Traceback", err)
+
+    def test_floor_reads_the_given_record(self):
+        repos = os.environ.get("OPENDDIL_REPOS")
+        bundle = os.environ.get("OPENDDIL_BUNDLE")
+        if not repos or not bundle:
+            self.skipTest("OPENDDIL_REPOS and OPENDDIL_BUNDLE not set: no chart to render")
+        r, b = Path(repos), Path(bundle)
+        inputs = ["--chart", str(r / "openddil-helm" / "openddil-demo"),
+                  "--values", str(b / "k8s" / "tier-node-values.yaml"),
+                  "--values", str(b / "k8s" / "egress-values.yaml"),
+                  "--release", "openddil",
+                  "--readiness", str(r / "openddil-helm" / "scripts" / "RECORDING-READINESS.md"),
+                  "--barred", str(HERE / "barred-sample.txt")]
+        NL = chr(10)
+        text = self.rec.read_text(encoding="utf-8")
+        head, sep, tail = text.partition(NL + "rendered:" + NL + "  workload:" + NL)
+        self.assertTrue(sep, "no rendered.workload section")
+        lines = tail.splitlines(keepends=True)
+        self.assertTrue(lines[0].startswith("    "), lines[0])
+        self.rec.write_text(head + sep + "".join(lines[1:]), encoding="utf-8", newline=chr(10))
+        rc, out, err = run(self.root, "--record", str(self.rec), *inputs)
+        self.assertEqual(rc, 1, err)
+        self.assertTrue(any(l.startswith("FAIL: floor:") for l in err.splitlines()), err)
 
 
 if __name__ == "__main__":

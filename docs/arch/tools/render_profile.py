@@ -402,6 +402,8 @@ class Renderer:
         for mk, home in derived.HOMES.items():
             if mk in body and vid != home:
                 raise InputError(f"view {vid}: the marker {mk} belongs only in {home}")
+        if vid == PHASES_HOME:
+            body = capability_phases.name_record(body, self.a.record, ROOT / "capability-record.yaml")
         body = marks.fill(body, (ROOT / entry["file"]).parent, ROOT.parent.parent / "decisions", vid)
         body = inline_model(body, self.sysml, self.masked)
         body = rewrite_links(body, (ROOT / entry["file"]).parent, self.out_dir)

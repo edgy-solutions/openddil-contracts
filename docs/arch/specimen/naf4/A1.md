@@ -9,6 +9,7 @@ The terms the ontology declares, generated from [`ontology/`](../../../../ontolo
 | File | Term | Kind | Entries | Fields |
 |---|---|---|---|---|
 | asset_identity_aliases.yaml | aliases.dis | records | 3 | canonical_asset_id, dis_entity_id, notes |
+| closure_reasons.yaml | reasons | map of records | 5 | aligned_to, alignment, basis, candidate, censors_life, confirms_failure, ends_life, in_bit_counts, in_reliability, meaning |
 | dis_appearance.yaml | populating_sources | map of records | 1 | declared_by, declared_on, note |
 | dis_appearance.yaml | appearance | map of records | 2 | damage, deactivated, firepower_kill, launcher, mobility_kill, power_plant, siso_ref |
 | dis_condition.yaml | level_order | values | 7 | none |
@@ -20,6 +21,7 @@ The terms the ontology declares, generated from [`ontology/`](../../../../ontolo
 | dis_entity_types.yaml | mappings | map of records | 14 | cbm_schema, cm_schema, default_baseline, deployment_signal, domain_authority, handling, nomenclature, platform_family, platform_variant, siso_description, siso_ref |
 | platform_reference.yaml | platforms | map of records | 3 | domain_authority, fuel_capacity, weight_class |
 | platform_variant_aliases.yaml | aliases.dis | empty list | 0 | none |
+| repair_types.yaml | types | map of records | 6 | aligned_to, alignment, kind, meaning, requires |
 
 An entry count of 0 is a term the public ontology declares and leaves empty for a deployment to fill. The platform variants a deployment uses: {{slot:platform-variants}}. [Resources-Information](../../views/Rs-If.md) shows the same files on the wire, and [Standards-Taxonomy](../../views/Sd-Tx.md) shows the standards they cite.
 

@@ -100,8 +100,9 @@ The phase is computed from these citations, and the evidence comes only from the
 `measured` citation reads `measured`. One with `built` and no `measured` reads `built unmeasured`. A citation that does
 not resolve fails the render with exit 1.
 
-**The floor is not checked for this record.** `check_views.py` reads only `docs/arch/capability-record.yaml`, so a
-record passed with `--record` is never checked to claim every rendered workload, kind, flag and route.
+Check the record with `check_views.py --record` before rendering. That also checks that it claims every workload,
+kind, flag and route the deployment's render shows. [RUNBOOK-cv3-for-a-deployment.md](RUNBOOK-cv3-for-a-deployment.md)
+walks through the record, the readiness doc, the check and CV-3 on its own.
 
 ## 6. The output stays on the deployment's side
 
