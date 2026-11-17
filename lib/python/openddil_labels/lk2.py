@@ -190,13 +190,18 @@ def _life_ok(life):
 
 
 def _check_keys(dims, spec):
-    """NoKey for a non-mapping, an undeclared key, or a missing dimension; else None."""
+    """NoKey for a non-mapping, an undeclared key, or a missing dimension; else None.
+
+    Any non-str key gives DIMENSION_UNDECLARED with no dimension. Otherwise the first undeclared key
+    is the first in byte order (str sort is code-point order, which is UTF-8 byte order), not dict
+    order, matching the SQL.
+    """
     if not isinstance(dims, Mapping):
         return NoKey(VALUE_MALFORMED, None)
     names = {n for n, _ in spec}
-    for k in dims:
-        if not isinstance(k, str):
-            return NoKey(DIMENSION_UNDECLARED, None)
+    if any(not isinstance(k, str) for k in dims):
+        return NoKey(DIMENSION_UNDECLARED, None)
+    for k in sorted(dims):
         if k not in names:
             return NoKey(DIMENSION_UNDECLARED, k)
     for n in ["nation"] + sorted(n for n in names if n != "nation"):
@@ -385,16 +390,21 @@ def verify_label(label_key, body, *, declaration):
 
 
 def declaration_from_data(data):
-    """Build a Declaration from {"policy_id", "dimensions": [{name, type, vocabulary, owner, has_author}]}."""
-    makers = {
-        "permissive": lambda d: Dimension.permissive(
-            d["name"], d["vocabulary"], d["owner"], has_author=d["has_author"]
-        ),
-        "restrictive": lambda d: Dimension.restrictive(d["name"], d["vocabulary"], d["owner"]),
-        "exclusionary": lambda d: Dimension.exclusionary(d["name"], d["vocabulary"], d["owner"]),
-        "hierarchical": lambda d: Dimension.hierarchical(d["name"], d["vocabulary"], d["owner"]),
-    }
-    dims = tuple(makers[d["type"]](d) for d in data["dimensions"])
+    """Build a Declaration from {"policy_id", "dimensions": [{name, type, vocabulary, owner, has_author}]}.
+
+    Every dimension, of every type, must carry a has_author member that is a bool (exactly True or
+    False; absent, null, 1, 0 and "true" are all refused) or ValueError("has_author must be a bool:
+    <name>") is raised before anything is built. has_author is then passed through for every type, so
+    the model refuses has_author true on a dimension that is not permissive.
+    """
+    dimensions = data["dimensions"]
+    for d in dimensions:
+        if type(d.get("has_author")) is not bool:
+            raise ValueError("has_author must be a bool: %s" % (d.get("name"),))
+    dims = tuple(
+        Dimension(d["name"], d["type"], tuple(d["vocabulary"]), d["owner"], d["has_author"])
+        for d in dimensions
+    )
     return Declaration(data["policy_id"], dims)
 
 
@@ -538,6 +548,13 @@ def _vector_cases():
         ("second_dim_missing", nr, {"nation": atl_bdr}, None, {}),
         ("second_dim_null", nr, rights(atl_bdr, None), None, {}),
         ("dimension_undeclared", no, {"nation": _n(["ATL", "BDR"], ["CRD"]), "caveat": ["X"]}, None, {}),
+        (
+            "dimension_undeclared_byte_order",
+            no,
+            {"zz": ["X"], "Caveat": ["X"], "b": ["X"], "nation": _n(["ATL", "BDR"], ["CRD"])},
+            None,
+            {},
+        ),
         (
             "hierarchical_level",
             "nation_rights_level",

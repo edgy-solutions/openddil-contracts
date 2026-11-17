@@ -43,7 +43,7 @@ REQUIRED = """composite_release composite_release_empty composite_release_absent
 rollup_release rollup_release_empty rollup_release_absent rollup_not_true rollup_over_one_author
 single_author_atl_bdr single_author_atl_atl_bdr single_author_as_list lk1_keeps_key_legacy_policy
 legacy_policy_composite author_empty_no_marker author_null_no_marker marker_with_author marker_with_empty_author
-second_dim_empty second_dim_values second_dim_missing second_dim_null dimension_undeclared hierarchical_level
+second_dim_empty second_dim_values second_dim_missing second_dim_null dimension_undeclared dimension_undeclared_byte_order hierarchical_level
 hierarchical_as_list rollup_with_two_dims separator_pipe separator_comma separator_tilde separator_at
 value_empty_string value_too_long value_space nation_author_malformed life_a life_b life_extra_member
 life_missing_review life_bad_time life_offset life_lowercase_z life_feb_30 life_on_lk1_form
@@ -132,6 +132,7 @@ def test_expected_outcomes():
         "second_dim_missing": ("dimension_missing", "data_rights_holder"),
         "second_dim_null": ("dimension_missing", "data_rights_holder"),
         "dimension_undeclared": ("dimension_undeclared", "caveat"),
+        "dimension_undeclared_byte_order": ("dimension_undeclared", "Caveat"),
         "hierarchical_as_list": ("value_malformed", "classification"),
         "separator_pipe": ("value_malformed", "data_rights_holder"),
         "separator_comma": ("value_malformed", "data_rights_holder"),
@@ -430,6 +431,43 @@ def test_life_on_lk1_form_keeps_lk1_key():
     legacy = BY_NAME["life_on_lk1_legacy_policy"]
     assert legacy["label_key"] == BY_NAME["lk1_keeps_key_legacy_policy"]["label_key"]
     assert legacy["label"]["life"] == legacy["life"]
+
+
+def test_declaration_from_data_has_author():
+    from copy import deepcopy
+
+    for bad in (_MISSING, None, 1, 0, "true"):
+        d = deepcopy(NATION)
+        if bad is _MISSING:
+            del d["has_author"]
+        else:
+            d["has_author"] = bad
+        with pytest.raises(ValueError, match="has_author must be a bool: nation"):
+            declaration_from_data(_data(d))
+    for type_ in ("restrictive", "hierarchical", "exclusionary"):
+        with pytest.raises(ValueError, match="only valid on a permissive"):
+            declaration_from_data(_data(NATION, _d("x", type_, ["A"], True)))
+    d = _d("x", "restrictive", ["A"])
+    del d["has_author"]
+    with pytest.raises(ValueError, match="has_author must be a bool: x"):
+        declaration_from_data(_data(NATION, d))
+    for name, data in DATA["declarations"].items():
+        assert declaration_from_data(data) == DECLS[name]
+
+
+_MISSING = object()
+
+
+def test_undeclared_key_byte_order_any_insertion_order():
+    import itertools
+
+    decl = DECLS["nation_only"]
+    comp = BY_NAME["dimension_undeclared_byte_order"]["dims"]["nation"]
+    items = {"zz": ["X"], "Caveat": ["X"], "b": ["X"], "nation": comp}
+    for perm in itertools.permutations(items):
+        dims = {k: items[k] for k in perm}
+        for f in (compile_label, compile_lk2):
+            assert f(dims, decl, life=None) == NoKey("dimension_undeclared", "Caveat"), perm
 
 
 def test_garbage_never_raises():
