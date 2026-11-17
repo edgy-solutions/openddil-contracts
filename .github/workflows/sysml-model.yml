@@ -11,13 +11,15 @@ on:
     branches: [main]
     paths:
       - 'docs/arch/model/**'
-      - 'docs/arch/tools/validate_sysml.py'
+      - 'docs/arch/arch-kit.yaml'
+      - 'docs/arch/tools/kit_path.py'
       - 'docs/arch/tools/test_validate_sysml.py'
       - '.github/workflows/sysml-model.yml'
   pull_request:
     paths:
       - 'docs/arch/model/**'
-      - 'docs/arch/tools/validate_sysml.py'
+      - 'docs/arch/arch-kit.yaml'
+      - 'docs/arch/tools/kit_path.py'
       - 'docs/arch/tools/test_validate_sysml.py'
       - '.github/workflows/sysml-model.yml'
   workflow_dispatch:
@@ -39,6 +41,16 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
+
+      # The validator is the kit's, at the same full sha that check-views.yml pins.
+      # The test finds the kit through ARCH_KIT.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edgy-solutions/arch-kit
+          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          path: arch-kit
+
+      - run: pip install ./arch-kit
 
       - uses: actions/setup-java@v6
         with:
@@ -63,10 +75,12 @@ jobs:
           tar --zstd -xf parser/kernel/pkg-*.tar.zst -C parser/kernel "$KERNEL_JAR"
 
       - name: Test the validator
+        env:
+          ARCH_KIT: ${{ github.workspace }}/arch-kit
         run: python -m unittest docs/arch/tools/test_validate_sysml.py
 
       - name: Validate the model
         run: |
-          python docs/arch/tools/validate_sysml.py \
+          arch-kit --config docs/arch/arch-kit.yaml validate_sysml \
             --jar "$PWD/parser/kernel/$KERNEL_JAR" \
             --library "$PWD/parser/release/sysml.library"
