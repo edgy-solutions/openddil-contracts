@@ -20,3 +20,13 @@ registers:
 readiness:
   default: ../scripts/RECORDING-READINESS.md   # relative to the chart directory
 loader: kit_loader.py        # the module that reads this repository's record, decisions, registers and readiness doc
+labels:
+  degraded_mode:
+    heading: Severed behaviour     # the page heading, the table column, the derived table's lead sentence
+    marker: severed-behaviour      # the generated-section marker: <!-- generated: MARKER -->
+    attribute: data-severed        # the HTML attribute on the capability page's paragraph
+    open_row_prefix: SV-           # a record row id with this prefix is the open row for "not stated"
+  group:
+    column: Lane                   # the capability-phases table column, and the column render_html styles
+  environment:
+    word: lab                      # "Lab X is ..., lab Y ..." and the evidence cell's "<date>, lab X, ..."

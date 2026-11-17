@@ -659,6 +659,13 @@ class BuiltRelabel(unittest.TestCase):
                 self.assertIn('<a href="#adr-', m.group(1))
             self.assertLess(page.index("<h2>Evidence</h2>"), page.index("<h2>Severed behaviour</h2>"))
 
+    def test_the_declared_labels_reach_a_capability_page(self):
+        """This repository's own words, declared in arch-kit.yaml, still come out of the kit."""
+        doc, _ = self.make()
+        page = re.search(r'<section id="cap-[^"]+" class="page capability".*?</section>', doc, re.S).group(0)
+        self.assertIn("<h2>Severed behaviour</h2><p data-severed>", page)
+        self.assertIn("tr.lane-start>*{", doc)
+
     def test_the_severed_table_in_st_tx_links_every_capability(self):
         doc, record = self.make()
         sec = section(doc, "St-Tx")

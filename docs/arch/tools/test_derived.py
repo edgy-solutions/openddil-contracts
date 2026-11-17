@@ -82,7 +82,7 @@ class RealTree(unittest.TestCase):
     def test_severed_behaviour_has_one_row_per_capability_in_model_order(self):
         sysml = (ARCH / "model" / "openddil.sysml").read_text(encoding="utf-8")
         record = cp.load_record(ARCH / "capability-record.yaml")
-        out = derived.severed(record, sysml)
+        out = derived.degraded_mode_table(record, sysml)
         names = list(cp.model_capabilities(sysml))
         rows = body(body_after_head(out))
         self.assertEqual([r.split(" | ")[0].lstrip("| ") for r in rows], names)
@@ -110,7 +110,7 @@ class Severed(unittest.TestCase):
         return {"capabilities": {k: dict(v) for k, v in caps.items()}}
 
     def test_the_table_the_spec_shows(self):
-        out = derived.severed(self.rec(Alpha={"degraded_mode": "ADR-0029 §6"},
+        out = derived.degraded_mode_table(self.rec(Alpha={"degraded_mode": "ADR-0029 §6"},
                                        Beta={"degraded_mode": "not stated", "rows": ["AE-1", "SV-1", "SV-3"]}),
                               SEVERED_MODEL)
         self.assertEqual(out, "Severed behaviour: 1 of 2 capabilities have it stated in a decision record; 1 do not.\n\n"
@@ -120,12 +120,12 @@ class Severed(unittest.TestCase):
 
     def test_a_capability_without_the_key_is_refused(self):
         with self.assertRaises(cp.CheckError) as cm:
-            derived.severed(self.rec(Alpha={"degraded_mode": "not stated", "rows": ["SV-1"]}, Beta={}), SEVERED_MODEL)
+            derived.degraded_mode_table(self.rec(Alpha={"degraded_mode": "not stated", "rows": ["SV-1"]}, Beta={}), SEVERED_MODEL)
         self.assertIn("Beta has no severed entry", cm.exception.args[0])
 
     def test_the_marker_belongs_to_st_tx(self):
-        self.assertEqual(derived.HOMES[derived.SEVERED_MARKER], "St-Tx")
-        self.assertEqual(derived.SEVERED_MARKER, "<!-- generated: severed-behaviour -->")
+        self.assertEqual(derived.homes()[derived.degraded_marker()], "St-Tx")
+        self.assertEqual(derived.degraded_marker(), "<!-- generated: severed-behaviour -->")
 
 
 class Dependencies(unittest.TestCase):
