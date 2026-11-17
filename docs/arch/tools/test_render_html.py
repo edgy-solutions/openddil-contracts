@@ -258,7 +258,8 @@ class Args(unittest.TestCase):
             self.assertEqual(cm.exception.code, 2, drop)
 
     def test_bad_date_is_exit_2(self):
-        with mock.patch("sys.stderr"):
+        # a public portal would refuse first, for the missing lists; this test is about the date
+        with mock.patch("sys.stderr"), mock.patch.object(declared, "portal_audience", return_value="private"):
             rc = render_html.main(["--out", "x.html", "--chart", "c", "--values", "v", "--release", "r",
                                    "--date", "yesterday"])
         self.assertEqual(rc, 2)

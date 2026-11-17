@@ -15,11 +15,13 @@ import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import kit_path  # noqa: E402,F401
 import check_export  # noqa: E402
+import declared  # noqa: E402
 import capability_phases  # noqa: E402
 import check_views  # noqa: E402
 import render_profile as rp  # noqa: E402
@@ -85,6 +87,11 @@ def good(views=None, diagrams=FENCES, prov=PROV, decl=None, front=""):
 
 class Base(unittest.TestCase):
     def setUp(self):
+        # The declaration is public, which makes check_export require --relabel. These tests exercise the checks
+        # that run without a relabel list, so they run as a private portal; the kit's tests cover the public rule.
+        audience = mock.patch.object(declared, "portal_audience", return_value="private")
+        audience.start()
+        self.addCleanup(audience.stop)
         self.tmp = Path(tempfile.mkdtemp())
         self.addCleanup(lambda: __import__("shutil").rmtree(self.tmp, True))
         (self.tmp / "barred.txt").write_text(BARRED, encoding="utf-8")

@@ -19,6 +19,9 @@ registers:
   roadmap: ROADMAP-2026-10-29-isolation-increments.md
 readiness:
   default: ../scripts/RECORDING-READINESS.md   # relative to the chart directory
+portal:
+  hosting: ci-artifact        # the workflow uploads the export as a build artifact
+  audience: public             # a public repository: the render and check_export require the relabel and barred lists
 loader: kit_loader.py        # the module that reads this repository's record, decisions, registers and readiness doc
 labels:
   degraded_mode:

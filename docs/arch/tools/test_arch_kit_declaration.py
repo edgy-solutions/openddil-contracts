@@ -24,6 +24,10 @@ HOMES = {"dependencies": "St-Cn", "taxonomy": "Rs-Tx", "dictionary": "Am-If", "t
 
 
 class DeclarationMatchesLiterals(unittest.TestCase):
+    def test_portal(self):
+        self.assertEqual(declared.portal_hosting(TOOL), "ci-artifact")
+        self.assertEqual(declared.portal_audience(TOOL), "public")
+
     def test_phases(self):
         got = declared.phases(TOOL)
         self.assertEqual([p.name for p in got], PHASES)
