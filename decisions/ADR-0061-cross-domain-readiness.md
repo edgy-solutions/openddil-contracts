@@ -30,8 +30,10 @@ Option (iv) is ruled there. The alternatives stay listed.
 | ADatP-4778.2 Edition A Version 1, Profiles for Binding Metadata to a Data Object | A standards-related document to STANAG 4778: the binding profiles | **Read in full**: Chapters 1-12, and Chapter 2's Annexes A-E. The worked examples were scanned, not checked line by line. Cited by chapter and section |
 | ADatP-4778 (STANAG 4778), Metadata Binding Mechanism | The standard the profiles apply | **Unread.** What is said here about the binding data object comes from 4778.2's use of it, never from 4778 itself |
 | Isode, "Isode Approach to Data Centric Security using NATO Confidentiality Labels", white paper, 13 pages | **Secondary: a vendor's paper.** It describes the standards and the vendor's products | Read in full. Fetched 2026-11-16 from `https://www.isode.com/wp-content/uploads/2023/08/Isode-Approach-to-Data-Centric-Security-using-NATO-Confidentiality-Labels.pdf`. The PDF's metadata gives a creation date of 2026-07-27. Kept as a secondary source. Where it differs from the standards, the standards are followed and the difference is listed |
-| IANA media type registration, `application/vnd.nato.bindingdataobject+xml` | **A registry record**, not the standard. Registered 2023-11-27; change controller the NATO Standardization Office | Read in full |
+| IANA media type registration for the binding data object (the type is named under this table) | **A registry record**, not the standard. Registered 2023-11-27; change controller the NATO Standardization Office | Read in full |
 | RFC 3061 (the `urn:oid:` namespace), RFC 8141 (URNs), RFC 8785 (JSON canonicalization), RFC 7515 (JWS), RFC 7444 (the email label header that 4778.2's `Binding-Data` header is based on) | IETF standards | Cited for their names and scope only. Nothing here depends on a clause of them yet |
+
+The registered media type is `application/vnd.nato.bindingdataobject+xml`.
 
 Statements about what 4774 or 4778.2 contain now cite a clause, for example "4774 App 1 Table 5" or "4778.2 §7.5".
 - **4774 is paraphrased, never quoted.** Its element, attribute and value names are given as identifiers.
