@@ -28,5 +28,67 @@ labels:
     open_row_prefix: SV-           # a record row id with this prefix is the open row for "not stated"
   group:
     column: Lane                   # the capability-phases table column, and the column render_html styles
+  phase:
+    column: Phase                  # the phase column of the capability-phases table, and the column render_html badges
   environment:
     word: lab                      # "Lab X is ..., lab Y ..." and the evidence cell's "<date>, lab X, ..."
+phases:                        # strongest first; a capability takes the first phase whose rule it meets
+  - name: measured
+    when: [measured]
+    badge: m
+  - name: built unmeasured
+    when: [built]
+    badge: b
+  - name: accepted design
+    when: [{status: Accepted}]
+    badge: a
+  - name: proposed
+    when: [{status: Proposed}, still-open, pending]
+    badge: p
+  - name: row
+    when: [rows]
+    badge: r
+floor: built unmeasured        # capability_floor: this phase and every phase above it count as built
+statuses:
+  - word: Accepted             # as the decision index and a Sources table's Decision column write it
+    lead: accepted             # how a record's status line starts
+    in_force: true             # derived: a record with this status must be cited, unless exempt
+  - word: Proposed
+    lead: proposed
+    in_force: true
+    sources_check: true        # check_views marks: a row marked with this word and its record's lead must agree
+  - word: Superseded
+    lead: superseded
+    in_force: false
+  - word: Rejected
+    lead: rejected
+    in_force: false
+  - word: Deprecated
+    lead: deprecated
+    in_force: false
+  - word: Withdrawn
+    lead: withdrawn
+    in_force: false
+views:
+  required: [Op-Cn, Rs-Sr, Rs-If, Sc-Sr, Sd-Tx, St-Rm-P, Rs-Tr]
+  required_dodaf: [OV-1, OV-2, OV-5a, OV-5b, SV-1, SV-2, SV-4, SV-6, StdV-1, DIV-2, CV-2]
+  homes:                       # generated-section name -> the view that holds it
+    capability-phases: St-Rm-P
+    dependencies: St-Cn
+    taxonomy: Rs-Tx
+    dictionary: Am-If
+    trace: Am-Tr
+    severed-behaviour: St-Tx   # keyed by the marker declared in labels.degraded_mode.marker
+  capability_links: [St-Tx, St-Rm-P]   # views whose capability names link to their pages
+export:
+  browser:
+    views:                             # the views the browser check opens, by the role it gives each
+      table: Rs-Cn                     #   phone, zebra and screenshot checks; holds the widest table
+      diagram: Op-Tx                   #   diagram screenshot, print and table-width checks
+      profile_only: Sc-Sr              #   a view that has no export in one of the profiles
+    search:
+      phrase: Which resource talks to which   # typed into the search box
+      finds: Rs-Cn                     # the view whose page holds that phrase
+    min_pages: 30
+    min_tables: 30
+    min_tokens: 1000
