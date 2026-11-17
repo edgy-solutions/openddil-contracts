@@ -1,6 +1,9 @@
 """openddil_identity: the first slice of ADR-0056 (pure library).
 
 Nothing calls this package yet.
+
+This increment adds the era-2 episode id (episode.py), per ADR-0056 section 5a
+(#39), ruled 2026-11-16 with the canonical-JSON seed.
 """
 
 from .declaration import (
@@ -22,6 +25,7 @@ from .equivalence import (
     Refused,
     check_equivalence,
 )
+from .episode import EPISODE_NAMESPACE, episode_id, episode_seed
 from .era import era
 from .ids import (
     GENERATOR,
@@ -39,6 +43,7 @@ __all__ = [
     "Bind",
     "Binding",
     "Conflict",
+    "EPISODE_NAMESPACE",
     "GENERATOR",
     "GENERATOR_VERSION",
     "Identity",
@@ -54,6 +59,8 @@ __all__ = [
     "check_equivalence",
     "declaration_ref",
     "decide",
+    "episode_id",
+    "episode_seed",
     "era",
     "lookup_key",
     "mint_identity",
