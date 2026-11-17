@@ -13,8 +13,8 @@
 - **What iagent has on disk today (read 2026-11-07).** There is no ADR-0067 and no ADR-0065 on any iagent branch, and
   no `graph_mapping`. This record names all three as forthcoming. It does not cite them as records until they exist.
 - **The five items lane 02 left open are ruled by the project owner, 2026-11-07** (see Rulings).
-- **Proposed for ruling 2026-11-15: the era-2 episode id's seed and namespace** (§5a). Provisional until the project
-  owner rules it.
+- **ACCEPTED, ruled by the project owner 2026-11-16: the era-2 episode id's seed and namespace** (§5a), with the
+  canonical-JSON seed. Proposed for ruling 2026-11-15.
 
 ## Findings first
 
@@ -161,7 +161,7 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
   - **The October test still holds.** The pinned literal tests the era-1 function for ids already issued. That function
     stays and the literal stays unedited. Only occurrences opened after the change take the new tuple.
 
-### 5a. The era-2 episode id: seed and namespace (proposed for ruling, 2026-11-15)
+### 5a. The era-2 episode id: seed and namespace (accepted 2026-11-16)
 
 §5 says "a uuid5 over (identity, component, fault code)" but not the exact string or namespace. Two implementations
 of that sentence can disagree byte for byte, and then check 8 fails by construction. This section fixes both.
@@ -169,13 +169,16 @@ of that sentence can disagree byte for byte, and then check 8 fails by construct
 **The id.**
 
 ```
-episode_id := uuid5(EPISODE_NAMESPACE, "episode|" + identity_iri + "|" + component + "|" + fault_code)
-identity_iri := "urn:uuid:" + the identity in lowercase canonical form
+episode_id     := uuid5(EPISODE_NAMESPACE, canonical_json(["episode", identity_iri, component, fault_code]))
+identity_iri   := "urn:uuid:" + the identity in lowercase canonical form
+canonical_json := json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False), UTF-8
 ```
 
-- **The seed keeps CM's era-1 shape,** `episode|<asset_id>|<component>|<fault_code>`
-  (`openddil-cm-service/src/events/asset_cm.py`). Only two inputs change: the identity's IRI replaces `asset_id`, and
-  the framework namespace replaces `NAMESPACE_URL`. CM's change is one function with two arguments moved.
+- **The seed is the canonical JSON of the field list,** not CM's era-1 `|`-joined shape,
+  `episode|<asset_id>|<component>|<fault_code>` (`openddil-cm-service/src/events/asset_cm.py`). A `|` in a value
+  cannot move a field boundary: `("a|b", "c")` and `("a", "b|c")` give different ids. The fields and their order are
+  era-1's, except that the identity's IRI replaces `asset_id`. The framework namespace replaces `NAMESPACE_URL`. CM's
+  change is one function, which calls `episode_id` or passes the same vectors.
 - **Kind and owning tier are not in it** (Ruling 1).
 - **`component` and `fault_code` are written as the record carries them.** They are compared and hashed, never
   normalised or parsed (check 4).
