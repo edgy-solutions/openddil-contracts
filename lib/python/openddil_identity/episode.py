@@ -1,24 +1,27 @@
 """The era-2 episode id: a uuid5 of (identity, component, fault code).
 
-Builds on the PROPOSED ADR-0056 section 5a (#39). It is not a ruled behaviour:
-the seed string and the namespace are provisional until the project owner rules
-them.
+ADR-0056 section 5a (#39), ruled 2026-11-16 with the canonical-JSON seed. The
+seed is the canonical JSON of the field list, not a "|"-joined string:
+
+    episode_id   := uuid5(EPISODE_NAMESPACE, seed)
+    seed         := canonical_json(["episode", identity_iri, component, fault_code])
+    identity_iri := "urn:uuid:" + the identity in lowercase canonical form
+    canonical_json(v) := json.dumps(v, sort_keys=True, separators=(",", ":"),
+                                    ensure_ascii=False, allow_nan=False)
+                         encoded as UTF-8 (the encoding declaration_ref uses)
+
+So ("a|b", "c") and ("a", "b|c") give different seeds and different ids: a
+field's boundary is the JSON string's, and no character inside a field can
+move it.
+
+Kind and owning tier are not in the seed. ``component`` and ``fault_code`` are
+hashed exactly as given: no strip, no case fold, no Unicode normalisation. An
+empty ``component`` or ``fault_code`` is accepted. A value that cannot be
+encoded as UTF-8 (a lone surrogate) is refused with ValueError, because it has
+no canonical encoding.
 
 Nothing calls this module yet. No occurrence id is here; the era-2 occurrence id
 is not proposed.
-
-    episode_id := uuid5(EPISODE_NAMESPACE, "episode|" + identity_iri + "|" + component + "|" + fault_code)
-    identity_iri := "urn:uuid:" + the identity in lowercase canonical form
-
-Kind and owning tier are not in the seed. ``component`` and ``fault_code`` are
-hashed exactly as given: no strip, no case fold, no Unicode normalisation.
-
-Open points, which #39 does not decide, so the current behaviour is kept and
-tested (a ruling changes a test, not a surprise):
-
-* An empty ``component`` or ``fault_code`` is accepted.
-* A ``|`` inside ``component`` or ``fault_code`` is accepted, so ("a|b", "c")
-  and ("a", "b|c") give the same seed and the same id.
 """
 
 from __future__ import annotations
@@ -39,19 +42,32 @@ EPISODE_NAMESPACE_GENERATOR_VERSION = "1"
 EPISODE_NAMESPACE_MINTED_AT = "2026-11-16T04:01:21Z"
 
 SEED_FORM = (
-    'episode_id := uuid5(EPISODE_NAMESPACE, "episode|" + identity_iri + "|" + component + "|" + fault_code)'
+    'episode_id := uuid5(EPISODE_NAMESPACE, canonical_json(["episode", identity_iri, component, fault_code]))'
+)
+CANONICAL_JSON_FORM = (
+    'json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False), UTF-8'
 )
 
 
+def _canonical_json(value: object) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
+
 def episode_seed(identity: Identity, component: str, fault_code: str) -> str:
-    """The string that is hashed: ``episode|<iri>|<component>|<fault_code>``."""
+    """The string that is hashed: the canonical JSON of
+    ``["episode", <iri>, <component>, <fault_code>]``."""
     if not isinstance(identity, Identity):
         raise TypeError("identity must be an Identity")
     if not isinstance(component, str):
         raise TypeError("component must be a str")
     if not isinstance(fault_code, str):
         raise TypeError("fault_code must be a str")
-    return "episode|" + as_iri(identity) + "|" + component + "|" + fault_code
+    for field, value in (("component", component), ("fault_code", fault_code)):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            raise ValueError("%s is not encodable as UTF-8" % field) from None
+    return _canonical_json(["episode", as_iri(identity), component, fault_code])
 
 
 def episode_id(identity: Identity, component: str, fault_code: str) -> uuid.UUID:
@@ -75,11 +91,14 @@ def generate_episode_vectors() -> dict:
         ("leading_whitespace", id_a, " pump", "F001", None),
         ("non_ascii_component", id_a, "pompe-éè", "F001", None),
         ("empty_fault_code", id_a, "pump", "", None),
+        ("empty_component", id_a, "", "F001", None),
+        ("empty_both", id_a, "", "", None),
+        ("json_escapes", id_a, 'a"b\\c/d', "line\nfeed\ttab\u001f", None),
         ("pipe_in_component", id_a, "a|b", "c", "pipe_in_fault_code"),
         ("pipe_in_fault_code", id_a, "a", "b|c", "pipe_in_component"),
     ]
     vectors = []
-    for name, ident, component, fault, collides in cases:
+    for name, ident, component, fault, differs in cases:
         identity = Identity(uuid.UUID(ident))
         v = {
             "name": name,
@@ -89,8 +108,8 @@ def generate_episode_vectors() -> dict:
             "seed": episode_seed(identity, component, fault),
             "episode_id": str(episode_id(identity, component, fault)),
         }
-        if collides is not None:
-            v["collides_with"] = collides
+        if differs is not None:
+            v["differs_from"] = differs
         vectors.append(v)
 
     contrast = []
@@ -114,6 +133,7 @@ def generate_episode_vectors() -> dict:
         "generator_version": EPISODE_NAMESPACE_GENERATOR_VERSION,
         "minted_at": EPISODE_NAMESPACE_MINTED_AT,
         "seed_form": SEED_FORM,
+        "canonical_json": CANONICAL_JSON_FORM,
         "vectors": vectors,
         "era1_contrast": contrast,
     }

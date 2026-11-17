@@ -1,4 +1,5 @@
-"""Tests for openddil_identity.episode (PROPOSED ADR-0056 section 5a, #39)."""
+"""Tests for openddil_identity.episode (ADR-0056 section 5a, #39, ruled
+2026-11-16 with the canonical-JSON seed)."""
 
 import json
 import os
@@ -55,6 +56,7 @@ def test_namespace_literal_matches_file_and_is_v7():
     assert data["generator_version"] == ep.EPISODE_NAMESPACE_GENERATOR_VERSION
     assert data["minted_at"] == ep.EPISODE_NAMESPACE_MINTED_AT
     assert data["seed_form"] == ep.SEED_FORM
+    assert data["canonical_json"] == ep.CANONICAL_JSON_FORM
 
 
 def test_exports():
@@ -70,12 +72,29 @@ def test_version_5_and_deterministic():
     assert a == episode_id(ID_A, "pump", "F001")
 
 
-def test_seed_form_and_lowercase():
-    seed = episode_seed(ID_A, "pump", "F001")
-    assert seed == "episode|" + as_iri(ID_A) + "|pump|F001"
-    assert seed.startswith("episode|urn:uuid:")
+def test_seed_is_canonical_json_of_the_field_list():
     iri = as_iri(ID_A)
     assert iri == iri.lower()
+    seed = episode_seed(ID_A, "pump", "F001")
+    # Written out by hand, not through json.dumps: compact, no spaces.
+    assert seed == '["episode","' + iri + '","pump","F001"]'
+    assert json.loads(seed) == ["episode", iri, "pump", "F001"]
+    assert seed.startswith('["episode","urn:uuid:')
+    assert uuid.uuid5(EPISODE_NAMESPACE, seed) == episode_id(ID_A, "pump", "F001")
+
+
+def test_canonical_json_escaping():
+    # Only '"', backslash and control characters are escaped; '/' and
+    # non-ASCII are written raw, as UTF-8. Short escapes where JSON has them,
+    # otherwise lowercase \\u00xx.
+    bs = chr(92)
+    seed = episode_seed(ID_A, 'a"b' + bs + "c/d", "\n\t\x1fé")
+    tail = seed.split('","')[2:]
+    assert tail == [
+        "a" + bs + '"b' + bs + bs + "c/d",
+        bs + "n" + bs + "t" + bs + "u001fé\"]",
+    ]
+    assert json.loads(seed)[2:] == ['a"b' + bs + "c/d", "\n\t\x1fé"]
 
 
 def test_distinct_inputs_distinct_ids():
@@ -89,7 +108,7 @@ def test_distinct_inputs_distinct_ids():
 
 
 def test_no_normalisation():
-    assert episode_seed(ID_A, " Pump ", "f 1") == "episode|" + as_iri(ID_A) + "| Pump |f 1"
+    assert json.loads(episode_seed(ID_A, " Pump ", "f 1"))[2:] == [" Pump ", "f 1"]
     composed, decomposed = "é", "é"
     assert episode_id(ID_A, composed, "F") != episode_id(ID_A, decomposed, "F")
 
@@ -114,20 +133,56 @@ def test_component_and_fault_must_be_str(bad):
         episode_id(ID_A, "pump", bad)
 
 
-def test_empty_strings_are_accepted_current_behaviour():
-    assert episode_seed(ID_A, "", "") == "episode|" + as_iri(ID_A) + "||"
-    assert episode_id(ID_A, "pump", "").version == 5
+def test_empty_values_are_accepted():
+    iri = as_iri(ID_A)
+    assert episode_seed(ID_A, "", "") == '["episode","' + iri + '","",""]'
+    assert episode_seed(ID_A, "", "F001") == '["episode","' + iri + '","","F001"]'
+    assert episode_seed(ID_A, "pump", "") == '["episode","' + iri + '","pump",""]'
+    ids = {
+        episode_id(ID_A, "", ""),
+        episode_id(ID_A, "", "F001"),
+        episode_id(ID_A, "pump", ""),
+        episode_id(ID_A, "pump", "F001"),
+    }
+    assert len(ids) == 4
+    assert all(i.version == 5 for i in ids)
+    names = {v["name"] for v in _load()["vectors"]}
+    assert {"empty_component", "empty_fault_code", "empty_both"} <= names
 
 
-def test_pipe_collision_is_current_behaviour():
-    assert episode_seed(ID_A, "a|b", "c") == episode_seed(ID_A, "a", "b|c")
-    assert episode_id(ID_A, "a|b", "c") == episode_id(ID_A, "a", "b|c")
+def test_pipe_pair_gives_different_ids():
+    # ("a|b", "c") and ("a", "b|c") collided under the "|"-joined seed; the
+    # canonical-JSON seed keeps each field's boundary.
+    assert episode_seed(ID_A, "a|b", "c") != episode_seed(ID_A, "a", "b|c")
+    assert episode_id(ID_A, "a|b", "c") != episode_id(ID_A, "a", "b|c")
+    # The same pair under the era-1 joining would collide.
+    assert "|".join(["a|b", "c"]) == "|".join(["a", "b|c"])
     by_name = {v["name"]: v for v in _load()["vectors"]}
-    pair = [v for v in by_name.values() if "collides_with" in v]
+    pair = [v for v in by_name.values() if "differs_from" in v]
     assert len(pair) == 2
     for v in pair:
-        assert by_name[v["collides_with"]]["collides_with"] == v["name"]
-        assert by_name[v["collides_with"]]["episode_id"] == v["episode_id"]
+        other = by_name[v["differs_from"]]
+        assert other["differs_from"] == v["name"]
+        assert other["seed"] != v["seed"]
+        assert other["episode_id"] != v["episode_id"]
+
+
+def test_field_boundaries_cannot_be_forged():
+    # A value carrying JSON punctuation stays inside its field.
+    forged = episode_id(ID_A, 'a","b', "c")
+    assert forged != episode_id(ID_A, "a", 'b","c')
+    assert json.loads(episode_seed(ID_A, 'a","b', "c"))[2:] == ['a","b', "c"]
+
+
+@pytest.mark.parametrize("field", ["component", "fault_code"])
+def test_lone_surrogate_refused(field):
+    bad = "x\ud800"
+    args = {"component": "pump", "fault_code": "F001"}
+    args[field] = bad
+    with pytest.raises(ValueError, match=field):
+        episode_seed(ID_A, **args)
+    with pytest.raises(ValueError, match=field):
+        episode_id(ID_A, **args)
 
 
 def test_era1_contrast_never_equal():

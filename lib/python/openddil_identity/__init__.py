@@ -2,8 +2,8 @@
 
 Nothing calls this package yet.
 
-This increment adds the era-2 episode id (episode.py), built on the PROPOSED
-ADR-0056 section 5a (#39).
+This increment adds the era-2 episode id (episode.py), per ADR-0056 section 5a
+(#39), ruled 2026-11-16 with the canonical-JSON seed.
 """
 
 from .declaration import (
