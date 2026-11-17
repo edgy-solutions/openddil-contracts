@@ -13,6 +13,8 @@
 - **What iagent has on disk today (read 2026-11-07).** There is no ADR-0067 and no ADR-0065 on any iagent branch, and
   no `graph_mapping`. This record names all three as forthcoming. It does not cite them as records until they exist.
 - **The five items lane 02 left open are ruled by the project owner, 2026-11-07** (see Rulings).
+- **ACCEPTED, ruled by the project owner 2026-11-16: the era-2 episode id's seed and namespace** (§5a), with the
+  canonical-JSON seed. Proposed for ruling 2026-11-15.
 
 ## Findings first
 
@@ -158,6 +160,56 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
     covers the identity.
   - **The October test still holds.** The pinned literal tests the era-1 function for ids already issued. That function
     stays and the literal stays unedited. Only occurrences opened after the change take the new tuple.
+
+### 5a. The era-2 episode id: seed and namespace (accepted 2026-11-16)
+
+§5 says "a uuid5 over (identity, component, fault code)" but not the exact string or namespace. Two implementations
+of that sentence can disagree byte for byte, and then check 8 fails by construction. This section fixes both.
+
+**The id.**
+
+```
+episode_id     := uuid5(EPISODE_NAMESPACE, canonical_json(["episode", identity_iri, component, fault_code]))
+identity_iri   := "urn:uuid:" + the identity in lowercase canonical form
+canonical_json := json.dumps(v, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False), UTF-8
+```
+
+- **The seed is the canonical JSON of the field list,** not CM's era-1 `|`-joined shape,
+  `episode|<asset_id>|<component>|<fault_code>` (`openddil-cm-service/src/events/asset_cm.py`). A `|` in a value
+  cannot move a field boundary: `("a|b", "c")` and `("a", "b|c")` give different ids. The fields and their order are
+  era-1's, except that the identity's IRI replaces `asset_id`. The framework namespace replaces `NAMESPACE_URL`. CM's
+  change is one function, which calls `episode_id` or passes the same vectors.
+- **Kind and owning tier are not in it** (Ruling 1).
+- **`component` and `fault_code` are written as the record carries them.** They are compared and hashed, never
+  normalised or parsed (check 4).
+- **The identity is written as its IRI** (`urn:uuid:`, §1), never as a bare UUID. So an alias value can never
+  produce the same seed string as an identity.
+
+**The namespace: one framework constant, minted once.**
+- `EPISODE_NAMESPACE` is a UUID minted once by the contracts repo's generator (Ruling 5), written in the contracts
+  repo beside the function that uses it, and recorded with its generator.
+- It is never recomputed, and it is never derived from a name at run time. Changing it would be a third era, by a
+  decision record, never an edit.
+- **Why not `NAMESPACE_URL`.** Era-1 ids, and several other record ids across the stack, are uuid5 under
+  `NAMESPACE_URL` over seed strings each service chose. A namespace of its own keeps era-2 episode ids out of that
+  space by construction, not by the seed strings happening to differ. The id still encodes nothing: the era is read
+  from the binding row (§6), never from the id or its namespace.
+- The exact file follows the ruling on where `mint_identity()` lives. The value is the same either way.
+
+**One function, with golden vectors.** The contracts repo holds `episode_id(identity, component, fault_code)` and a
+vector file of inputs and ids. CM and egress each either call it or pass the same vectors. Check 8 is then a vector
+test plus one comparison on a live episode.
+
+**What egress adopts.**
+- For an episode opened under era 2, egress writes this id to the kind's `episode_id` pointer, in place of its own
+  `episode_key`, whose seed includes kind and owning tier (`openddil-demo/egress/assembler.py`).
+- Its occurrence id (`record_key`) and the October literal are unchanged (check 1).
+- **The era-2 occurrence id is not proposed here.** §5 says "the episode plus `detected_at_ns`". Its string is a
+  separate ruling, and until it is made, occurrences keep the era-1 function.
+
+**Not decided here.**
+- Whether a component that has its own identity is written in the seed as that identity's IRI, or as the name the
+  record carries. Today every component is a name.
 
 ### 6. Two id eras, and the rebinding row
 
