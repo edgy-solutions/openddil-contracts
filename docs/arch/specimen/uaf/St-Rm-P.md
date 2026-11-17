@@ -4,7 +4,7 @@ built on OpenDDIL 0.1.161
 
 Where each capability in [Strategic-Taxonomy](../../views/St-Tx.md) stands, read from the record. Phase and evidence are computed at render from [capability-record.yaml](../../capability-record.yaml), and every citation in it has to resolve or the render fails. A capability with no phase also fails the render.
 
-Phases: 7 measured, 9 built unmeasured, 7 accepted design, 6 proposed, 2 row.
+Phases: 7 measured, 9 built unmeasured, 8 accepted design, 5 proposed, 2 row.
 
 | Capability | Lane | Phase | Evidence | Built | Decisions | Rows |
 |---|---|---|---|---|---|---|
@@ -30,7 +30,7 @@ Phases: 7 measured, 9 built unmeasured, 7 accepted design, 6 proposed, 2 row.
 | LabelledReadEnforcement | Releasability | measured | 2026-09-26, lab A, The pre-flight: completeness: ALL 4 STORES PASS, 7 populated tables, zero unlabelled; 2026-09-19, lab A, C. Releasability: Gate passes on all four stores, zero unlabelled values anywhere. | templates/tier-node.yaml | ADR-0029 §1, ADR-0029 §6 | - |
 | GatedRelease | Releasability | built unmeasured | not measured | templates/egress.yaml | ADR-0043 §1, ADR-0043 §7 | SV-14 |
 | GatedIntake | Releasability | built unmeasured | not measured | templates/egress.yaml | ADR-0046 §5 (record: accepted; index: proposed) | - |
-| DeclaredLabelDimensions | Releasability | proposed | not measured | - | ADR-0055 §1, ADR-0055 §2 | - |
+| DeclaredLabelDimensions | Releasability | accepted design | not measured | - | ADR-0055 §1, ADR-0055 §2, ADR-0061 §1, ADR-0061 §4 | - |
 | OneIdentityPerThing | Data management | proposed | not measured | - | ADR-0056 §1, ADR-0056 §4 | - |
 | DeclaredCards | Operator interaction | proposed | not measured | - | ADR-0058 §1, ADR-0058 §2a | SV-15 |
 | SustainmentFeasibility | Anticipated | row | not measured | - | - | AE-3, AE-5, GD-10, SV-16 |

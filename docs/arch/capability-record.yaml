@@ -300,8 +300,10 @@ capabilities:
       A deployment declares what its release labels are made of, such as nations or caveats, each with a
       stated vocabulary and owner, and a reader sees a record only when every dimension admits them. A record
       missing a declared dimension, or carrying an undeclared one, is served to nobody. Two tiers that stamp
-      labels while severed agree on the same key without talking to each other.
-    adrs: [ADR-0055 §1, ADR-0055 §2]
+      labels while severed agree on the same key without talking to each other. For release to another security
+      domain, a label carries STANAG 4774's field names, and a kind eligible to cross carries no free text; that
+      design is accepted, and nothing of it is built.
+    adrs: [ADR-0055 §1, ADR-0055 §2, ADR-0061 §1, ADR-0061 §4]
     severed: ADR-0055 §2
   OneIdentityPerThing:
     description: >-

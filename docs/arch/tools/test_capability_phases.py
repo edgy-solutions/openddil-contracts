@@ -672,7 +672,7 @@ class RealSources(unittest.TestCase):
 
     def test_counts(self):
         self.assertTrue(self.table.startswith(
-            "Phases: 7 measured, 9 built unmeasured, 7 accepted design, 6 proposed, 2 row.\n"))
+            "Phases: 7 measured, 9 built unmeasured, 8 accepted design, 5 proposed, 2 row.\n"))
 
     def test_no_uncited_readiness_line_is_quoted(self):
         lines = self.readiness.replace("\r\n", "\n").split("\n")
