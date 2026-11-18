@@ -19,7 +19,9 @@ from pathlib import Path
 import yaml
 
 HERE = Path(__file__).resolve().parent
-TOOL = HERE / "check_annotations.py"
+sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
+TOOL = kit_path.TOOLS / "check_annotations.py"
 LEDGER = HERE.parent / "annotation-exceptions.yaml"
 ROOT = Path(os.environ.get("OPENDDIL_REPOS", HERE.parents[3]))
 CHART = ROOT / "openddil-helm" / "openddil-demo"

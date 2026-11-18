@@ -1,16 +1,20 @@
 name: check-views
 
-# Runs the architecture view checks (docs/arch/tools/check_views.py): all
-# fourteen view rules, plus `quotes` (evidence quotes against the public sample
-# list) and `floor` (the chart's render against the capability record). Then a
-# canary run that breaks a copy of the record and proves both can fail.
+# Builds and checks the architecture views with arch-kit, pinned below to a full
+# commit of the kit. The kit's Action runs check_views (all the view rules, plus
+# `quotes` against the public sample list and `floor`, the chart's render against
+# the capability record), builds the single-file HTML export (Mermaid diagrams drawn
+# by mermaid-cli), checks it (check_export: the view count equals check_views', no
+# barred value, provenance on every page, no network reference, under 16 MB), drives
+# it in a browser, runs the decision-index check, and uploads the export as the
+# arch-kit-export artifact, because the portal declares hosting: ci-artifact. The
+# export is not committed anywhere. The tests, and a canary (a run that breaks a
+# copy of the record and proves quotes and floor can fail), run from the same kit.
 #
-# It then builds the single-file HTML export of the views (render_html.py, with
-# the Mermaid diagrams drawn by mermaid-cli), checks it (check_export.py: the
-# view count equals check_views', no barred value, provenance on every page, no
-# network reference, under 16 MB), drives it in a browser (check_export_browser.mjs)
-# and attaches it as the architecture-export artifact. The export is not
-# committed anywhere.
+# The `golden` job builds the same tree with this repository's own old tools and with
+# the pinned kit, and compares the two exports element by element. Every difference
+# must be named in docs/arch/golden-allow.txt, with a reason, or the job fails; so
+# does an allowance that matches nothing.
 #
 # Am-If's table is built from ontology/, so an ontology change is a reason to
 # run too. The floor reads a render of the chart, so the chart changing is a reason to
@@ -18,8 +22,9 @@ name: check-views
 # schedule is a floor under that dispatch: a dropped or missed dispatch
 # still gets caught within a day.
 #
-# This workflow uses no secret. Green here shows the structural checks and the
-# scan's mechanics, and is not evidence that any private scan ran.
+# The only secret is the optional relabel list, written to a file for the Action.
+# Green here shows the structural checks and the scan's mechanics, and is not evidence
+# that any private scan ran: the barred list is the public sample.
 on:
   push:
     branches: [main, 'docs/arch-*']
@@ -27,12 +32,14 @@ on:
       - 'docs/arch/**'
       - 'decisions/**'
       - 'ontology/**'
+      - 'scripts/golden*'
       - '.github/workflows/check-views.yml'
   pull_request:
     paths:
       - 'docs/arch/**'
       - 'decisions/**'
       - 'ontology/**'
+      - 'scripts/golden*'
       - '.github/workflows/check-views.yml'
   repository_dispatch:
     types: [chart-version-bumped]
@@ -54,29 +61,36 @@ env:
 jobs:
   check:
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-helm
           ref: master
           path: repos/openddil-helm
 
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
           ref: master
           path: repos/openddil-customer-bundle-example
 
-      - uses: actions/setup-python@v7
+      # The kit again, as a directory: the tests find it through ARCH_KIT, and the canary runs from it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edgy-solutions/arch-kit
+          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          path: arch-kit
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: '3.12'
 
-      - run: pip install pyyaml markdown-it-py==4.0.0
+      - run: pip install ./arch-kit
 
       - name: Install helm at its pinned version and check its hash
         run: |
@@ -92,7 +106,7 @@ jobs:
       - name: Tests
         run: |
           set +e
-          OPENDDIL_REPOS="$PWD/repos" OPENDDIL_BUNDLE="$PWD/$BUNDLE" \
+          ARCH_KIT="$PWD/arch-kit" OPENDDIL_REPOS="$PWD/repos" OPENDDIL_BUNDLE="$PWD/$BUNDLE" \
             python -m unittest discover -s docs/arch/tools -p 'test_*.py' > "$RUNNER_TEMP/tests.log" 2>&1
           rc=$?
           set -e
@@ -103,36 +117,15 @@ jobs:
             exit 1
           fi
 
-      - name: Check the views
-        run: |
-          python docs/arch/tools/check_views.py \
-            --chart "$CHART" \
-            --values "$BUNDLE/k8s/tier-node-values.yaml" \
-            --values "$BUNDLE/k8s/egress-values.yaml" \
-            --release openddil \
-            --readiness "$READINESS" \
-            --barred docs/arch/tools/barred-sample.txt
-
       - name: Canary (quotes and floor must fail when the copy is broken)
         run: |
-          python docs/arch/tools/check_views_canary.py \
+          arch-kit --config docs/arch/arch-kit.yaml check_views_canary \
             --chart "$CHART" \
             --values "$BUNDLE/k8s/tier-node-values.yaml" \
             --values "$BUNDLE/k8s/egress-values.yaml" \
             --release openddil \
             --readiness "$READINESS" \
             --barred docs/arch/tools/barred-sample.txt
-
-      - uses: actions/setup-node@v7
-        with:
-          node-version: '22'
-
-      # Chrome is the runner's own, so puppeteer downloads none.
-      - name: Install the export tooling
-        working-directory: docs/arch/tools/export
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: "true"
-        run: npm ci
 
       - name: Relabel list
         env:
@@ -141,39 +134,90 @@ jobs:
           if [ -n "$RELABEL" ]; then printf '%s\n' "$RELABEL" > "$RUNNER_TEMP/relabel.txt"; echo "relabel: repository secret"
           else cp docs/arch/tools/relabel-sample.txt "$RUNNER_TEMP/relabel.txt"; echo "relabel: sample list only"; fi
 
-      - name: Build the HTML export
-        env:
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
-        run: |
-          echo '{"args": ["--no-sandbox"]}' > "$RUNNER_TEMP/puppeteer.json"
-          python docs/arch/tools/render_html.py \
-            --out "$RUNNER_TEMP/export/openddil-architecture.html" \
-            --chart "$CHART" \
-            --values "$BUNDLE/k8s/tier-node-values.yaml" \
-            --values "$BUNDLE/k8s/egress-values.yaml" \
-            --release openddil \
-            --readiness "$READINESS" \
-            --relabel "$RUNNER_TEMP/relabel.txt" \
-            --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
-
-      - name: Check the export
-        run: |
-          python docs/arch/tools/check_export.py \
-            --export "$RUNNER_TEMP/export/openddil-architecture.html" \
-            --barred docs/arch/tools/barred-sample.txt \
-            --relabel "$RUNNER_TEMP/relabel.txt"
-
-      - name: Check the export in a browser
-        working-directory: docs/arch/tools/export
-        env:
-          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
-        run: |
-          node check_export_browser.mjs "$RUNNER_TEMP/export/openddil-architecture.html" \
-            --shots "$RUNNER_TEMP/shots" --puppeteer-config "$RUNNER_TEMP/puppeteer.json"
-
-      - uses: actions/upload-artifact@v7
+      # Check the views, build and check the export, check it in a browser, check the decision
+      # indexes, and upload the export (the portal declares hosting: ci-artifact).
+      - name: Build and check with arch-kit
+        uses: edgy-solutions/arch-kit@2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
         with:
-          name: architecture-export
-          path: ${{ runner.temp }}/export/openddil-architecture.html
-          if-no-files-found: error
-          retention-days: 30
+          config: docs/arch/arch-kit.yaml
+          chart: ${{ env.CHART }}
+          release: openddil
+          values: |
+            ${{ env.BUNDLE }}/k8s/tier-node-values.yaml
+            ${{ env.BUNDLE }}/k8s/egress-values.yaml
+          readiness: ${{ env.READINESS }}
+          relabel: ${{ runner.temp }}/relabel.txt
+          barred: docs/arch/tools/barred-sample.txt
+
+  # The golden comparison. The old tools are the last tree that had this repository's own: db08b35 on main,
+  # the commit before the tools moved to the kit. It is pinned by full sha, not "the base of the branch".
+  golden:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: db08b35a1f9475f63f2b0ad9b355268fe91e28e5
+          path: old-src
+          sparse-checkout: docs/arch/tools
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edgy-solutions/openddil-helm
+          ref: master
+          path: repos/openddil-helm
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edgy-solutions/openddil-customer-bundle-example
+          ref: master
+          path: repos/openddil-customer-bundle-example
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: edgy-solutions/arch-kit
+          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          path: arch-kit
+
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      # The old tools need the same libraries the kit does.
+      - run: pip install ./arch-kit
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '22'
+
+      - name: Install helm at its pinned version and check its hash
+        run: |
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/helm.tar.gz" \
+            "https://get.helm.sh/helm-$HELM_VERSION-linux-amd64.tar.gz"
+          echo "$HELM_SHA256  $RUNNER_TEMP/helm.tar.gz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/helm"
+          tar -xzf "$RUNNER_TEMP/helm.tar.gz" -C "$RUNNER_TEMP/helm" --strip-components=1 linux-amd64/helm
+          echo "$RUNNER_TEMP/helm" >> "$GITHUB_PATH"
+
+      - name: Relabel list
+        env:
+          RELABEL: ${{ secrets.ARCH_RELABEL }}
+        run: |
+          if [ -n "$RELABEL" ]; then printf '%s\n' "$RELABEL" > "$RUNNER_TEMP/relabel.txt"; echo "relabel: repository secret"
+          else cp docs/arch/tools/relabel-sample.txt "$RUNNER_TEMP/relabel.txt"; echo "relabel: sample list only"; fi
+
+      # Prints counts and element ids only. A failure names the element, never a value.
+      - name: Build with the old tools and with the kit, and compare
+        env:
+          PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
+          CHART: ${{ github.workspace }}/${{ env.CHART }}
+          BUNDLE: ${{ github.workspace }}/${{ env.BUNDLE }}
+          READINESS: ${{ github.workspace }}/${{ env.READINESS }}
+          RELABEL: ${{ runner.temp }}/relabel.txt
+          BARRED: ${{ github.workspace }}/docs/arch/tools/barred-sample.txt
+        run: |
+          scripts/golden.sh "$PWD" old-src/docs/arch/tools arch-kit "$RUNNER_TEMP/golden"

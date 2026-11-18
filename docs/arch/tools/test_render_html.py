@@ -23,9 +23,12 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 import check_export  # noqa: E402
 import check_views  # noqa: E402
 import render_html  # noqa: E402
+import declared  # noqa: E402
+import project  # noqa: E402
 import render_profile as rp  # noqa: E402
 import capability_phases  # noqa: E402
 from capability_phases import CheckError  # noqa: E402
@@ -272,7 +275,8 @@ class Args(unittest.TestCase):
             self.assertEqual(cm.exception.code, 2, drop)
 
     def test_bad_date_is_exit_2(self):
-        with mock.patch("sys.stderr"):
+        # a public portal would refuse first, for the missing lists; this test is about the date
+        with mock.patch("sys.stderr"), mock.patch.object(declared, "portal_audience", return_value="private"):
             rc = render_html.main(["--out", "x.html", "--chart", "c", "--values", "v", "--release", "r",
                                    "--date", "yesterday"])
         self.assertEqual(rc, 2)
@@ -527,6 +531,8 @@ class BuiltStub(unittest.TestCase):
         a = args()
         a.record = str(root / "capability-record.yaml")
         with mock.patch.object(rp, "ROOT", root), mock.patch.object(render_html, "ROOT", root), \
+                mock.patch.object(project, "ROOT", root), mock.patch.object(project, "REPO", root.parent.parent), \
+                mock.patch.object(project, "DECISIONS", root.parent.parent / "decisions"), \
                 mock.patch.object(render_html, "REPO", root.parent.parent):
             return render_html.build(a, fake, DATE)
 
@@ -551,7 +557,7 @@ class BuiltStub(unittest.TestCase):
     def test_every_capability_name_in_the_cv2_and_roadmap_tables_is_linked(self):
         caps = list(capability_phases.model_capabilities(
             (self.root / "model" / "openddil.sysml").read_text(encoding="utf-8")))
-        for vid in render_html.CAP_NAME_VIEWS:
+        for vid in declared.views("test_render_html")["capability_links"]:
             sec = section(self.doc, vid)
             for name in caps:
                 if vid == "St-Rm-P" or name in sec:
@@ -619,6 +625,8 @@ class BuiltRelabel(unittest.TestCase):
             lst.write_text(relabel_text, encoding="utf-8", newline="\n")
             a.relabel = [str(lst)]
         with mock.patch.object(rp, "ROOT", root), mock.patch.object(render_html, "ROOT", root), \
+                mock.patch.object(project, "ROOT", root), mock.patch.object(project, "REPO", root.parent.parent), \
+                mock.patch.object(project, "DECISIONS", root.parent.parent / "decisions"), \
                 mock.patch.object(render_html, "REPO", tmp):
             return render_html.build(a, fake, DATE), record
 
@@ -631,8 +639,8 @@ class BuiltRelabel(unittest.TestCase):
         page = re.search(rf'<section id="cap-{self.first}".*?</section>', doc, re.S).group(0)
         self.assertIn(f'href="#{want}"', page)
         line = re.search(r'<p class="relabel" data-relabel>(.*?)</p>', doc, re.S).group(1)
-        m = re.fullmatch(r"Decision records are shown with (\d+) names replaced by neutral labels at export "
-                         r"\(1 rules\)\. The records in the repository are unchanged\.", line)
+        m = re.fullmatch(r"Names are replaced by neutral labels at export: (\d+) in this page "
+                         r"\(1 rules\)\. The sources in the repository are unchanged\.", line)
         self.assertTrue(m, line)
         self.assertGreaterEqual(int(m.group(1)), 4)
 
@@ -669,6 +677,13 @@ class BuiltRelabel(unittest.TestCase):
                 self.assertRegex(text, rf"^Stated in {re.escape(cap['severed'])} .+\.$")
                 self.assertIn('<a href="#adr-', m.group(1))
             self.assertLess(page.index("<h2>Evidence</h2>"), page.index("<h2>Severed behaviour</h2>"))
+
+    def test_the_declared_labels_reach_a_capability_page(self):
+        """This repository's own words, declared in arch-kit.yaml, still come out of the kit."""
+        doc, _ = self.make()
+        page = re.search(r'<section id="cap-[^"]+" class="page capability".*?</section>', doc, re.S).group(0)
+        self.assertIn("<h2>Severed behaviour</h2><p data-severed>", page)
+        self.assertIn("tr.lane-start>*{", doc)
 
     def test_the_severed_table_in_st_tx_links_every_capability(self):
         doc, record = self.make()

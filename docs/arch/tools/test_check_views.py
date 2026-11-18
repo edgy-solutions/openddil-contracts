@@ -17,16 +17,19 @@ import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 ARCH = HERE.parent
 REPO = ARCH.parent.parent
-TOOL = HERE / "check_views.py"
+TOOL = kit_path.TOOLS / "check_views.py"
 
 
 def run(root, *extra):
     """check_views on root. The default is partial: quotes and floor need a chart, and have their own tests."""
     args = extra or ("--allow-partial", "test")
+    env = {**os.environ, "ARCH_KIT_CONFIG": str(Path(root) / "arch-kit.yaml")}
     p = subprocess.run([sys.executable, str(TOOL), "--root", str(root), *args],
-                       capture_output=True, text=True, encoding="utf-8")
+                       capture_output=True, text=True, encoding="utf-8", env=env)
     return p.returncode, p.stdout, p.stderr
 
 
@@ -311,7 +314,7 @@ class Perturbed(unittest.TestCase):
         self.expect("phases", "TacticalSustainmentCorrelation")
 
     def test_13_phases_capability_with_no_citation(self):
-        edit(self.root, "capability-record.yaml", "    adrs: [ADR-0039 §1, ADR-0039 §2]\n    severed: not stated\n    rows: [SV-11]\n", "")
+        edit(self.root, "capability-record.yaml", "    adrs: [ADR-0039 §1, ADR-0039 §2]\n    severed: not stated\n    rows: [SV-11]\n", "    severed: not stated\n")
         self.expect("phases", "TacticalSustainmentCorrelation has no phase")
 
     def test_13_phases_marker_twice(self):

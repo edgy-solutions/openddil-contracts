@@ -28,7 +28,7 @@ Which resource talks to which, and across what boundary. The row-by-row flows ar
 
 ## Data exchange
 
-Generated from a bundle by [`tools/data_exchange.py`](../../tools/data_exchange.py), which reads a chart render. A tier, kind or route with no row fails the generator's check. Every row is declared and none was measured; where a declaration is missing, the Exceptions section of the output names it.
+Generated from a bundle by `data_exchange.py` in the export kit, which reads a chart render. A tier, kind or route with no row fails the generator's check. Every row is declared and none was measured; where a declaration is missing, the Exceptions section of the output names it.
 
 Chart: openddil-demo 0.1.161
 Values: tier-node-values.yaml

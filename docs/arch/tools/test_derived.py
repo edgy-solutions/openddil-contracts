@@ -17,12 +17,16 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 import capability_phases as cp  # noqa: E402
+import declared  # noqa: E402
 import derived  # noqa: E402
 from render_profile import mask_sysml  # noqa: E402
 
 ARCH = HERE.parent
 REPO = ARCH.parent.parent
+DECLARED = declared.dictionary("test_derived")  # the consumer's own declaration, read through the kit
+DICT = (DECLARED.terms, DECLARED.dir)
 
 ROADMAP = """\
 | # | increment | what isolates | home | depends on |
@@ -65,7 +69,7 @@ def body(table: str) -> list[str]:
 
 class RealTree(unittest.TestCase):
     def test_dependencies_builds_one_row_per_increment_and_fold_in(self):
-        roadmap = (REPO / "decisions" / cp.ROADMAP).read_text(encoding="utf-8")
+        roadmap = (REPO / "decisions" / cp.roadmap_file()).read_text(encoding="utf-8")
         record = cp.load_record(ARCH / "capability-record.yaml")
         rows = body(derived.dependencies(record, roadmap))
         increments = derived.table_with(roadmap, derived.ROADMAP_HEADER, "increment")
@@ -81,18 +85,18 @@ class RealTree(unittest.TestCase):
     def test_severed_behaviour_has_one_row_per_capability_in_model_order(self):
         sysml = (ARCH / "model" / "openddil.sysml").read_text(encoding="utf-8")
         record = cp.load_record(ARCH / "capability-record.yaml")
-        out = derived.severed(record, sysml)
+        out = derived.degraded_mode_table(record, sysml)
         names = list(cp.model_capabilities(sysml))
         rows = body(body_after_head(out))
         self.assertEqual([r.split(" | ")[0].lstrip("| ") for r in rows], names)
-        stated = sum(1 for n in names if record["capabilities"][n]["severed"] != "not stated")
+        stated = sum(1 for n in names if record["capabilities"][n]["degraded_mode"] != "not stated")
         self.assertTrue(out.startswith(f"Severed behaviour: {stated} of {len(names)} capabilities have it stated "
                                        f"in a decision record; {len(names) - stated} do not.\n\n"
                                        "| Capability |"))
 
     def test_dictionary_has_one_row_per_declared_term(self):
-        rows = body(derived.dictionary(REPO / "ontology"))
-        self.assertEqual(len(rows), len(derived.DICTIONARY))
+        rows = body(derived.dictionary(REPO / "ontology", *DICT))
+        self.assertEqual(len(rows), len(DECLARED.terms))
 
 
 SEVERED_MODEL = """\
@@ -109,8 +113,8 @@ class Severed(unittest.TestCase):
         return {"capabilities": {k: dict(v) for k, v in caps.items()}}
 
     def test_the_table_the_spec_shows(self):
-        out = derived.severed(self.rec(Alpha={"severed": "ADR-0029 §6"},
-                                       Beta={"severed": "not stated", "rows": ["AE-1", "SV-1", "SV-3"]}),
+        out = derived.degraded_mode_table(self.rec(Alpha={"degraded_mode": "ADR-0029 §6"},
+                                       Beta={"degraded_mode": "not stated", "rows": ["AE-1", "SV-1", "SV-3"]}),
                               SEVERED_MODEL)
         self.assertEqual(out, "Severed behaviour: 1 of 2 capabilities have it stated in a decision record; 1 do not.\n\n"
                               "| Capability | Severed behaviour | Row |\n|---|---|---|\n"
@@ -119,12 +123,12 @@ class Severed(unittest.TestCase):
 
     def test_a_capability_without_the_key_is_refused(self):
         with self.assertRaises(cp.CheckError) as cm:
-            derived.severed(self.rec(Alpha={"severed": "not stated", "rows": ["SV-1"]}, Beta={}), SEVERED_MODEL)
+            derived.degraded_mode_table(self.rec(Alpha={"degraded_mode": "not stated", "rows": ["SV-1"]}, Beta={}), SEVERED_MODEL)
         self.assertIn("Beta has no severed entry", cm.exception.args[0])
 
     def test_the_marker_belongs_to_st_tx(self):
-        self.assertEqual(derived.HOMES[derived.SEVERED_MARKER], "St-Tx")
-        self.assertEqual(derived.SEVERED_MARKER, "<!-- generated: severed-behaviour -->")
+        self.assertEqual(derived.homes()[derived.degraded_marker()], "St-Tx")
+        self.assertEqual(derived.degraded_marker(), "<!-- generated: severed-behaviour -->")
 
 
 class Dependencies(unittest.TestCase):
@@ -209,34 +213,34 @@ class Dictionary(unittest.TestCase):
     def test_file_with_no_row_is_refused(self):
         (self.onto / "new_terms.yaml").write_text("terms: []\n", encoding="utf-8")
         with self.assertRaisesRegex(cp.CheckError, "ontology/new_terms.yaml has no dictionary row"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_missing_file_is_refused(self):
-        name = derived.DICTIONARY[0][0]
+        name = DECLARED.terms[0][0]
         (self.onto / name).unlink()
         with self.assertRaisesRegex(cp.CheckError, f"names ontology/{name}, which does not exist"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_missing_term_is_refused(self):
         name, path = "platform_reference.yaml", "platforms"
         (self.onto / name).write_text("other: []\n", encoding="utf-8")
         with self.assertRaisesRegex(cp.CheckError, f"ontology/{name} has no {path}"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_empty_term_counts_zero(self):
         (self.onto / "platform_reference.yaml").write_text("platforms: []\n", encoding="utf-8")
-        rows = body(derived.dictionary(self.onto))
+        rows = body(derived.dictionary(self.onto, *DICT))
         self.assertIn("| platform_reference.yaml | platforms | empty list | 0 | none |", rows)
 
     def test_single_value_is_refused(self):
         (self.onto / "platform_reference.yaml").write_text("platforms: 3\n", encoding="utf-8")
         with self.assertRaisesRegex(cp.CheckError, "is a single value, not a term"):
-            derived.dictionary(self.onto)
+            derived.dictionary(self.onto, *DICT)
 
     def test_no_entry_value_reaches_the_table(self):
         (self.onto / "platform_reference.yaml").write_text(
             "platforms:\n  - name: PLANTED-ENTRY-VALUE\n    code: 7\n", encoding="utf-8")
-        table = derived.dictionary(self.onto)
+        table = derived.dictionary(self.onto, *DICT)
         self.assertIn("| platform_reference.yaml | platforms | records | 1 | code, name |", table)
         self.assertNotIn("PLANTED-ENTRY-VALUE", table)
 

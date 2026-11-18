@@ -21,8 +21,10 @@ import yaml
 
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import kit_path  # noqa: E402,F401
 import refresh_specimen as rs  # noqa: E402
 import capability_phases as cp  # noqa: E402
+import declared  # noqa: E402
 
 SPECIMEN = rs.SPECIMEN
 PROFILES = rs.PROFILES
@@ -200,7 +202,7 @@ class Specimen(unittest.TestCase):
             rows = self.phase_rows(prof, name)
             self.assertEqual([r[0] for r in rows], names, f"{prof}/{name}")
             for r in rows:
-                self.assertIn(r[2], cp.PHASES, f"{prof}/{name}: {r[0]}")
+                self.assertIn(r[2], declared.phase_names("test_specimen"), f"{prof}/{name}: {r[0]}")
                 if r[2] == "measured":
                     self.assertRegex(r[3], MEASURED_EVIDENCE, f"{prof}/{name}: {r[0]}")
                 else:

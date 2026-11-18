@@ -2,7 +2,7 @@
 
 Which DoDAF 2.02, NAF 4.0 and DNDAF security views UAF 1.2 names for each UAF view specification. Source: UAF 1.2 Appendix A, Traceability, OMG formal/22-07-07, Table 2:1 (DoDAF 2.02), Table 2:3 (NAF 4.0) and Table 2:5 (DNDAF security views). Looked up on 2026-11-02.
 
-This table is the only copy of the mapping. `exports` in [`profiles.yaml`](profiles.yaml) is the selection this repository makes from it, and [`tools/check_views.py`](tools/check_views.py) fails on an export this table does not name. The appendix states that the mapping is not one-to-one, so one view can name several outputs and one output can come from several views.
+This table is the only copy of the mapping. `exports` in [`profiles.yaml`](profiles.yaml) is the selection this repository makes from it, and `check_views.py` in the export kit fails on an export this table does not name. The appendix states that the mapping is not one-to-one, so one view can name several outputs and one output can come from several views.
 
 A dash means the table gives that view no output. Several rows can share an identifier, where the appendix splits one view specification by aspect.
 
