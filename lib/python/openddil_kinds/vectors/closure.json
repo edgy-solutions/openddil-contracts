@@ -1,0 +1,1984 @@
+{
+  "bounded_formats": [
+    "date",
+    "date-time",
+    "uuid"
+  ],
+  "findings": [
+    "object_open",
+    "string_unbounded",
+    "free_text_no_max_length",
+    "array_no_max_items",
+    "untyped",
+    "ref_unresolved",
+    "schema_malformed"
+  ],
+  "load_refusals": [
+    "enforce_not_clean",
+    "eligible_in_report",
+    "eligible_not_clean",
+    "eligible_free_text"
+  ],
+  "vectors": [
+    {
+      "name": "object_closed_minimal",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_additional_absent",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_additional_true",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": true,
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_additional_schema",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          },
+          {
+            "finding": "string_unbounded",
+            "pointer": "/additionalProperties"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": {
+          "type": "string"
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_additional_open_object_schema",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          },
+          {
+            "finding": "object_open",
+            "pointer": "/additionalProperties"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": {
+          "type": "object"
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_open_under_properties",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/properties/a"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "type": "object"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_open_under_items",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/items"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "items": {
+          "type": "object"
+        },
+        "maxItems": 3,
+        "type": "array"
+      }
+    },
+    {
+      "name": "object_open_under_defs",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/$defs/x"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "$defs": {
+          "x": {
+            "type": "object"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_open_under_anyof",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/anyOf/0"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    {
+      "name": "object_open_under_allof",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/allOf/0"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "allOf": [
+          {
+            "type": "object"
+          }
+        ]
+      }
+    },
+    {
+      "name": "object_open_under_oneof",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/oneOf/0"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "oneOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    {
+      "name": "object_open_under_prefixitems",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/prefixItems/0"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "maxItems": 1,
+        "prefixItems": [
+          {
+            "type": "object"
+          }
+        ],
+        "type": "array"
+      }
+    },
+    {
+      "name": "object_open_under_patternproperties",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/patternProperties/^x-"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "patternProperties": {
+          "^x-": {
+            "type": "object"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_closed_with_patternproperties_still_closed",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "patternProperties": {
+          "^x-": {
+            "type": "null"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "object_or_null_open",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": [
+          "object",
+          "null"
+        ]
+      }
+    },
+    {
+      "name": "string_bounded_by_enum",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "enum": [
+          "a",
+          "b"
+        ],
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_bounded_by_const",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "const": "a",
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_bounded_by_pattern",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "pattern": "^[A-Z]{3}$",
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_bounded_by_format_date_time",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "format": "date-time",
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_bounded_by_format_date",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "format": "date",
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_bounded_by_format_uuid",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "format": "uuid",
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_format_email_unbounded",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "format": "email",
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_max_length_only_unbounded",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "maxLength": 10,
+        "type": "string"
+      }
+    },
+    {
+      "name": "string_free_text_with_max_length",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [
+          ""
+        ],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "maxLength": 200,
+        "type": "string",
+        "x-free-text": true
+      }
+    },
+    {
+      "name": "string_free_text_no_max_length",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "free_text_no_max_length",
+            "pointer": ""
+          }
+        ],
+        "free_text": [
+          ""
+        ],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": "string",
+        "x-free-text": true
+      }
+    },
+    {
+      "name": "string_free_text_max_length_bool",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "free_text_no_max_length",
+            "pointer": ""
+          }
+        ],
+        "free_text": [
+          ""
+        ],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "maxLength": true,
+        "type": "string",
+        "x-free-text": true
+      }
+    },
+    {
+      "name": "string_free_text_and_pattern",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [
+          ""
+        ],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "maxLength": 5,
+        "pattern": "^a",
+        "type": "string",
+        "x-free-text": true
+      }
+    },
+    {
+      "name": "string_free_text_declared_as_string_true",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "maxLength": 5,
+        "type": "string",
+        "x-free-text": "true"
+      }
+    },
+    {
+      "name": "string_or_null_unbounded",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": [
+          "string",
+          "null"
+        ]
+      }
+    },
+    {
+      "name": "string_enum_without_type",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "enum": [
+          "a",
+          "b"
+        ]
+      }
+    },
+    {
+      "name": "string_format_not_a_string",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "format": [
+          "uuid"
+        ],
+        "type": "string"
+      }
+    },
+    {
+      "name": "array_with_max_items",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "items": {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        "maxItems": 4,
+        "type": "array"
+      }
+    },
+    {
+      "name": "array_without_max_items",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "array_no_max_items",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "items": {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    {
+      "name": "array_max_items_zero",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "maxItems": 0,
+        "type": "array"
+      }
+    },
+    {
+      "name": "array_max_items_true_does_not_count",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "array_no_max_items",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "items": {
+          "pattern": "^[A-Z]{3}$",
+          "type": "string"
+        },
+        "maxItems": true,
+        "type": "array"
+      }
+    },
+    {
+      "name": "array_items_open_object",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/items"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "items": {
+          "type": "object"
+        },
+        "maxItems": 2,
+        "type": "array"
+      }
+    },
+    {
+      "name": "array_tuple_form_items",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": "/items/1"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "items": [
+          {
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          {
+            "type": "string"
+          }
+        ],
+        "maxItems": 2,
+        "type": "array"
+      }
+    },
+    {
+      "name": "node_empty_untyped",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {}
+    },
+    {
+      "name": "node_true_under_properties",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": "/properties/a"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": true
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "node_false_clean",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": false
+    },
+    {
+      "name": "node_false_under_properties",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": false
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "node_anyof_pattern_or_null_no_type",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "anyOf": [
+          {
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ref_local_resolves",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": "/$defs/id"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "$defs": {
+          "id": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "$ref": "#/$defs/id"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "ref_root",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "self": {
+            "$ref": "#"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "ref_escaped_slash_resolves",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "$defs": {
+          "a/b": {
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "$ref": "#/$defs/a~1b"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "ref_external",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "ref_unresolved",
+            "pointer": "/properties/a/$ref"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "$ref": "https://example.test/x.json"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "ref_dangling",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "ref_unresolved",
+            "pointer": "/properties/a/$ref"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "$ref": "#/$defs/missing"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "ref_anchor",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "ref_unresolved",
+            "pointer": "/properties/a/$ref"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "$defs": {
+          "t": {
+            "$anchor": "thing",
+            "type": "null"
+          }
+        },
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "$ref": "#thing"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "ref_not_a_string",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "ref_unresolved",
+            "pointer": "/properties/a/$ref"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "$ref": 5
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "pointer_escapes_slash_and_tilde",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/properties/a~1b"
+          },
+          {
+            "finding": "object_open",
+            "pointer": "/properties/c~0d"
+          },
+          {
+            "finding": "object_open",
+            "pointer": "/properties/e~0~1f"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a/b": {
+            "type": "object"
+          },
+          "c~d": {
+            "type": "object"
+          },
+          "e~/f": {
+            "type": "object"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "type_list_three_findings_one_pointer",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "array_no_max_items",
+            "pointer": ""
+          },
+          {
+            "finding": "object_open",
+            "pointer": ""
+          },
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": [
+          "object",
+          "string",
+          "array"
+        ]
+      }
+    },
+    {
+      "name": "type_integer_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": ""
+          },
+          {
+            "finding": "schema_malformed",
+            "pointer": "/type"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": 5
+      }
+    },
+    {
+      "name": "type_list_with_non_string_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": ""
+          },
+          {
+            "finding": "schema_malformed",
+            "pointer": "/type"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": [
+          "string",
+          5
+        ]
+      }
+    },
+    {
+      "name": "type_list_empty_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": ""
+          },
+          {
+            "finding": "schema_malformed",
+            "pointer": "/type"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": []
+      }
+    },
+    {
+      "name": "type_name_unknown_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": ""
+          },
+          {
+            "finding": "schema_malformed",
+            "pointer": "/type"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": "strin"
+      }
+    },
+    {
+      "name": "type_list_unknown_name_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "untyped",
+            "pointer": ""
+          },
+          {
+            "finding": "schema_malformed",
+            "pointer": "/type"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": [
+          "string",
+          "text"
+        ]
+      }
+    },
+    {
+      "name": "enum_not_an_array_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          },
+          {
+            "finding": "schema_malformed",
+            "pointer": "/enum"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "enum": "a",
+        "type": "string"
+      }
+    },
+    {
+      "name": "properties_is_array_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": "/properties"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": [],
+        "type": "object"
+      }
+    },
+    {
+      "name": "allof_is_object_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": "/allOf"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "allOf": {},
+        "type": "object"
+      }
+    },
+    {
+      "name": "root_is_array",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": []
+    },
+    {
+      "name": "root_is_number",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": 7
+    },
+    {
+      "name": "root_is_string",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": "x"
+    },
+    {
+      "name": "root_is_null",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": null
+    },
+    {
+      "name": "member_is_number_malformed",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "schema_malformed",
+            "pointer": "/properties/a"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": 3
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "allof_sibling_bound_not_credited",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "string_unbounded",
+            "pointer": ""
+          },
+          {
+            "finding": "untyped",
+            "pointer": "/allOf/0"
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "allOf": [
+          {
+            "pattern": "^a$"
+          }
+        ],
+        "type": "string"
+      }
+    },
+    {
+      "name": "declare_enforce_clean",
+      "report": {
+        "clean": true,
+        "closure": "enforce",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-closure": "enforce"
+      }
+    },
+    {
+      "name": "declare_enforce_with_findings",
+      "report": {
+        "clean": false,
+        "closure": "enforce",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [
+          "enforce_not_clean"
+        ],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": "object",
+        "x-closure": "enforce"
+      }
+    },
+    {
+      "name": "declare_enforced_misspelt_is_report",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-closure": "enforced"
+      }
+    },
+    {
+      "name": "declare_closure_true_is_report",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-closure": true
+      }
+    },
+    {
+      "name": "declare_eligible_enforce_clean",
+      "report": {
+        "clean": true,
+        "closure": "enforce",
+        "eligible_declared": true,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-closure": "enforce",
+        "x-cross-domain": "eligible"
+      }
+    },
+    {
+      "name": "declare_eligible_in_report",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": true,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [
+          "eligible_in_report"
+        ],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-cross-domain": "eligible"
+      }
+    },
+    {
+      "name": "declare_eligible_enforce_free_text",
+      "report": {
+        "clean": true,
+        "closure": "enforce",
+        "eligible_declared": true,
+        "findings": [],
+        "free_text": [
+          "/properties/n"
+        ],
+        "load_refusals": [
+          "eligible_free_text"
+        ],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "maxLength": 200,
+            "type": "string",
+            "x-free-text": true
+          }
+        },
+        "type": "object",
+        "x-closure": "enforce",
+        "x-cross-domain": "eligible"
+      }
+    },
+    {
+      "name": "declare_eligible_report_free_text",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": true,
+        "findings": [],
+        "free_text": [
+          "/properties/n"
+        ],
+        "load_refusals": [
+          "eligible_in_report",
+          "eligible_free_text"
+        ],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "n": {
+            "maxLength": 200,
+            "type": "string",
+            "x-free-text": true
+          }
+        },
+        "type": "object",
+        "x-cross-domain": "eligible"
+      }
+    },
+    {
+      "name": "declare_eligible_enforce_not_clean",
+      "report": {
+        "clean": false,
+        "closure": "enforce",
+        "eligible_declared": true,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": ""
+          }
+        ],
+        "free_text": [],
+        "load_refusals": [
+          "enforce_not_clean",
+          "eligible_not_clean"
+        ],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "type": "object",
+        "x-closure": "enforce",
+        "x-cross-domain": "eligible"
+      }
+    },
+    {
+      "name": "declare_eligible_capitalised_not_declared",
+      "report": {
+        "clean": true,
+        "closure": "enforce",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-closure": "enforce",
+        "x-cross-domain": "Eligible"
+      }
+    },
+    {
+      "name": "declare_eligible_true_not_declared",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object",
+        "x-cross-domain": true
+      }
+    },
+    {
+      "name": "declare_nested_ignored",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [],
+        "load_refusals": [],
+        "qualifies_eligible": true
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "additionalProperties": false,
+            "type": "object",
+            "x-closure": "enforce",
+            "x-cross-domain": "eligible"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "free_text_deep_nested",
+      "report": {
+        "clean": true,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [],
+        "free_text": [
+          "/properties/a/items/properties/n"
+        ],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "additionalProperties": false,
+        "properties": {
+          "a": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "n": {
+                  "maxLength": 200,
+                  "type": "string",
+                  "x-free-text": true
+                }
+              },
+              "type": "object"
+            },
+            "maxItems": 2,
+            "type": "array"
+          }
+        },
+        "type": "object"
+      }
+    },
+    {
+      "name": "realistic_example_outbound_event",
+      "report": {
+        "clean": false,
+        "closure": "report",
+        "eligible_declared": false,
+        "findings": [
+          {
+            "finding": "object_open",
+            "pointer": "/properties/extra"
+          },
+          {
+            "finding": "array_no_max_items",
+            "pointer": "/properties/tags"
+          }
+        ],
+        "free_text": [
+          "/properties/note"
+        ],
+        "load_refusals": [],
+        "qualifies_eligible": false
+      },
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "event_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "expires_on": {
+            "format": "date",
+            "type": "string"
+          },
+          "extra": {
+            "properties": {
+              "k": {
+                "enum": [
+                  "x"
+                ],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "label": {
+            "additionalProperties": false,
+            "properties": {
+              "policy": {
+                "pattern": "^[a-z0-9:._-]{1,63}$",
+                "type": "string"
+              },
+              "release": {
+                "items": {
+                  "pattern": "^[A-Z]{3}$",
+                  "type": "string"
+                },
+                "maxItems": 8,
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "note": {
+            "maxLength": 280,
+            "type": "string",
+            "x-free-text": true
+          },
+          "observed_at": {
+            "format": "date-time",
+            "type": "string"
+          },
+          "parts": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "a",
+                    "b"
+                  ],
+                  "type": "string"
+                },
+                "part_id": {
+                  "format": "uuid",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "maxItems": 16,
+            "type": "array"
+          },
+          "region_code": {
+            "pattern": "^[A-Z]{3}$",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": "1",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "new",
+              "updated",
+              "closed"
+            ],
+            "type": "string"
+          },
+          "subject_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "tags": {
+            "items": {
+              "enum": [
+                "t1",
+                "t2"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "event_id",
+          "subject_id",
+          "observed_at",
+          "status"
+        ],
+        "title": "ExampleOutboundEvent",
+        "type": "object",
+        "x-closure": "report"
+      }
+    }
+  ]
+}
