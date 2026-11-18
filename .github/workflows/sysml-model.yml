@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/arch-kit
-          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          ref: v0.1.0 # e0b9b3c40520440a09a4e0e6050ea5017de05848
           path: arch-kit
 
       - run: pip install ./arch-kit

@@ -83,7 +83,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/arch-kit
-          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          ref: v0.1.0 # e0b9b3c40520440a09a4e0e6050ea5017de05848
           path: arch-kit
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -137,7 +137,7 @@ jobs:
       # Check the views, build and check the export, check it in a browser, check the decision
       # indexes, and upload the export (the portal declares hosting: ci-artifact).
       - name: Build and check with arch-kit
-        uses: edgy-solutions/arch-kit@2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+        uses: edgy-solutions/arch-kit@v0.1.0 # e0b9b3c40520440a09a4e0e6050ea5017de05848
         with:
           config: docs/arch/arch-kit.yaml
           chart: ${{ env.CHART }}
@@ -180,7 +180,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/arch-kit
-          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          ref: v0.1.0 # e0b9b3c40520440a09a4e0e6050ea5017de05848
           path: arch-kit
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
