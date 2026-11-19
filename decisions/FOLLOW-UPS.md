@@ -4,6 +4,37 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-19 — the views are modelled in UAF 1.2; move the grid and the mapping to UAF 1.3
+
+**Not started.**
+
+The views and the three grids are keyed to UAF 1.2:
+- `APPENDIX-A.md` is the UAF 1.2 Appendix A mapping (formal/22-07-07, Tables 2:1, 2:3 and 2:5);
+- the `uaf` profile is labelled "UAF 1.2";
+- the front page counts its written views against that appendix's rows.
+
+UAF 1.3 Appendix A (formal/25-10-05) is in hand. Its Table 2-1 (UAF 1.3 to DoDAF 2.02) and Table 2-4 (UAF 1.3 to
+NAF 4.0) have been read in full; the rest of that appendix has not. Another project exported with the same kit cites
+UAF 1.3, so the two exports count against different appendices.
+
+The move:
+- **Replace the rows** of `APPENDIX-A.md` with the UAF 1.3 rows, and cite formal/25-10-05.
+- **Relabel the `uaf` profile** "UAF 1.3".
+- **Re-check every `exports` entry** in `profiles.yaml` against Tables 2-1 and 2-4. A view whose DoDAF or NAF id
+  changed between the editions is listed.
+- **The security-view column** (2:5 in 1.2) stays as it is until the 1.3 appendix's equivalent table is read.
+- **Write each view kept under a renamed or split 1.3 id under the new id.** An id 1.3 adds is muted on the grid
+  until a view is written for it.
+
+Home: `docs/arch/README.md` (the views "modelled in UAF 1.2") and `docs/arch/APPENDIX-A.md`. Named by: the
+architecture order of 2026-11-19.
+
+Close when:
+- `APPENDIX-A.md` carries the UAF 1.3 rows and cites formal/25-10-05;
+- the README says UAF 1.3;
+- `tools/check_views.py` passes against the new table;
+- the export's legend counts against the 1.3 rows.
+
 ## OPEN 2026-11-03 — durable records that live only in Restate state are erased by every upgrade that wipes Restate (first seen: a launcher's Fire count)
 
 **Widened 2026-11-12 to a rule: no durable record lives only in Restate state.** A record that has to outlast an upgrade gets a home in the store, and Restate state holds at most a working copy of it. This row started with the launcher counts. The review of the ADR-0058 first-increment spec found a second case: **closed manual-discrepancy episodes** (ADR-0051, "the fault cleared and the record stayed"). They live only in `AssetCM` state (`am_state`, `closed_episodes`, on the edge tiers), with no topic, no table and no reader, so every roll that wipes Restate deletes the FRACAS record of every closed fault. The `failure_episodes` projection (its topic, the projector handler, the migration and a backfill) is ordered ahead of the rest of slice 3a. Until it lands, a lab roll that wipes Restate first exports the closed episodes from the state table to a file and reads that file back. The backfill loads those exports together with whatever is still held.
