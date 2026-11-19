@@ -57,9 +57,7 @@ references:
   - key: dmra
     title: DoD Data Mesh Reference Architecture
     edition: "Version 2.6, March 2024"   # as the paper's first page states it
-    obtained: >-
-      obtained from a public source, URL not recorded. The copy's PDF file is dated 2024-03-26; that is the file's
-      date, not the paper's.
+    obtained: "CDAO, version 2.6, March 2024, public page"   # as the project owner gave it, 2026-11-19
     read: partial
     read_note: >-
       Section 3's list of 15 services, and Section 4's grouping of them, read. The rest was read for its markings and
@@ -67,8 +65,8 @@ references:
     terms:
       status: public
       basis: >-
-        a US Government work; the copy held carries no distribution statement; the project owner ruled its service
-        names citable in public records, 2026-11-18
+        a US Government work, published by the CDAO on a public page; the project owner ruled its service names
+        citable in public records, 2026-11-18, and gave its source, 2026-11-19
       cite: "service names, section numbers and paraphrase; no passages, no figures"
     elements:
       - {id: dmra-01, name: UID, where: "Section 3, Figure 4, service 1", group: Services}
