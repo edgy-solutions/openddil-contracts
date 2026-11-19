@@ -46,7 +46,7 @@ references:
       # Appendix 10: data quality management.
       - {id: ap10-team, name: Data Quality Team, where: "Appendix 10, para 2", group: "Appendix 10"}
       - {id: ap10-dqms, name: Data Quality Monitoring Services, where: "Appendix 10, para 3", group: "Appendix 10"}
-      - {id: ap10-poisoned, name: Poisoned flag in the federated catalogue, with a restricting proxy, where: "Appendix 10, para 4", group: "Appendix 10"}
+      - {id: ap10-poisoned, name: "Poisoned flag in the federated catalogue, with a restricting proxy", where: "Appendix 10, para 4", group: "Appendix 10"}
       - {id: ap10-iso8000, name: Alignment with ISO 8000-61, where: "Appendix 10, para 6", group: "Appendix 10"}
       # Where the label standards and the catalogue sit. These are not in Appendices 5 or 10.
       - {id: md-4774, name: "Confidentiality label encoding (STANAG 4774)", where: "Annex 2, paras 15.3 and 80; Appendix 4, paras 12 and 14", group: "Core metadata"}
