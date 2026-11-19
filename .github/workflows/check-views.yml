@@ -54,6 +54,10 @@ env:
   # Same helm as openddil-helm's chart-checks.yml. Release tarball from get.helm.sh.
   HELM_VERSION: v3.16.2
   HELM_SHA256: 9318379b847e333460d33d291d4c088156299a26cd93d570a7f5d0c36e50b5bb
+  # The chart commit this CI reads, pinned so that a chart change cannot turn this repository red
+  # by itself. Bumping it refreshes the specimen: run docs/arch/tools/refresh_specimen.py against
+  # the new commit and commit the result in the same change.
+  HELM_REF: f2c971c6293851520df042aaed54f5db104447bf
   CHART: repos/openddil-helm/openddil-demo
   BUNDLE: repos/openddil-customer-bundle-example
   READINESS: repos/openddil-helm/scripts/RECORDING-READINESS.md
@@ -70,7 +74,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-helm
-          ref: master
+          ref: ${{ env.HELM_REF }}
           path: repos/openddil-helm
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -168,7 +172,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-helm
-          ref: master
+          ref: ${{ env.HELM_REF }}
           path: repos/openddil-helm
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
