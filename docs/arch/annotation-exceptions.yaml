@@ -74,6 +74,8 @@ group-without-topic:
   - hq/projector-capability-state (projector-hq)
   - hq/projector-cm-state (projector-hq)
   - hq/projector-effector-launch (projector-hq)
+  - hq/projector-failure-episodes (projector-hq)
+  - hq/projector-failure-episodes-withheld (projector-hq)
   - hq/projector-logistics-status (projector-hq)
   - hq/projector-munition-track (projector-hq)
   - hq/projector-parts-availability (projector-hq)
