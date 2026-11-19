@@ -27,9 +27,20 @@ it is still pruned on age alone (`NON_ASSET_ID_KEYED_UPSERT_TABLES` in the
 projector's `main.py`). Its `asset_ttl_hours: 24` is set in the projector
 image's root config, which `projector-hq` runs, as does the projector of an
 edge that is not tier-managed. The tier projectors' config sets no TTL on it.
-So at the root, a quiet asset's inventory rows are deleted 24 to 25 hours after
-their last write. For that one table, the pruner is still a lifecycle. The
-project owner ruled on 2026-11-18 that removing it is required (FOLLOW-UPS).
+So at the root, an inventory row is deleted 24 to 25 hours after its last
+write. For that one table, the pruner is still a lifecycle. The project owner
+ruled on 2026-11-18 that removing it is required (FOLLOW-UPS).
+
+**What triggers it, and what does not.** An inventory row's age is set by the
+producer that writes it, not by the asset's own reports. So a row ages out when
+its inventory producer stops writing it, not when an asset goes quiet or an
+edge is cut. When that producer sits on the hub side of a cut, **no table loses
+a cut edge's rows at +24 h**: the tier stores set no TTL on the table, and an
+edge that runs the root config does not carry inventory. It becomes a cut loss only in a
+deployment where a root projector's inventory arrives across the cut link.
+This was read in the projector's code and confirmed on 2026-11-18 against a
+running deployment's config. The prune counter there showed no upsert-table
+deletes over two days.
 
 This ADR amends `DESIGN-2026-09-26-asset-lifecycle.md` (same day) on one
 point and keeps the rest: the design's `EVICTED` state is **withdrawn**, because
