@@ -16,8 +16,13 @@ not a design ceiling. This row is the prune; everything else that assumes a shor
   is still operational is no longer pruned for its age. This was read in the code at the projector's default branch,
   not on a running tier.
 - **Not built: one table stays on age alone.** `inventory_items` is keyed `<asset_id>:<layer_name>`, not by
-  `asset_id`, so the projector leaves it on the age-only predicate (`NON_ASSET_ID_KEYED_UPSERT_TABLES`), with
-  `asset_ttl_hours: 24`. A quiet operational asset keeps its other rows, and loses its inventory rows after 24 h.
+  `asset_id`, so the projector leaves it on the age-only predicate (`NON_ASSET_ID_KEYED_UPSERT_TABLES`).
+- **Where it runs: the root projectors only.** `asset_ttl_hours: 24` on `inventory_items` is in the projector
+  image's root config, which `projector-hq` runs, as does the projector of an edge that is not tier-managed (the
+  chart sets no `PROJECTOR_CONFIG` on either). The tier projectors' config, from the chart, sets no TTL on it, so a
+  tier never prunes it. At a root projector, a quiet operational asset keeps its other rows and loses its inventory
+  rows 24 to 25 h after their last write, because the prune runs hourly (`PROJECTOR_PRUNE_INTERVAL_S`, default 3600).
+  `PROJECTOR_ASSET_TTL_HOURS`, if set, would change the age everywhere and give the tier projectors a TTL too.
 
 Home: `ADR-0044-lifecycle-two-columns-no-deletes.md`, Amendment (rule 3). Named by: the architecture order of
 2026-11-18.
@@ -26,7 +31,7 @@ Close when:
 - `inventory_items` passes the terminal-status gate, either through an `asset_id` column or a join on its key's
   asset part;
 - a test shows a quiet operational asset keeping its inventory rows past `asset_ttl_hours`;
-- ADR-0044's amendment and its index entry say the change is built, naming the commit.
+- ADR-0044's amendment and its index entry say `inventory_items` is gated too, naming the commit.
 
 ## OPEN 2026-11-18 — what still assumes a cut shorter than seven days
 
@@ -36,7 +41,7 @@ and in the projector's default branch, not on a running tier. The owner is a rol
 
 | # | What | Where, and the value today | Owner | State |
 |---|---|---|---|---|
-| 1 | The 24 h prune | `inventory_items` is pruned on age alone at `asset_ttl_hours: 24` (previous row) | the projector's owner | **required** |
+| 1 | The 24 h prune | `inventory_items` is pruned on age alone at `asset_ttl_hours: 24`, by the root projectors only; the tier projectors never prune it (previous row) | the projector's owner | **required** |
 | 2 | The edge buffer: retention of the topics the edge bridge carries | `retention.ms` 24 h on `raw-sensor-stream` (an edge with no tier node), `munition-tracks`, and, at a tier-managed edge, `asset-telemetry-windows` and `derived-sustainment`. While the bridge is cut, a record older than 24 h is deleted before it is forwarded. The compacted bridged topics keep each key's last value; the 30-day ones (`tactical-events`, `effector-events`) hold seven days | the chart's owner | open |
 | 3 | The tier uplink's topics at a tier node's broker | not read: whether a tier node's broker uses the same topic specs as an edge broker | the chart's owner | to read |
 | 4 | The region fan-in topic | 7 d by time and 2 GiB by size (`regionFanIn.retentionBytes`). If it sits behind a cut, seven days is zero margin, and 2 GiB is unchecked against seven days of a region's rate. Whether it sits behind a cut is not read | the chart's owner | to read |
