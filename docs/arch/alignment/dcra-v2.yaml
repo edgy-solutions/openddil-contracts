@@ -1,0 +1,276 @@
+# Alignment record: this project against the NATO Data Centric Reference Architecture, Version 2, and the DoD Data
+# Mesh Reference Architecture, Version 2.6.
+#
+# DRAFT. It is written in the format proposed in arch-kit's docs/design/alignment.md. That format is proposed and not
+# merged, so nothing renders or checks this file yet. Element names are the references' own. Every note and every
+# counterpart is this project's paraphrase. The record cites by section and paragraph and carries no passages and no
+# figures. The element-to-element mapping between the two references is ../crosswalks/dcra-v2-dmra-v2.6.yaml.
+
+title: Data-centric security, labels and data quality, against the NATO DCRA v2 and the DoD DMRA v2.6
+status: draft
+context: |
+  This project does not cite the DCRA anywhere in its decision records today. This record is its first citation.
+
+  Where the model is attribute-based, and where it is not:
+  - It is attribute-based in the decision. Access to a record is decided by one policy engine, from the viewer's
+    asserted attributes (nation, clearance, role) and the record's label. It is not decided by which screen the
+    viewer opened (ADR-0029).
+  - It is not attribute-based per request. A label is compiled to one key when it is stamped (ADR-0055 §2). The
+    decision point evaluates each distinct label once per viewer and returns the keys that viewer is admitted to.
+    The enforcement point then filters by set membership, `label_key IN (admitted)`. So a read tests membership in
+    a set decided earlier; the attributes are not evaluated again on every read.
+  - So a change takes effect when the set is recomputed, not on the next read. That holds for a change to a
+    viewer's attributes, and for a change to a record's label, which is a new key. ADR-0055 records what a new key
+    costs, and that the cost of recomputing has not been measured.
+  - Environment attributes such as time, device or location are not inputs today.
+
+references:
+  - key: dcra
+    title: Data Centric Reference Architecture for the Alliance
+    edition: "Version 2, 2025"
+    identifier: AC/322-D(2025)0056
+    obtained: "supplied by the project owner, 2026-11-18"
+    read: partial
+    read_note: >-
+      Annex 2, and Appendices 4, 5, 9, 10 and 14, read in full. The other appendices were not read for this record.
+      Supplement 1 (the architecture model) is not held.
+    terms:
+      status: public
+      basis: "marked publicly disclosed, PDN(2025)0031, on every page; NATO UNCLASSIFIED"
+      cite: "names, section numbers and paraphrase; no passages, no figures"
+    seed: nato-dcra-v2
+    groups: ["Appendix 9: roles", "Appendix 9: services"]
+    elements:
+      # Appendix 5 (data labelling) is read but not compared. It covers AI/ML training data, not confidentiality
+      # labels, and this project produces no training data.
+      # Appendix 10: data quality management.
+      - {id: ap10-team, name: Data Quality Team, where: "Appendix 10, para 2", group: "Appendix 10"}
+      - {id: ap10-dqms, name: Data Quality Monitoring Services, where: "Appendix 10, para 3", group: "Appendix 10"}
+      - {id: ap10-poisoned, name: "Poisoned flag in the federated catalogue, with a restricting proxy", where: "Appendix 10, para 4", group: "Appendix 10"}
+      - {id: ap10-iso8000, name: Alignment with ISO 8000-61, where: "Appendix 10, para 6", group: "Appendix 10"}
+      # Where the label standards and the catalogue sit. These are not in Appendices 5 or 10.
+      - {id: md-4774, name: "Confidentiality label encoding (STANAG 4774)", where: "Annex 2, paras 15.3 and 80; Appendix 4, paras 12 and 14", group: "Core metadata"}
+      - {id: md-4778, name: "Label binding (STANAG 4778)", where: "Annex 2, paras 15.3 and 80; Appendix 4, paras 12 and 14", group: "Core metadata"}
+      - {id: md-dcat, name: "Catalogue metadata (DCAT)", where: "Appendix 4, para 9", group: "Core metadata"}
+      - {id: a2-interface-policy, name: "Interfaces that enforce sharing, labelling and terms-of-use policy", where: "Annex 2, para 56", group: "Core metadata"}
+
+  - key: dmra
+    title: DoD Data Mesh Reference Architecture
+    edition: "Version 2.6, March 2024"   # as the paper's first page states it
+    obtained: "CDAO, version 2.6, March 2024, public page"   # as the project owner gave it, 2026-11-19
+    read: partial
+    read_note: >-
+      Section 3's list of 15 services, and Section 4's grouping of them, read. The rest was read for its markings and
+      dates only.
+    terms:
+      status: public
+      basis: >-
+        a US Government work, published by the CDAO on a public page; the project owner ruled its service names
+        citable in public records, 2026-11-18, and gave its source, 2026-11-19
+      cite: "service names, section numbers and paraphrase; no passages, no figures"
+    elements:
+      - {id: dmra-01, name: UID, where: "Section 3, Figure 4, service 1", group: Services}
+      - {id: dmra-02, name: Semantic Services, where: "Section 3, Figure 4, service 2", group: Services}
+      - {id: dmra-03, name: Federated Data Catalog, where: "Section 3, Figure 4, service 3", group: Services}
+      - {id: dmra-04, name: Data and Metadata Profiles (xBOMs), where: "Section 3, Figure 4, service 4", group: Services}
+      - {id: dmra-05, name: Policy Access Control, where: "Section 3, Figure 4, service 5", group: Services}
+      - {id: dmra-06, name: Digital Policy Administration, where: "Section 3, Figure 4, service 6", group: Services}
+      - {id: dmra-07, name: Data Exchange Management, where: "Section 3, Figure 4, service 7", group: Services}
+      - {id: dmra-08, name: Data Product Search, where: "Section 3, Figure 4, service 8", group: Services}
+      - {id: dmra-09, name: Data Mesh Pub/Sub, where: "Section 3, Figure 4, service 9", group: Services}
+      - {id: dmra-10, name: Mesh Performance Analytics, where: "Section 3, Figure 4, service 10", group: Services}
+      - {id: dmra-11, name: Data Product Life Cycle Management, where: "Section 3, Figure 4, service 11", group: Services}
+      - {id: dmra-12, name: Data Security Classification, where: "Section 3, Figure 4, service 12", group: Services}
+      - {id: dmra-13, name: Quality Management Services, where: "Section 3, Figure 4, service 13", group: Services}
+      - {id: dmra-14, name: Mediation Hub Services, where: "Section 3, Figure 4, service 14", group: Services}
+      - {id: dmra-15, name: Mesh Instrumentation Tools, where: "Section 3, Figure 4, service 15", group: Services}
+
+rows:
+  # Appendix 9: roles
+  - ref: dcra
+    element: ap9-pep
+    counterpart: "The read path's enforcement point, and the egress gate"
+    correspondence: corresponds
+    evidence: [ADR-0029, ADR-0043]
+    note: >-
+      An enforcement point gathers the attributes, asks the decision point, and applies the answer. It has no access
+      logic of its own. The read path's enforcement point is built (ADR-0029, slice 1). The egress gate is a
+      compiled predicate that asks the decision point once at startup. It is built and measured under compose, and
+      is not deployed (ADR-0043).
+  - ref: dcra
+    element: ap9-pdp
+    counterpart: "One policy engine, with a replica at each tier"
+    correspondence: corresponds
+    evidence: [ADR-0029, ADR-0045, ADR-0055]
+    note: >-
+      One decision point, a policy engine. Each tier has its own replica, so a severed tier still decides (ADR-0045,
+      partly built). Per-viewer admitted keys are ADR-0055, design only. ADR-0043 treats an unavailable decision
+      point as an error, not as a deny.
+  - ref: dcra
+    element: ap9-pip
+    counterpart: "The viewer's token claims and the record's stamped label"
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0045]
+    note: >-
+      The attributes come from two places: the viewer's token claims (asserted entitlements, ADR-0029 §5) and the
+      label stamped on the record at ingress. No separate information point is queried at decision time, and there
+      are no device or network-posture attributes.
+  - ref: dcra
+    element: ap9-pap
+    counterpart: "Policies and entitlements as versioned declarations"
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0055]
+    note: >-
+      Policies and entitlements are declarations under version control, and each deployment declares its policy
+      identifier (ADR-0055 §6). There is no administration service: a change is a reviewed commit and a redeploy.
+  # Appendix 9: services
+  - ref: dcra
+    element: ap9-crypto
+    correspondence: none
+    evidence: [ADR-0061]
+    note: >-
+      Data is not encrypted or signed per record. A signed binding of a label to its data is designed and not
+      built (ADR-0061 §6).
+    owed: ADR-0061
+  - ref: dcra
+    element: ap9-authz
+    counterpart: "The decision point and the enforcement points"
+    correspondence: corresponds
+    evidence: [ADR-0029]
+    note: "Authorization and access control is the decision point and enforcement points above."
+  - ref: dcra
+    element: ap9-authn
+    counterpart: "OIDC sign-in against an identity realm at each tier"
+    correspondence: corresponds
+    evidence: [ADR-0029, ADR-0045]
+    note: >-
+      Sign-in uses OIDC against an identity realm at each tier, with trust between tiers (ADR-0045, partly built).
+  - ref: dcra
+    element: ap9-certs
+    correspondence: none
+    note: "No decision record covers a certificate service. Transport TLS is part of the deployment, and is not data-centric."
+  - ref: dcra
+    element: ap9-identity
+    counterpart: "Each person's home tier, from the system of record's assignment"
+    correspondence: partial
+    evidence: [ADR-0045]
+    note: >-
+      Each person has a home tier, which follows the system of record's assignment. No record covers the identity
+      lifecycle (creation to deactivation).
+  # Appendix 10
+  - {ref: dcra, element: ap10-team, correspondence: not-applicable, note: "An organisational role, not a property of the software."}
+  - ref: dcra
+    element: ap10-dqms
+    counterpart: "Detection of lost feeds, stale data and degraded modes"
+    correspondence: partial
+    evidence: [ADR-0036]
+    note: >-
+      Lost feeds, stale data and degraded modes are detected and shown, and ADR-0036 keeps a register of the failure
+      modes that have no detection yet. Accuracy and completeness are not measured as quality dimensions.
+  - {ref: dcra, element: ap10-poisoned, correspondence: none, note: "There is no catalogue, so there is no flag and no proxy that acts on one."}
+  - {ref: dcra, element: ap10-iso8000, correspondence: none, note: "No decision record maps to ISO 8000-61."}
+  # Core metadata: the gaps
+  - ref: dcra
+    element: md-4774
+    counterpart: "The label's originator, releasability and lifecycle fields"
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0043, ADR-0055, ADR-0061]
+    note: >-
+      The 4774 concepts are carried: originator and releasability on the wire (ADR-0043), and lifecycle times
+      (ADR-0055). The 4774 encoding is not. A 4774 label is XML only, and generating it from the JSON Schema
+      source is designed, not built (ADR-0061, finding 1 and §7). This is a gap.
+    owed: ADR-0061
+  - ref: dcra
+    element: md-4778
+    correspondence: none
+    evidence: [ADR-0061]
+    note: >-
+      Designed, not built (ADR-0061 §6). A binding that leaves the domain is a 4778.2 binding data object, and it is
+      signed when the deployment declares the binding cryptographic.
+    owed: ADR-0061
+  - ref: dcra
+    element: md-dcat
+    correspondence: none
+    evidence: [ADR-0056]
+    note: "Named in ADR-0056's standards table as concept only, for data products and their terms, later. This is a gap."
+    owed: ADR-0056
+  - ref: dcra
+    element: a2-interface-policy
+    counterpart: "The enforcement points on reads and on egress"
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0043]
+    note: >-
+      Reads and egress both pass an enforcement point that applies the label. Terms of use, obfuscation and masking
+      are not enforced.
+
+  # DoD Data Mesh Reference Architecture: the 15 services. Draft judgments; services 2 and 4 are not yet assessed.
+  - ref: dmra
+    element: dmra-01
+    counterpart: "One identity per thing, minted once"
+    correspondence: partial
+    evidence: [ADR-0056]
+    note: "Identity covers the things this project tracks, not every object in an enterprise."
+  - {ref: dmra, element: dmra-02, correspondence: not_assessed}
+  - ref: dmra
+    element: dmra-03
+    correspondence: none
+    evidence: [ADR-0056]
+    note: "There is no catalogue. ADR-0056 names catalogue metadata (DCAT) as a concept only, for later."
+    owed: ADR-0056
+  - {ref: dmra, element: dmra-04, correspondence: not_assessed}
+  - ref: dmra
+    element: dmra-05
+    counterpart: "The decision point and the enforcement points"
+    correspondence: corresponds
+    evidence: [ADR-0029]
+    note: "Access to a record is decided from the viewer's asserted attributes and the record's label."
+  - ref: dmra
+    element: dmra-06
+    counterpart: "Policies and entitlements as versioned declarations"
+    correspondence: partial
+    evidence: [ADR-0055]
+    note: "There is no administration service: a change is a reviewed commit and a redeploy."
+  - ref: dmra
+    element: dmra-07
+    counterpart: "The read path, through its enforcement point"
+    correspondence: partial
+    evidence: [ADR-0029]
+    note: "Requests are filtered by label on the way through. They are not routed between services."
+  - {ref: dmra, element: dmra-08, correspondence: none, note: "There is no search over data products."}
+  - ref: dmra
+    element: dmra-09
+    counterpart: "The Redpanda bus, with a broker per edge"
+    correspondence: corresponds
+    evidence: [ADR-0022, ADR-0024]
+    note: "ADR-0022 chose Redpanda as the architecture's bus. ADR-0024's aggregation pattern is built on it."
+  - ref: dmra
+    element: dmra-10
+    counterpart: "Detection of lost feeds, stale data and degraded modes"
+    correspondence: partial
+    evidence: [ADR-0036]
+    note: "It watches the system's health. How data is used is not tracked."
+  - {ref: dmra, element: dmra-11, correspondence: none, note: "There are no data products to register, revoke or recall."}
+  - ref: dmra
+    element: dmra-12
+    counterpart: "A label stamped on every record at ingress, compiled to one key"
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0055, ADR-0061]
+    note: "Labels are applied and enforced. Their STANAG 4774 encoding is designed, not built (ADR-0061)."
+  - ref: dmra
+    element: dmra-13
+    counterpart: "Stale and degraded data is marked as such"
+    correspondence: partial
+    evidence: [ADR-0036]
+    note: "Accuracy and completeness are not measured as quality dimensions."
+  - ref: dmra
+    element: dmra-14
+    counterpart: "An ingestion sidecar per external feed, translating it to the internal schema"
+    correspondence: partial
+    evidence: [ADR-0010]
+    note: "Translation is from each external feed inward, not from one producer to each consumer's domain."
+  - ref: dmra
+    element: dmra-15
+    counterpart: "Health signals from the system's own components"
+    correspondence: partial
+    evidence: [ADR-0036]
+    note: "The signals are for detecting failures, not for weighing performance or value."
