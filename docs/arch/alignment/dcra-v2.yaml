@@ -1,0 +1,189 @@
+# Alignment record: this project against the NATO Data Centric Reference Architecture, Version 2.
+#
+# DRAFT. It is written in the format proposed in arch-kit's docs/design/alignment.md. That format is proposed, not
+# built, so nothing renders or checks this file yet. Element names are the reference's own. Every note is this
+# project's paraphrase. The record cites by appendix and paragraph and carries no passages and no figures.
+
+title: Data-centric security, labels and data quality, against the NATO DCRA v2
+status: draft
+context: |
+  This project does not cite the DCRA anywhere in its decision records today. This record is its first citation.
+
+  Where the model is attribute-based, and where it is not:
+  - It is attribute-based in the decision. Access to a record is decided by one policy engine, from the viewer's
+    asserted attributes (nation, clearance, role) and the record's label. It is not decided by which screen the
+    viewer opened (ADR-0029).
+  - It is not attribute-based per request. A label is compiled to one key when it is stamped (ADR-0055 §2). The
+    decision point evaluates each distinct label once per viewer and returns the keys that viewer is admitted to.
+    The enforcement point then filters by set membership, `label_key IN (admitted)`. So a read tests membership in
+    a set decided earlier; the attributes are not evaluated again on every read.
+  - So a change takes effect when the set is recomputed, not on the next read. That holds for a change to a
+    viewer's attributes, and for a change to a record's label, which is a new key. ADR-0055 records what a new key
+    costs, and that the cost of recomputing has not been measured.
+  - Environment attributes such as time, device or location are not inputs today.
+
+references:
+  - key: dcra
+    title: Data Centric Reference Architecture for the Alliance
+    edition: "Version 2, 2025"
+    identifier: AC/322-D(2025)0056
+    obtained: "supplied by the project owner, 2026-11-18"
+    read: partial
+    read_note: >-
+      Annex 2, and Appendices 4, 5, 9, 10 and 14, read in full. The other appendices were not read for this record.
+      Supplement 1 (the architecture model) is not held.
+    terms:
+      status: public
+      basis: "marked publicly disclosed, PDN(2025)0031, on every page; NATO UNCLASSIFIED"
+      cite: "names, section numbers and paraphrase; no passages, no figures"
+    seed: nato-dcra-v2
+    groups: ["Appendix 9: roles", "Appendix 9: services"]
+    elements:
+      # Appendix 5: data labelling. It covers AI/ML training data, not confidentiality labels.
+      - {id: ap5-acquire, name: Training Data Acquisition and Preparation, where: "Appendix 5, para 5", group: "Appendix 5"}
+      - {id: ap5-annotate, name: Data Annotation and Labelling, where: "Appendix 5, para 5", group: "Appendix 5"}
+      - {id: ap5-qa, name: Quality Assurance and Validation, where: "Appendix 5, para 5", group: "Appendix 5"}
+      - {id: ap5-package, name: Training Dataset Delivery Packages, where: "Appendix 5, para 5", group: "Appendix 5"}
+      - {id: ap5-compliance, name: Compliance Management, where: "Appendix 5, para 5", group: "Appendix 5"}
+      - {id: ap5-provenance, name: Dataset provenance metadata, where: "Appendix 5, para 6", group: "Appendix 5"}
+      - {id: ap5-privacy, name: Data Privacy-Enhancement Services, where: "Appendix 5, para 8", group: "Appendix 5"}
+      # Appendix 10: data quality management.
+      - {id: ap10-team, name: Data Quality Team, where: "Appendix 10, para 2", group: "Appendix 10"}
+      - {id: ap10-dqms, name: Data Quality Monitoring Services, where: "Appendix 10, para 3", group: "Appendix 10"}
+      - {id: ap10-poisoned, name: Poisoned flag in the federated catalogue, with a restricting proxy, where: "Appendix 10, para 4", group: "Appendix 10"}
+      - {id: ap10-iso8000, name: Alignment with ISO 8000-61, where: "Appendix 10, para 6", group: "Appendix 10"}
+      # Where the label standards and the catalogue sit. These are not in Appendices 5 or 10.
+      - {id: md-4774, name: "Confidentiality label encoding (STANAG 4774)", where: "Annex 2, paras 15.3 and 80; Appendix 4, paras 12 and 14", group: "Core metadata"}
+      - {id: md-4778, name: "Label binding (STANAG 4778)", where: "Annex 2, paras 15.3 and 80; Appendix 4, paras 12 and 14", group: "Core metadata"}
+      - {id: md-dcat, name: "Catalogue metadata (DCAT)", where: "Appendix 4, para 9", group: "Core metadata"}
+      - {id: a2-interface-policy, name: "Interfaces that enforce sharing, labelling and terms-of-use policy", where: "Annex 2, para 56", group: "Core metadata"}
+
+  - key: dmra
+    title: DoD Data Mesh Reference Architecture
+    edition: "v2.6, March 2024"
+    obtained: "supplied by the project owner; source to be confirmed"
+    read: title-only
+    terms:
+      status: unconfirmed
+      basis: "no release statement found in the copy held"
+      cite: "title only, until the source is confirmed"
+
+rows:
+  # Appendix 9: roles
+  - ref: dcra
+    element: ap9-pep
+    correspondence: corresponds
+    evidence: [ADR-0029, ADR-0043]
+    note: >-
+      An enforcement point gathers the attributes, asks the decision point, and applies the answer. It has no access
+      logic of its own. The read path's enforcement point is built (ADR-0029, slice 1). The egress gate is a
+      compiled predicate that asks the decision point once at startup. It is built and measured under compose, and
+      is not deployed (ADR-0043).
+  - ref: dcra
+    element: ap9-pdp
+    correspondence: corresponds
+    evidence: [ADR-0029, ADR-0045, ADR-0055]
+    note: >-
+      One decision point, a policy engine. Each tier has its own replica, so a severed tier still decides (ADR-0045,
+      partly built). Per-viewer admitted keys are ADR-0055, design only. ADR-0043 treats an unavailable decision
+      point as an error, not as a deny.
+  - ref: dcra
+    element: ap9-pip
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0045]
+    note: >-
+      The attributes come from two places: the viewer's token claims (asserted entitlements, ADR-0029 §5) and the
+      label stamped on the record at ingress. No separate information point is queried at decision time, and there
+      are no device or network-posture attributes.
+  - ref: dcra
+    element: ap9-pap
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0055]
+    note: >-
+      Policies and entitlements are declarations under version control, and each deployment declares its policy
+      identifier (ADR-0055 §6). There is no administration service: a change is a reviewed commit and a redeploy.
+  # Appendix 9: services
+  - ref: dcra
+    element: ap9-crypto
+    correspondence: none
+    evidence: [ADR-0061]
+    note: >-
+      Data is not encrypted or signed per record. A signed binding of a label to its data is designed and not
+      built (ADR-0061 §6).
+    owed: ADR-0061
+  - ref: dcra
+    element: ap9-authz
+    correspondence: corresponds
+    evidence: [ADR-0029]
+    note: "Authorization and access control is the decision point and enforcement points above."
+  - ref: dcra
+    element: ap9-authn
+    correspondence: corresponds
+    evidence: [ADR-0029, ADR-0045]
+    note: >-
+      Sign-in uses OIDC against an identity realm at each tier, with trust between tiers (ADR-0045, partly built).
+  - ref: dcra
+    element: ap9-certs
+    correspondence: none
+    note: "No decision record covers a certificate service. Transport TLS is part of the deployment, and is not data-centric."
+  - ref: dcra
+    element: ap9-identity
+    correspondence: partial
+    evidence: [ADR-0045]
+    note: >-
+      Each person has a home tier, which follows the system of record's assignment. No record covers the identity
+      lifecycle (creation to deactivation).
+  # Appendix 5
+  - {ref: dcra, element: ap5-acquire, correspondence: not-applicable, note: "No AI/ML training data is produced."}
+  - {ref: dcra, element: ap5-annotate, correspondence: not-applicable, note: "No AI/ML training data is produced."}
+  - {ref: dcra, element: ap5-qa, correspondence: not-applicable, note: "No AI/ML training data is produced."}
+  - {ref: dcra, element: ap5-package, correspondence: not-applicable, note: "No AI/ML training data is produced."}
+  - {ref: dcra, element: ap5-compliance, correspondence: not-applicable, note: "No AI/ML training data is produced."}
+  - ref: dcra
+    element: ap5-provenance
+    correspondence: not-applicable
+    note: >-
+      The element concerns training datasets. Records here do carry provenance, which is recorded under ADR-0043.
+  - {ref: dcra, element: ap5-privacy, correspondence: not-applicable, note: "No AI/ML training data is produced."}
+  # Appendix 10
+  - {ref: dcra, element: ap10-team, correspondence: not-applicable, note: "An organisational role, not a property of the software."}
+  - ref: dcra
+    element: ap10-dqms
+    correspondence: partial
+    evidence: [ADR-0036]
+    note: >-
+      Lost feeds, stale data and degraded modes are detected and shown, and ADR-0036 keeps a register of the failure
+      modes that have no detection yet. Accuracy and completeness are not measured as quality dimensions.
+  - {ref: dcra, element: ap10-poisoned, correspondence: none, note: "There is no catalogue, so there is no flag and no proxy that acts on one."}
+  - {ref: dcra, element: ap10-iso8000, correspondence: none, note: "No decision record maps to ISO 8000-61."}
+  # Core metadata: the gaps
+  - ref: dcra
+    element: md-4774
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0043, ADR-0055, ADR-0061]
+    note: >-
+      The 4774 concepts are carried: originator and releasability on the wire (ADR-0043), and lifecycle times
+      (ADR-0055). The 4774 encoding is not. A 4774 label is XML only, and generating it from the JSON Schema
+      source is designed, not built (ADR-0061, finding 1 and §7). This is a gap.
+    owed: ADR-0061
+  - ref: dcra
+    element: md-4778
+    correspondence: none
+    evidence: [ADR-0061]
+    note: >-
+      Designed, not built (ADR-0061 §6). A binding that leaves the domain is a 4778.2 binding data object, and it is
+      signed when the deployment declares the binding cryptographic.
+    owed: ADR-0061
+  - ref: dcra
+    element: md-dcat
+    correspondence: none
+    evidence: [ADR-0056]
+    note: "Named in ADR-0056's standards table as concept only, for data products and their terms, later. This is a gap."
+    owed: ADR-0056
+  - ref: dcra
+    element: a2-interface-policy
+    correspondence: partial
+    evidence: [ADR-0029, ADR-0043]
+    note: >-
+      Reads and egress both pass an enforcement point that applies the label. Terms of use, obfuscation and masking
+      are not enforced.
