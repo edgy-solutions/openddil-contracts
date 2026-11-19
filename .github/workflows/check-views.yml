@@ -56,7 +56,8 @@ env:
   HELM_SHA256: 9318379b847e333460d33d291d4c088156299a26cd93d570a7f5d0c36e50b5bb
   # The chart commit this CI reads, pinned so that a chart change cannot turn this repository red
   # by itself. Bumping it refreshes the specimen: run docs/arch/tools/refresh_specimen.py against
-  # the new commit and commit the result in the same change.
+  # the new commit and commit the result in the same change. A new consumer group in the chart
+  # also needs its row in docs/arch/annotation-exceptions.yaml; test_check_annotations names it.
   HELM_REF: f2c971c6293851520df042aaed54f5db104447bf
   CHART: repos/openddil-helm/openddil-demo
   BUNDLE: repos/openddil-customer-bundle-example
