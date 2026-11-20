@@ -1,1 +1,6 @@
 front data-relabel: S4 relabels the whole export, so the sentence names the export, not the decision records
+view-Am-Tr break-hints: kit v0.3.1 adds break hints to long tokens in table cells; text and other markup unchanged
+view-Rs-Tr break-hints: kit v0.3.1 adds break hints to long tokens in table cells; text and other markup unchanged
+view-St-Rm-P break-hints: kit v0.3.1 adds break hints to long tokens in table cells; text and other markup unchanged
+view-Rs-Cn break-hints: kit v0.3.1 adds break hints to long tokens in table cells; text and other markup unchanged
+view-Rs-If break-hints: kit v0.3.1 adds break hints to long tokens in table cells; text and other markup unchanged
