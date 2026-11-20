@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Strategic-Taxonomy (St-Tx).
+From UAF 1.3 Strategic-Taxonomy (St-Tx).
 
 The capabilities this architecture names. The grouping is this view's; each row cites where the capability comes from. ISO 13374 is used as a reading of what exists and is not a conformance claim. In scope for this deployment: {{slot:capabilities-in-scope}}.
 

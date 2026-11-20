@@ -2,8 +2,8 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Taxonomy (Rs-Tx).
-From UAF 1.2 Resources-Structure (Rs-Sr).
+From UAF 1.3 Resources-Taxonomy (Rs-Tx).
+From UAF 1.3 Resources-Structure (Rs-Sr).
 
 ## Resources-Taxonomy (Rs-Tx)
 

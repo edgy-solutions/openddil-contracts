@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Constraints (Rs-Ct).
+From UAF 1.3 Resources-Constraints (Rs-Ct).
 
 The rules a deployment's choice of resources has to keep. They are framework rules and hold at any depth. Which tier carries which member is the deployment's choice within them: {{slot:tier-tree}}.
 

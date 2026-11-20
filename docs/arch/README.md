@@ -1,6 +1,6 @@
 # Architecture views
 
-The OpenDDIL architecture as framework views, modelled in UAF 1.2. The content lives once, in [`views/`](views/) and [`model/`](model/). DoDAF 2.02 and NAF v4 are output profiles that rename and select those views.
+The OpenDDIL architecture as framework views, modelled in UAF 1.3. The content lives once, in [`views/`](views/) and [`model/`](model/). DoDAF 2.02 and NAF v4 are output profiles that rename and select those views.
 
 This is a framework description. A deployment fills the `{{slot:name}}` placeholders from its bundle or a private file; [`slots.yaml`](slots.yaml) lists every slot and where its value comes from. Nothing here describes a real deployment until those are filled.
 
@@ -164,7 +164,7 @@ Evidence quotes are scanned against a list of barred values, read from a file `c
 
 ## Profile mapping
 
-[`APPENDIX-A.md`](APPENDIX-A.md) is the mapping from UAF 1.2 Appendix A, formal/22-07-07, Tables 2:1, 2:3 and 2:5, and the only copy of it. `exports` in [`profiles.yaml`](profiles.yaml) selects from it, and `tools/check_views.py` fails on an export the table does not name. The mapping is not one-to-one. A view a profile cannot name is listed in that profile's `NOT-EXPORTED.md` and is not dropped silently.
+[`APPENDIX-A.md`](APPENDIX-A.md) is the mapping from UAF 1.3 Appendix A, formal/25-10-05, Tables 2-1, 2-4 and 2-5, and the only copy of it. `exports` in [`profiles.yaml`](profiles.yaml) selects from it, and `tools/check_views.py` fails on an export the table does not name. The mapping is not one-to-one. A view a profile cannot name is listed in that profile's `NOT-EXPORTED.md` and is not dropped silently.
 
 The security views have no DoDAF 2.02 or NAF 4.0 target. Appendix A maps them only to DNDAF SecV views.
 

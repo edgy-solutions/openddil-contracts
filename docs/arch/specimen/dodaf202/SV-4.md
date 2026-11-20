@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Processes (Rs-Pr).
+From UAF 1.3 Resources-Processes (Rs-Pr).
 
 The functions the resources perform. [Resources-Traceability](../../views/Rs-Tr.md) ties them to activities.
 

@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-Connectivity (Op-Cn).
+From UAF 1.3 Operational-Connectivity (Op-Cn).
 
 Who needs what from whom. This view states the needs. The topics and workloads that carry them are in [Resources-Connectivity](../../views/Rs-Cn.md).
 

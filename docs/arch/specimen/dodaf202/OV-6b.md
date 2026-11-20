@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-States (Op-St).
+From UAF 1.3 Operational-States (Op-St).
 
 The states the operational record can claim, and what moves between them. The three machines are independent: none of them writes another's value.
 

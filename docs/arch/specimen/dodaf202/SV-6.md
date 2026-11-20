@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Connectivity (Rs-Cn).
+From UAF 1.3 Resources-Connectivity (Rs-Cn).
 
 Chart: openddil-demo 0.1.161
 Values: tier-node-values.yaml

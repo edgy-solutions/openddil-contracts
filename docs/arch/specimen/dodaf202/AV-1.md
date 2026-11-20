@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Summary-Overview (Sm-Ov).
+From UAF 1.3 Summary-Overview (Sm-Ov).
 
 The architecture of Sample Fleet System, which supports {{slot:mission-thread}}.
 
