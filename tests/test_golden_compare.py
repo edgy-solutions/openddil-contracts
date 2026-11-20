@@ -106,6 +106,29 @@ class Compare(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("view-A: differs and is not in the allowlist (break-hints would cover it)", err)
 
+    def test_break_hints_cover_split_nowrap_spans(self):
+        old = export(other='<span class="nb">abc-def-ghi-jkl</span>')
+        new = export(other='<span class="nb">abc-</span><wbr><span class="nb">def-</span><wbr>'
+                           '<span class="nb">ghi-</span><wbr>jkl')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = self.run_tool(old, new, "")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs and is not in the allowlist (break-hints would cover it)", err)
+
+    def test_break_hints_do_not_cover_changed_span_text(self):
+        rc, out, err = self.run_tool(export(other='<span class="nb">a-b</span>'),
+                                     export(other='<span class="nb">a-c</span>'),
+                                     "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
+    def test_break_hints_do_not_unwrap_another_class(self):
+        rc, out, err = self.run_tool(export(other='<span class="x">ab</span>'), export(other="ab"),
+                                     "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
 
 if __name__ == "__main__":
     unittest.main()

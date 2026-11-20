@@ -11,8 +11,9 @@ ALLOW lines are `ID: reason`, or `ID ELEMENT: reason` for one element of a page.
 (the front page's sentence about relabelling) or `break-hints`. `ID` is a page id, or `prelude` / `postlude`. Blank lines and
 lines starting with `#` are ignored.
 
-`ID break-hints: reason` lets the page differ by break hints and header widths only: on both sides every `<wbr>`
-is removed, and inside each `<th ...>` start tag `min-width:<digits>ch` becomes `min-width:Nch`. The page must then
+`ID break-hints: reason` lets the page differ by break hints, by how the nowrap spans split a token, and by header widths
+only: on both sides every `<wbr>` is removed, each `<span class="nb">TEXT</span>` whose TEXT has no `<` becomes
+TEXT, and inside each `<th ...>` start tag `min-width:<digits>ch` becomes `min-width:Nch`. The page must then
 be byte-equal. When a page has both kinds, the element is removed first, then the break hints are normalised. A
 `break-hints` line is used only when the page differs before normalising and the normalising changed a side. When a
 page differs, no line names it, and normalising would make it equal, the failure says `(break-hints would cover it)`.
@@ -38,12 +39,13 @@ BREAK_HINTS = "break-hints"
 KINDS = [*ELEMENTS, BREAK_HINTS]
 WBR = b"<wbr>"
 TH_START = re.compile(rb"<th\b[^>]*>")
+NOWRAP = re.compile(rb'<span class="nb">([^<]*)</span>')
 MIN_WIDTH = re.compile(rb"min-width:\d+ch")
 
 
 def normalise(data: bytes) -> bytes:
-    """Remove every <wbr>, and make the min-width of each <th> start tag `Nch`."""
-    data = data.replace(WBR, b"")
+    """Remove every <wbr>, unwrap the nowrap spans, and make the min-width of each <th> start tag `Nch`."""
+    data = NOWRAP.sub(rb"\1", data.replace(WBR, b""))
     return TH_START.sub(lambda m: MIN_WIDTH.sub(b"min-width:Nch", m.group(0)), data)
 
 
