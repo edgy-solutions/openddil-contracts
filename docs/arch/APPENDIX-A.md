@@ -1,8 +1,10 @@
-# UAF 1.2 Appendix A mapping
+# UAF 1.3 Appendix A mapping
 
-Which DoDAF 2.02, NAF 4.0 and DNDAF security views UAF 1.2 names for each UAF view specification. Source: UAF 1.2 Appendix A, Traceability, OMG formal/22-07-07, Table 2:1 (DoDAF 2.02), Table 2:3 (NAF 4.0) and Table 2:5 (DNDAF security views). Looked up on 2026-11-02.
+Which DoDAF 2.02, NAF 4.0 and DNDAF security views UAF 1.3 names for each UAF view specification. Source: UAF 1.3 Appendix A, Traceability, OMG formal/25-10-05, Table 2-1 (DoDAF 2.02), Table 2-4 (NAF 4.0) and Table 2-5 (DNDAF security views). Looked up on 2026-11-19.
 
 This table is the only copy of the mapping. `exports` in [`profiles.yaml`](profiles.yaml) is the selection this repository makes from it, and `check_views.py` in the export kit fails on an export this table does not name. The appendix states that the mapping is not one-to-one, so one view can name several outputs and one output can come from several views.
+
+The four views new in 1.3 (Mi-Pm-VS, Op-Pr-MT, Rs-Pr-MET and St-Pr-MP) are named here because the appendix names them; no view in `views/` is written for them.
 
 A dash means the table gives that view no output. Several rows can share an identifier, where the appendix splits one view specification by aspect.
 
@@ -23,10 +25,12 @@ A dash means the table gives that view no output. Several rows can share an iden
 | Ar-Sr | Actual Resources Structure | OV-4 | P2 | - |
 | En-Pm | Parameters: Environment | - | - | - |
 | Me-Pm | Parameters: Measurements | SV-7, SvcV-7 | C7, S7 | - |
+| Mi-Pm-VS | Parameters: Mission Vignette and Scenario | - | - | - |
 | Op-Cn | Operational Connectivity | OV-2, OV-3 | L3, L2-L3 | - |
 | Op-Ct | Operational Constraints | OV-6a | L8 | - |
 | Op-If | Information: Operational Information | DIV-2 | L7 | - |
 | Op-Pr | Operational Processes | OV-5a, OV-5b | L4 | - |
+| Op-Pr-MT | Operational Processes: Mission Threads | - | - | - |
 | Op-Sq | Operational Sequences | OV-6c | L6 | - |
 | Op-Sr | Operational Structure | OV-2 | L2, L2-L3 | - |
 | Op-St | Operational States | OV-6b | L5 | - |
@@ -57,6 +61,7 @@ A dash means the table gives that view no output. Several rows can share an iden
 | Rs-Ct | Resources Constraints | SV-10a | P8 | - |
 | Rs-If | Information: Resources Information | DIV-3 | P7 | - |
 | Rs-Pr | Resources Processes | SV-4 | P4 | - |
+| Rs-Pr-MET | Resources Processes: Mission Engineering Threads | - | - | - |
 | Rs-Rm | Resources Roadmap: Evolution | SV-8 | Pr | - |
 | Rs-Rm | Resources Roadmap: Forecast | SV-9 | Pr | - |
 | Rs-Sq | Resources Sequences | SV-10c | P6 | - |
@@ -81,6 +86,7 @@ A dash means the table gives that view no output. Several rows can share an iden
 | St-If | Information: Strategic Information | DIV-1 | - | - |
 | St-Mv | Strategic Motivation | - | - | - |
 | St-Pr | Strategic Processes | CV-1 | C2 | - |
+| St-Pr-MP | Strategic Processes: Mission Phases | - | - | - |
 | St-Rm-Dm | Strategic Roadmap: Deployment | CV-5 | Cr | - |
 | St-Rm-P | Strategic Roadmap: Phasing | CV-3 | Cr | - |
 | St-Sr | Strategic Structure | CV-2 | C1 | - |
@@ -103,15 +109,17 @@ The appendix's identifiers and names disagree in some rows. This table keys each
 
 | Printed | Table | Read here as |
 |---|---|---|
-| Op-St, Operational Structure | 2:1 | Op-Sr |
-| Rs-sr, Resources Structure | 2:1 | Rs-Sr |
-| Rs-St, Resources Structure | 2:3 | Rs-Sr |
-| AM-Pr, Architecture Development Method | 2:1, 2:3 | Am-Pr |
-| Ps-Sr, Personnel States | 2:3 | Ps-St |
-| Ps-St, Personnel Structure | 2:3 | Ps-Sr |
-| Ps-Tr, Personnel Taxonomy | 2:3 | Ps-Tx |
-| Ps-Tx, Personnel Traceability | 2:3 | Ps-Tr |
-| Sc-Tr, Security Taxonomy | 2:3, 2:5 | Sc-Tx |
-| Sc-Tx, Security Traceability | 2:3, 2:5 | Sc-Tr |
-| Ps-Sq, Personnel Scenarios | 2:1 | Personnel Sequences, the name Table 2:3 prints |
-| Sv-Sq, Services Sequences Interaction Scenarios | 2:3 | Services Sequences, the name Table 2:1 prints |
+| Op-St, Operational Structure | 2-1 | Op-Sr |
+| Rs-sr, Resources Structure | 2-1 | Rs-Sr |
+| Rs-St, Resources Structure | 2-4 | Rs-Sr |
+| AM-Pr, Architecture Development Method | 2-1, 2-4 | Am-Pr |
+| Ps-Sr, Personnel States | 2-4 | Ps-St |
+| Ps-St, Personnel Structure | 2-4 | Ps-Sr |
+| Ps-Tr, Personnel Taxonomy | 2-4 | Ps-Tx |
+| Ps-Tx, Personnel Traceability | 2-4 | Ps-Tr |
+| Sc-Tr, Security Taxonomy | 2-4, 2-5 | Sc-Tx |
+| Sc-Tx, Security Traceability | 2-4, 2-5 | Sc-Tr |
+| Ps-Sq, Personnel Scenarios | 2-1 | Personnel Sequences, the name Table 2-4 prints |
+| Sv-Sq, Services Sequences Interaction Scenarios | 2-4 | Services Sequences, the name Table 2-1 prints |
+| St-Pr-MP, Strategic Processes: MissionPhases | 2-1 | St-Pr-MP, Strategic Processes: Mission Phases, the name the view specifications print |
+| St-Pr-MP, Services Processes: MissionPhases | 2-4 | St-Pr-MP, Strategic Processes: Mission Phases |

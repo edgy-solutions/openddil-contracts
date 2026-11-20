@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Strategic-Connectivity (St-Cn).
+From UAF 1.3 Strategic-Connectivity (St-Cn).
 
 Which capability depends on which. The table is generated when the view is rendered. It joins the roadmap note's `depends on` and `folds into` columns to [capability-record.yaml](../../capability-record.yaml) by each capability's increment. A dependency cell that names no increment, or more than one, fails the render, and so does an increment with no capability, so an edit to the note cannot drop an edge silently.
 

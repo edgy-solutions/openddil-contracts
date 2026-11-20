@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-States (Rs-St).
+From UAF 1.3 Resources-States (Rs-St).
 
 Where each operational state lives, and which resource may move it. [Operational-States](../../views/Op-St.md) holds the state machines themselves. This view holds the resources that store them, decide them, and carry them.
 

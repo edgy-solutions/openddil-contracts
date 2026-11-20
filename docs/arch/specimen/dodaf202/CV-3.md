@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Strategic-Roadmap-Phasing (St-Rm-P).
+From UAF 1.3 Strategic-Roadmap-Phasing (St-Rm-P).
 
 Where each capability in [Strategic-Taxonomy](../../views/St-Tx.md) stands, read from the record. Phase and evidence are computed at render from [capability-record.yaml](../../capability-record.yaml), and every citation in it has to resolve or the render fails. A capability with no phase also fails the render.
 

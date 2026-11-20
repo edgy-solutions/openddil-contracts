@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-Information (Op-If).
+From UAF 1.3 Operational-Information (Op-If).
 
 The logical information model. Field names are local to this architecture: the standards in [Standards-Taxonomy](../../views/Sd-Tx.md) are aligned by concept name, and a binding is owed before any field is frozen. Bindings: {{slot:attribute-bindings}}. Variants: {{slot:platform-variants}}.
 

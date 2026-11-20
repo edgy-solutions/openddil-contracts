@@ -124,8 +124,8 @@ class RealTree(Base):
 
     def test_ov2_has_both_sources(self):
         t = read(self.out["dodaf202"], "OV-2.md")
-        self.assertIn("From UAF 1.2 Operational-Structure (Op-Sr).", t)
-        self.assertIn("From UAF 1.2 Operational-Connectivity (Op-Cn).", t)
+        self.assertIn("From UAF 1.3 Operational-Structure (Op-Sr).", t)
+        self.assertIn("From UAF 1.3 Operational-Connectivity (Op-Cn).", t)
         self.assertIn("## Operational-Structure (Op-Sr)", t)
         self.assertIn("## Operational-Connectivity (Op-Cn)", t)
         self.assertNotIn("\n## Sources", t)  # demoted one level
@@ -137,7 +137,7 @@ class RealTree(Base):
         d = self.out["dodaf202"]
         sv6 = read(d, "SV-6.md")
         self.assertIn(NOTICE, sv6)
-        self.assertIn("From UAF 1.2 Resources-Connectivity (Rs-Cn).", sv6)
+        self.assertIn("From UAF 1.3 Resources-Connectivity (Rs-Cn).", sv6)
         self.assertIn("Exported separately as SV-6.", read(d, "SV-3.md"))
         div3 = read(d, "DIV-3.md")
         self.assertNotIn(NOTICE, div3)
@@ -159,7 +159,7 @@ class RealTree(Base):
 
     def test_l7_is_op_if_only(self):
         t = read(self.out["naf4"], "L7.md")
-        self.assertIn("From UAF 1.2 Operational-Information (Op-If).", t)
+        self.assertIn("From UAF 1.3 Operational-Information (Op-If).", t)
         self.assertNotIn("(Rs-", t)
 
     def test_uaf_home_view_holds_notice_under_demoted_flow(self):
@@ -399,7 +399,7 @@ class TempTree(unittest.TestCase):
     def test_view_without_exports_or_reason_is_exit_2(self):
         edit = self.arch / "profiles.yaml"
         text = edit.read_text(encoding="utf-8")
-        old = '      naf4: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:3 gives no NAF 4.0 view."'
+        old = '      naf4: "Table 2-5 maps Security Processes to DNDAF SecV-1 only; Table 2-4 gives no NAF 4.0 view."'
         self.assertIn(old, text)
         edit.write_text(text.replace(old, "      dodaf202x: x"), encoding="utf-8", newline="\n")
         rc, _, err = self.render("--profile", "naf4", "--out", self.tmp / "o")
