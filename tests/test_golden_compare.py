@@ -16,6 +16,13 @@ def page(pid, body):
     return f'<section id="{pid}"><p>{body}</p></section>\n'
 
 
+def prov(kind, text):
+    return f'<p data-prov="{kind}">{text}</p>'
+
+
+PARTS = prov("chart-commit", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") + prov("bundle-commit", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") + prov("kit", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+
+
 def export(front="a", other="b", date="d1"):
     return (f"<html><body>{date}\n" + page("front", front) + page("view-A", other)
             + "</body></html>\n").encode()
@@ -154,6 +161,59 @@ class Compare(unittest.TestCase):
                                      "view-A break-hints: spans split around hints\n")
         self.assertEqual(rc, 1)
         self.assertIn("differs outside break-hints", err)
+
+    def test_input_commits_cover_the_added_parts(self):
+        old = export(other="b")
+        new = export(other=PARTS + "b")
+        rc, out, err = self.run_tool(old, new, "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A input-commits  the kit records its inputs", out)
+
+    def test_input_commits_remove_several_bundle_commits(self):
+        extra = prov("bundle-commit", "b" * 40) + prov("bundle-commit", "c" * 40)
+        rc, out, err = self.run_tool(export(other="b"), export(other=PARTS + extra + "b"),
+                                     "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
+
+    def test_input_commits_do_not_cover_a_changed_word(self):
+        rc, out, err = self.run_tool(export(other="one"), export(other=PARTS + "two"),
+                                     "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs outside input-commits", err)
+
+    def test_star_input_commits_cover_two_pages(self):
+        rc, out, err = self.run_tool(export(front="a", other="b"),
+                                     export(front=PARTS + "a", other=PARTS + "b"),
+                                     "* input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   front input-commits  the kit", out)
+        self.assertIn("allowed:   view-A input-commits  the kit", out)
+
+    def test_star_input_commits_matching_nothing_fail(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"),
+                                     "view-A: reworded\n* input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("allowlist line matches nothing: * input-commits", err)
+
+    def test_a_bare_star_line_is_refused(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"), "# c\n*: everything\n")
+        self.assertNotEqual(rc, 0)
+        self.assertIn("allow.txt:2:", err)
+
+    def test_star_input_commits_with_a_page_break_hints_line(self):
+        rc, out, err = self.run_tool(export(other="abcdef"), export(other=PARTS + "abc<wbr>def"),
+                                     "* input-commits: the kit records its inputs\n"
+                                     "view-A break-hints: long cells get hints\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A input-commits", out)
+        self.assertIn("allowed:   view-A break-hints", out)
+
+    def test_input_commits_cover_the_not_in_a_repository_text(self):
+        none = "none (not in a git repository)"
+        parts = prov("chart-commit", none) + prov("bundle-commit", none) + prov("kit", none)
+        rc, out, err = self.run_tool(export(other="b"), export(other=parts + "b"),
+                                     "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
 
 
 if __name__ == "__main__":
