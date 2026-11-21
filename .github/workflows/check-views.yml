@@ -91,7 +91,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/arch-kit
-          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          ref: 5dfe18b0b74268f1cf01d19ba8a53c8d4b438f55 # v0.3.3
           path: arch-kit
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -111,6 +111,9 @@ jobs:
 
       # A skipped specimen test means a sibling was not found. In CI that is
       # not a pass.
+      # The log's last lines are often another test's stderr, written after
+      # the summary, so the step prints the summary, every failure in full,
+      # and every skip reason.
       - name: Tests
         run: |
           set +e
@@ -118,9 +121,13 @@ jobs:
             python -m unittest discover -s docs/arch/tools -p 'test_*.py' > "$RUNNER_TEMP/tests.log" 2>&1
           rc=$?
           set -e
-          tail -n 8 "$RUNNER_TEMP/tests.log"
-          if [ "$rc" != 0 ]; then exit "$rc"; fi
+          grep -E '^(Ran [0-9]+ tests|OK|FAILED)' "$RUNNER_TEMP/tests.log" || true
+          if [ "$rc" != 0 ]; then
+            sed -n '/^======================================================================$/,/^Ran [0-9]/p' "$RUNNER_TEMP/tests.log"
+            exit "$rc"
+          fi
           if grep -q 'skipped=' "$RUNNER_TEMP/tests.log"; then
+            grep -E 'SKIP|skipped' "$RUNNER_TEMP/tests.log" | sort -u
             echo "tests: some were skipped; in CI a skipped test is not a pass"
             exit 1
           fi
@@ -145,7 +152,7 @@ jobs:
       # Check the views, build and check the export, check it in a browser, check the decision
       # indexes, and upload the export (the portal declares hosting: ci-artifact).
       - name: Build and check with arch-kit
-        uses: edgy-solutions/arch-kit@2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+        uses: edgy-solutions/arch-kit@5dfe18b0b74268f1cf01d19ba8a53c8d4b438f55 # v0.3.3
         with:
           config: docs/arch/arch-kit.yaml
           chart: ${{ env.CHART }}

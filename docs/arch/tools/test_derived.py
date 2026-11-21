@@ -72,8 +72,9 @@ class RealTree(unittest.TestCase):
         roadmap = (REPO / "decisions" / cp.roadmap_file()).read_text(encoding="utf-8")
         record = cp.load_record(ARCH / "capability-record.yaml")
         rows = body(derived.dependencies(record, roadmap))
-        increments = derived.table_with(roadmap, derived.ROADMAP_HEADER, "increment")
-        folds = derived.table_with(roadmap, derived.FOLD_HEADER, "fold-in")
+        inc_header, fold_header = declared.roadmap_headers("test_derived")
+        increments = derived.table_with(roadmap, inc_header, "increment")
+        folds = derived.table_with(roadmap, fold_header, "fold-in")
         self.assertEqual(len(rows), len(increments) + len(folds))
 
     def test_taxonomy_lists_every_resource_kit_type(self):
