@@ -64,6 +64,9 @@ env:
   HELM_REF: f2c971c6293851520df042aaed54f5db104447bf
   CHART: repos/openddil-helm/openddil-demo
   BUNDLE: repos/openddil-customer-bundle-example
+  # The bundle commit this CI reads, pinned like the chart: the kit refuses values files that are not at the
+  # commit it is given, and names the commit on every page.
+  BUNDLE_REF: 63f2f43868675d986e23017f11521479b50e6338
   READINESS: repos/openddil-helm/scripts/RECORDING-READINESS.md
 
 jobs:
@@ -84,14 +87,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
-          ref: master
+          ref: ${{ env.BUNDLE_REF }}
           path: repos/openddil-customer-bundle-example
 
       # The kit again, as a directory: the tests find it through ARCH_KIT, and the canary runs from it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/arch-kit
-          ref: 5dfe18b0b74268f1cf01d19ba8a53c8d4b438f55 # v0.3.3
+          ref: 30d74ce99b42e99c65a2d0246617e5889a710c80 # v0.4.0
           path: arch-kit
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -152,10 +155,12 @@ jobs:
       # Check the views, build and check the export, check it in a browser, check the decision
       # indexes, and upload the export (the portal declares hosting: ci-artifact).
       - name: Build and check with arch-kit
-        uses: edgy-solutions/arch-kit@5dfe18b0b74268f1cf01d19ba8a53c8d4b438f55 # v0.3.3
+        uses: edgy-solutions/arch-kit@30d74ce99b42e99c65a2d0246617e5889a710c80 # v0.4.0
         with:
           config: docs/arch/arch-kit.yaml
           chart: ${{ env.CHART }}
+          chart-ref: ${{ env.HELM_REF }}
+          bundle-ref: ${{ env.BUNDLE_REF }}
           release: openddil
           values: |
             ${{ env.BUNDLE }}/k8s/tier-node-values.yaml
@@ -213,7 +218,7 @@ jobs:
         if: steps.pins.outputs.compare == 'true'
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
-          ref: master
+          ref: ${{ env.BUNDLE_REF }}
           path: repos/openddil-customer-bundle-example
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

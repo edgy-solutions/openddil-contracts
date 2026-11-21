@@ -1,14 +1,10 @@
-# pins: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b 5dfe18b0b74268f1cf01d19ba8a53c8d4b438f55
+# pins: 5dfe18b0b74268f1cf01d19ba8a53c8d4b438f55 30d74ce99b42e99c65a2d0246617e5889a710c80
 # The differences allowed between two builds of the architecture export: the one made with the arch-kit at the
 # base's pin, and the one made with the arch-kit at this change's pin (scripts/golden_compare.py).
 # One line per difference, `ID: reason` or `ID ELEMENT: reason`. A line that matches nothing fails.
+# `*` names every page, but only with an element kind: `* ELEMENT: reason`.
 #
 # When the list holds any line, its first line must be `# pins: OLD NEW`, the two kit commits this list is for.
 # Another pair fails the comparison, so a list written for one pin change cannot be carried to the next.
 # At each pin change, empty the list, or rename it to the new pair and re-justify every line.
-
-view-Am-Tr break-hints: kit 0.3.1 adds break hints to long tokens in table cells and counts them in header widths; text and other markup unchanged
-view-Rs-Cn break-hints: kit 0.3.1 adds break hints to long tokens in table cells and counts them in header widths; text and other markup unchanged
-view-Rs-If break-hints: kit 0.3.1 adds break hints to long tokens in table cells and counts them in header widths; text and other markup unchanged
-view-Rs-Tr break-hints: kit 0.3.1 adds break hints to long tokens in table cells and counts them in header widths; text and other markup unchanged
-view-St-Rm-P break-hints: kit 0.3.1 adds break hints to long tokens in table cells and counts them in header widths; text and other markup unchanged
+* input-commits: kit 0.4.0 names the chart's, each bundle repository's and the kit's commit in every page's provenance block
