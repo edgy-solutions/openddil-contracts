@@ -1,18 +1,25 @@
 #!/usr/bin/env python3
 """Compare two architecture exports element by element, and name every allowed difference.
 
-usage: golden_compare.py OLD.html NEW.html ALLOW.txt [--out DIR]
+usage: golden_compare.py OLD.html NEW.html ALLOW.txt [--out DIR] [--pins OLD_SHA NEW_SHA]
 
-An export is cut into elements: the text before the first page, each `<section id="ID"...>` page, and the
-text after the last one. For each element the result is `identical`, `allowed` (it differs, and ALLOW names
-it) or `DIFFERENT`.
+OLD.html is the export built with the arch-kit at the old pin, NEW.html the export built with the arch-kit at
+the new pin, both from the same tree. An export is cut into elements: the text before the first page, each
+`<section id="ID"...>` page, and the text after the last one. For each element the result is `identical`,
+`allowed` (it differs, and ALLOW names it) or `DIFFERENT`.
 
 ALLOW lines are `ID: reason`, or `ID ELEMENT: reason` for one element of a page. ELEMENT is `data-relabel`
 (the front page's sentence about relabelling). `ID` is a page id, or `prelude` / `postlude`. Blank lines and
 lines starting with `#` are ignored.
 
+ALLOW may begin with a line `# pins: OLD NEW`, two 40-hex kit commits. When ALLOW holds at least one
+allowance, that line must be present and, when --pins is given, must equal it: the allowances of an earlier
+pin change are stale at the next one, and cannot be carried over unread. When ALLOW holds no allowance, the
+line is optional and is not checked.
+
 The allowed elements are removed from both sides, the rest is written to DIR/old.reduced and DIR/new.reduced,
 and the two files are compared byte for byte. The exit code is 1 when:
+  - the allowances are for another pair of pins than --pins, or have no pins line;
   - an element differs and ALLOW does not name it;
   - an ALLOW line matches nothing (the element is identical, or does not exist): a stale allowance;
   - the reduced files differ.
@@ -65,16 +72,37 @@ def read_allow(path: Path) -> list[tuple[str, str | None, str]]:
     return rows
 
 
+PINS_LINE = re.compile(r"^# pins: ([0-9a-f]{40}) ([0-9a-f]{40})\s*$")
+
+
+def read_pins(path: Path) -> tuple[str, str] | None:
+    """The `# pins: OLD NEW` line at the head of the allow file, or None."""
+    lines = path.read_text(encoding="utf-8").splitlines()
+    m = PINS_LINE.match(lines[0]) if lines else None
+    return (m.group(1), m.group(2)) if m else None
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("old")
     ap.add_argument("new")
     ap.add_argument("allow")
     ap.add_argument("--out", default=".")
+    ap.add_argument("--pins", nargs=2, metavar=("OLD", "NEW"), help="the kit commits of the two exports")
     a = ap.parse_args(argv)
+    for p in a.pins or []:
+        if not re.fullmatch(r"[0-9a-f]{40}", p):
+            ap.error(f"--pins takes two 40-hex shas, got {p!r}")
     old_raw, new_raw = Path(a.old).read_bytes(), Path(a.new).read_bytes()
     old, new = cut(old_raw), cut(new_raw)
     allow = read_allow(Path(a.allow))
+    if allow and a.pins:
+        file_pins = read_pins(Path(a.allow))
+        given = " ".join(a.pins)
+        if file_pins is None or " ".join(file_pins) != given:
+            print(f"golden_compare: the allowances are for {' '.join(file_pins) if file_pins else 'no pins line'}, "
+                  f"this comparison is {given}", file=sys.stderr)
+            return 1
     fails: list[str] = []
     if list(old) != list(new):
         only_old = [k for k in old if k not in new]
