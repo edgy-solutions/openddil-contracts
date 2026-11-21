@@ -88,6 +88,73 @@ class Compare(unittest.TestCase):
         self.assertEqual(rc, 1)
         self.assertIn("prelude: differs", err)
 
+    def test_break_hints_cover_wbr(self):
+        rc, out, err = self.run_tool(export(other="abcdef"), export(other="abc<wbr>def"),
+                                     "view-A break-hints: long cells get hints\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A break-hints", out)
+
+    def test_break_hints_cover_header_width(self):
+        old = export(other='</p><table><th style="min-width:40ch">h</th></table><p>')
+        new = export(other='</p><table><th style="min-width:12ch">h</th></table><p>')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: narrower headers\n")
+        self.assertEqual(rc, 0, err)
+
+    def test_break_hints_do_not_cover_width_outside_a_header(self):
+        old = export(other='</p><table><td style="min-width:40ch">h</td></table><p>')
+        new = export(other='</p><table><td style="min-width:12ch">h</td></table><p>')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: narrower headers\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
+    def test_break_hints_do_not_cover_a_changed_word(self):
+        rc, out, err = self.run_tool(export(other="abcdef one"), export(other="abc<wbr>def two"),
+                                     "view-A break-hints: long cells get hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs outside break-hints", err)
+
+    def test_a_stale_break_hints_line_fails(self):
+        rc, out, err = self.run_tool(export(), export(), "view-A break-hints: no longer differs\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("matches nothing: view-A break-hints", err)
+
+    def test_both_kinds_on_the_front_page(self):
+        old = export(front='<p class="relabel" data-relabel>x</p>abcdef')
+        new = export(front='<p class="relabel" data-relabel>y</p>abc<wbr>def')
+        rc, out, err = self.run_tool(old, new, "front data-relabel: names the export\n"
+                                               "front break-hints: long cells get hints\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("front data-relabel", out)
+        self.assertIn("front break-hints", out)
+
+    def test_the_failure_hints_at_break_hints(self):
+        rc, out, err = self.run_tool(export(other="abcdef"), export(other="abc<wbr>def"), "")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs and is not in the allowlist (break-hints would cover it)", err)
+
+    def test_break_hints_cover_split_nowrap_spans(self):
+        old = export(other='<span class="nb">abc-def-ghi-jkl</span>')
+        new = export(other='<span class="nb">abc-</span><wbr><span class="nb">def-</span><wbr>'
+                           '<span class="nb">ghi-</span><wbr>jkl')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = self.run_tool(old, new, "")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs and is not in the allowlist (break-hints would cover it)", err)
+
+    def test_break_hints_do_not_cover_changed_span_text(self):
+        rc, out, err = self.run_tool(export(other='<span class="nb">a-b</span>'),
+                                     export(other='<span class="nb">a-c</span>'),
+                                     "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
+    def test_break_hints_do_not_unwrap_another_class(self):
+        rc, out, err = self.run_tool(export(other='<span class="x">ab</span>'), export(other="ab"),
+                                     "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
 
 if __name__ == "__main__":
     unittest.main()
