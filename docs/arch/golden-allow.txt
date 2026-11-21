@@ -1,1 +1,7 @@
-front data-relabel: S4 relabels the whole export, so the sentence names the export, not the decision records
+# The differences allowed between two builds of the architecture export: the one made with the arch-kit at the
+# base's pin, and the one made with the arch-kit at this change's pin (scripts/golden_compare.py).
+# One line per difference, `ID: reason` or `ID ELEMENT: reason`. A line that matches nothing fails.
+#
+# When the list holds any line, its first line must be `# pins: OLD NEW`, the two kit commits this list is for.
+# Another pair fails the comparison, so a list written for one pin change cannot be carried to the next.
+# At each pin change, empty the list, or rename it to the new pair and re-justify every line.
