@@ -187,8 +187,10 @@ jobs:
             ''|*[!0-9a-f]*|0000000000000000000000000000000000000000) skip "golden: no readable base commit: nothing to compare" ;;
           esac
           NEW=$(python3 scripts/kit_pin.py .github/workflows/check-views.yml) || exit 1
-          git show "$BASE:.github/workflows/check-views.yml" > "$RUNNER_TEMP/base-check-views.yml" 2> /dev/null             || skip "golden: the base's workflow file cannot be read: nothing to compare"
-          OLD=$(python3 scripts/kit_pin.py "$RUNNER_TEMP/base-check-views.yml")             || skip "golden: the base's kit pin cannot be read: nothing to compare"
+          git show "$BASE:.github/workflows/check-views.yml" > "$RUNNER_TEMP/base-check-views.yml" 2> /dev/null \
+            || skip "golden: the base's workflow file cannot be read: nothing to compare"
+          OLD=$(python3 scripts/kit_pin.py "$RUNNER_TEMP/base-check-views.yml") \
+            || skip "golden: the base's kit pin cannot be read: nothing to compare"
           if [ "$OLD" = "$NEW" ]; then skip "kit pin unchanged at $NEW: nothing to compare"; fi
           echo "kit pin moves: $OLD -> $NEW"
           { echo "old=$OLD"; echo "new=$NEW"; echo "compare=true"; } >> "$GITHUB_OUTPUT"

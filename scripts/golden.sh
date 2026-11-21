@@ -15,10 +15,13 @@
 #
 # Both sides get the same flags. If the old kit's tool rejects one the new side passes, that side fails and the
 # log names the tool; no flag is dropped.
-set -u
+# Both sides render with one date, GOLDEN_DATE (YYYY-MM-DD) or today in UTC, taken once, so a run that crosses
+# midnight does not differ in its Generated lines.
+set -u -o pipefail
 TREE=$(cd "$1" && pwd); OLD_KIT=$(cd "$2" && pwd); NEW_KIT=$(cd "$3" && pwd); OUT=$4
 : "${CHART:?}" "${BUNDLE:?}" "${READINESS:?}" "${RELABEL:?}" "${BARRED:?}"
 PY=${PYTHON:-python}
+DATE=${GOLDEN_DATE:-$(date -u +%F)}
 export PYTHONIOENCODING=utf-8 PYTHONUTF8=1 PUPPETEER_SKIP_DOWNLOAD=true
 mkdir -p "$OUT" || exit 2
 OUT=$(cd "$OUT" && pwd)
@@ -42,7 +45,8 @@ side() {
     export PYTHONPATH="$kit"
     ak() { "$PY" -m arch_kit --config docs/arch/arch-kit.yaml "$@"; }
     run "$label/render_html" ak render_html --out "$OUT/$label/export.html" --chart "$CHART" "${VALUES[@]}" --release openddil \
-      --readiness "$READINESS" --relabel "$RELABEL" --barred "$BARRED" --puppeteer-config "$OUT/puppeteer.json"
+      --readiness "$READINESS" --relabel "$RELABEL" --barred "$BARRED" --puppeteer-config "$OUT/puppeteer.json" \
+      --date "$DATE"
     run "$label/check_export" ak check_export --export "$OUT/$label/export.html" --barred "$BARRED" --relabel "$RELABEL"
     run "$label/check_views" ak check_views --chart "$CHART" --release openddil "${VALUES[@]}" --readiness "$READINESS" --barred "$BARRED"
     run "$label/browser_facts" ak browser_facts --out "$OUT/$label/facts.json"
