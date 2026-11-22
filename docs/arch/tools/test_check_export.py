@@ -33,6 +33,9 @@ CSP = ("default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline
        "img-src data:; font-src data:")
 PROV = ('<div class="provenance" data-provenance><p data-prov="chart">Chart: demo 1.2.3</p>'
         '<p data-prov="digest">Bundle digest: sha256:' + "ab" * 32 + ' <span>of the values files read, in order: a.yaml</span></p>'
+        '<p data-prov="chart-commit">Chart commit: ' + "c" * 40 + '</p>'
+        '<p data-prov="bundle-commit">Bundle commit: ' + "b" * 40 + '</p>'
+        '<p data-prov="kit">Kit: ' + "d" * 40 + '</p>'
         '<p data-prov="date">Generated: 2026-01-02</p>'
         '<p data-prov="declared">Declared, not measured: this export reads the views.</p></div>')
 SVG = '<figure class="diagram"><svg id="d" xmlns="http://www.w3.org/2000/svg"><text>a</text></svg></figure>'
@@ -196,7 +199,7 @@ class Red(Base):
 
     def test_3_provenance_missing_block_part_or_disagreement(self):
         self.fails(good().replace(PROV, "", 1), "provenance")
-        for part in ("chart", "digest", "date", "declared"):
+        for part in ("chart", "digest", "chart-commit", "bundle-commit", "kit", "date", "declared"):
             doc = re.sub(rf'<p data-prov="{part}">.*?</p>', "", good(), count=1)
             err = self.fails(doc, "provenance")
             self.assertIn(f"lacks the {part} part", err)
