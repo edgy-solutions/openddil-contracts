@@ -166,6 +166,8 @@ class World:
     def run(self, argv):
         assert argv[0] == "kubectl" and argv[argv.index("--context") + 1] == "test-ctx"
         sql = argv[-1]
+        # every query runs after the session is made read only, in the same psql
+        assert argv[-4:-1] == ["-c", "SET default_transaction_read_only = on", "-c"], argv
         self.sql.append(sql)
         assert sql.lstrip().upper().startswith(("SELECT", "WITH")), sql
         if "to_regclass" in sql:

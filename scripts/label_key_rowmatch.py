@@ -169,7 +169,11 @@ class Store:
         if head not in ("SELECT", "WITH") or ";" in sql.rstrip().rstrip(";"):
             raise Refusal("this script only reads: refused a statement that is "
                           f"not one SELECT: {sql[:60]!r}")
-        return self.run(self.argv + ["-c", sql])
+        # The head check above is the script's own rule; the store enforces it
+        # too. A WITH can wrap a data-modifying statement, so every query runs
+        # in a session whose transactions are read only.
+        return self.run(self.argv + ["-c", "SET default_transaction_read_only = on",
+                                     "-c", sql])
 
     def rows(self, sql: str) -> list[list[str]]:
         return [ln.split("\t") for ln in self.psql(sql).splitlines() if ln.strip()]
