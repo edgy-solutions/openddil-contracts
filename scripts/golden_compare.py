@@ -9,8 +9,18 @@ the new pin, both from the same tree. An export is cut into elements: the text b
 `allowed` (it differs, and ALLOW names it) or `DIFFERENT`.
 
 ALLOW lines are `ID: reason`, or `ID ELEMENT: reason` for one element of a page. ELEMENT is `data-relabel`
-(the front page's sentence about relabelling) or `break-hints`. `ID` is a page id, or `prelude` / `postlude`. Blank lines and
-lines starting with `#` are ignored.
+(the front page's sentence about relabelling), `input-commits` or `break-hints`. `ID` is a page id, or `prelude` /
+`postlude`. Blank lines and lines starting with `#` are ignored.
+
+`ID` may also be `*`, which names every page, but only with an element: `* input-commits: reason`. A bare
+`*: reason` line is refused. For each page that differs, the elements that apply are those named for its id plus
+those named for `*`. A `*` line is used when it was used on at least one page, and a `*` line used on no page
+fails as a stale allowance. A page id line and a `*` line for the same element may both exist; the output takes
+the reason from the page's own line if there is one.
+
+`ID input-commits: reason` lets the page differ by its input-commit lines: on both sides every
+`<p data-prov="chart-commit|bundle-commit|kit">...</p>` is removed, before the other elements and before the
+break hints. The line is used only when the removal changed a side. The page must then be byte-equal.
 
 ALLOW may begin with a line `# pins: OLD NEW`, two 40-hex kit commits. When ALLOW holds at least one
 allowance, that line must be present and, when --pins is given, must equal it: the allowances of an earlier
@@ -43,7 +53,10 @@ ELEMENTS = {"data-relabel": re.compile(rb"<p[^>]*\bdata-relabel\b[^>]*>.*?</p>",
 
 
 BREAK_HINTS = "break-hints"
-KINDS = [*ELEMENTS, BREAK_HINTS]
+INPUT_COMMITS = "input-commits"
+INPUT_COMMITS_RE = re.compile(rb'<p data-prov="(?:chart-commit|bundle-commit|kit)">[^<]*</p>')
+KINDS = [*ELEMENTS, INPUT_COMMITS, BREAK_HINTS]
+ANY_PAGE = "*"
 WBR = b"<wbr>"
 TH_START = re.compile(rb"<th\b[^>]*>")
 NOWRAP = re.compile(rb'<span class="nb">([^<]*)</span>')
@@ -89,6 +102,9 @@ def read_allow(path: Path) -> list[tuple[str, str | None, str]]:
         parts = key.split()
         if len(parts) not in (1, 2) or (len(parts) == 2 and parts[1] not in KINDS):
             raise SystemExit(f"{path}:{n}: unknown element in `{key}` (known: {', '.join(KINDS)})")
+        if parts[0] == ANY_PAGE and len(parts) == 1:
+            raise SystemExit(f"{path}:{n}: `*` names every page and takes an element: `* ELEMENT: reason` "
+                             f"(known: {', '.join(KINDS)})")
         rows.append((parts[0], parts[1] if len(parts) == 2 else None, reason.strip()))
     return rows
 
@@ -143,27 +159,41 @@ def main(argv: list[str] | None = None) -> int:
             print(f"allowed:   {pid}  {next(r for i, e, r in allow if (i, e) == (pid, None))}")
             old[pid] = new[pid] = b""
             continue
-        hit = [e for (i, e) in names if i == pid and e]
+        hit = []
+        for who in (pid, ANY_PAGE):
+            hit += sorted(e for (i, e) in names if i == who and e and e not in hit)
+        page_used: set[str] = set()
+
+        def mark(e: str) -> None:
+            page_used.add(e)
+            used.update(k for k in ((pid, e), (ANY_PAGE, e)) if k in names)
+
+        if INPUT_COMMITS in hit:
+            no, nn = INPUT_COMMITS_RE.sub(b"", old[pid]), INPUT_COMMITS_RE.sub(b"", new[pid])
+            if no != old[pid] or nn != new[pid]:
+                mark(INPUT_COMMITS)
+                old[pid], new[pid] = no, nn
         for e in hit:
-            if e == BREAK_HINTS:
+            if e in (BREAK_HINTS, INPUT_COMMITS):
                 continue
             pat = ELEMENTS[e]
             o, n = pat.search(old[pid]), pat.search(new[pid])
             if not o or not n:
                 continue
-            used.add((pid, e))
+            mark(e)
             old[pid] = old[pid][:o.start()] + old[pid][o.end():]
             new[pid] = new[pid][:n.start()] + new[pid][n.end():]
         if BREAK_HINTS in hit and old[pid] != new[pid]:
             no, nn = normalise(old[pid]), normalise(new[pid])
             if no != old[pid] or nn != new[pid]:
-                used.add((pid, BREAK_HINTS))
+                mark(BREAK_HINTS)
                 old[pid], new[pid] = no, nn
         if hit and old[pid] == new[pid]:
             allowed += 1
             for e in hit:
-                if (pid, e) in used:
-                    print(f"allowed:   {pid} {e}  {next(r for i, el, r in allow if (i, el) == (pid, e))}")
+                if e in page_used:
+                    who = pid if (pid, e) in names else ANY_PAGE
+                    print(f"allowed:   {pid} {e}  {next(r for i, el, r in allow if (i, el) == (who, e))}")
         elif hit:
             fails.append(f"{pid}: differs outside {', '.join(hit)}")
         else:
