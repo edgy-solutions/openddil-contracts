@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Connectivity (Rs-Cn).
+From UAF 1.3 Resources-Connectivity (Rs-Cn).
 
 Which resource talks to which, and across what boundary. The row-by-row flows are generated from a bundle, under Data exchange below. Link figures: {{slot:link-characteristics}}. Severance results: {{slot:severance-test-results}}.
 

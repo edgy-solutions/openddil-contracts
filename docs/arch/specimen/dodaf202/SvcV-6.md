@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Services-Connectivity (Sv-Cn).
+From UAF 1.3 Services-Connectivity (Sv-Cn).
 
 The services this architecture offers across its boundary, which resources provide each, and what each carries. Nothing crosses a boundary ungated, and nothing that crosses is described as integrated until a conformance suite says so.
 

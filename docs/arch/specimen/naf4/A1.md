@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Information-Dictionary (Am-If).
+From UAF 1.3 Information-Dictionary (Am-If).
 
 The terms the ontology declares, generated from [`ontology/`](../../../../ontology/) when the view is rendered. Each row is one declared term: its file, its path in the file, its shape, how many entries it holds and the field names those entries use. No entry is listed, so the dictionary describes the vocabulary and states nothing a deployment declares. A file with no row, or a row whose term the file does not hold, fails the render.
 

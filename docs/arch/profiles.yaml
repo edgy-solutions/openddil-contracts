@@ -1,13 +1,13 @@
 # Output profiles for the architecture views. The content lives once, in
-# views/ under its UAF 1.2 view specification; a profile only renames and
+# views/ under its UAF 1.3 view specification; a profile only renames and
 # selects. tools/render_profile.py and tools/data_exchange.py both read this.
 #
 # `exports` is the selection this repository makes from APPENDIX-A.md, the
-# committed copy of the UAF 1.2 Appendix A mapping. tools/check_views.py fails
+# committed copy of the UAF 1.3 Appendix A mapping. tools/check_views.py fails
 # on an export that table does not name for that view.
 
 profiles:
-  uaf: {label: "UAF 1.2"}
+  uaf: {label: "UAF 1.3"}
   dodaf202: {label: "DoDAF 2.02"}
   naf4: {label: "NAF v4"}
 
@@ -87,7 +87,7 @@ views:
     name: Summary-Overview
     file: views/Sm-Ov.md
     exports: {dodaf202: [AV-1]}
-    no_target: {naf4: "Table 2:3 gives Summary & Overview no NAF 4.0 view."}
+    no_target: {naf4: "Table 2-4 gives Summary & Overview no NAF 4.0 view."}
   Am-If:
     name: Information-Dictionary
     file: views/Am-If.md
@@ -97,8 +97,8 @@ views:
     file: views/Am-Tr.md
     exports: {}
     no_target:
-      dodaf202: "Table 2:1 gives Architecture Traceability no DoDAF 2.02 view."
-      naf4: "Table 2:3 gives Architecture Traceability no NAF 4.0 view."
+      dodaf202: "Table 2-1 gives Architecture Traceability no DoDAF 2.02 view."
+      naf4: "Table 2-4 gives Architecture Traceability no NAF 4.0 view."
   St-Tx:
     name: Strategic-Taxonomy
     file: views/St-Tx.md
@@ -192,22 +192,22 @@ views:
     file: views/Sc-Sr.md
     exports: {}
     no_target:
-      dodaf202: "Table 2:1 gives Security Structure no DoDAF 2.02 view."
-      naf4: "Table 2:3 gives Security Structure no NAF 4.0 view."
+      dodaf202: "Table 2-1 gives Security Structure no DoDAF 2.02 view."
+      naf4: "Table 2-4 gives Security Structure no NAF 4.0 view."
   Sc-Cn:
     name: Security-Connectivity
     file: views/Sc-Cn.md
     exports: {}
     no_target:
-      dodaf202: "Table 2:5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2:1 gives no DoDAF 2.02 view."
-      naf4: "Table 2:5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2:3 gives no NAF 4.0 view."
+      dodaf202: "Table 2-5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2-1 gives no DoDAF 2.02 view."
+      naf4: "Table 2-5 maps Security Connectivity to DNDAF SecV-2 and SecV-3 only; Table 2-4 gives no NAF 4.0 view."
   Sc-Pr:
     name: Security-Processes
     file: views/Sc-Pr.md
     exports: {}
     no_target:
-      dodaf202: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:1 gives no DoDAF 2.02 view."
-      naf4: "Table 2:5 maps Security Processes to DNDAF SecV-1 only; Table 2:3 gives no NAF 4.0 view."
+      dodaf202: "Table 2-5 maps Security Processes to DNDAF SecV-1 only; Table 2-1 gives no DoDAF 2.02 view."
+      naf4: "Table 2-5 maps Security Processes to DNDAF SecV-1 only; Table 2-4 gives no NAF 4.0 view."
   Sd-Tx:
     name: Standards-Taxonomy
     file: views/Sd-Tx.md

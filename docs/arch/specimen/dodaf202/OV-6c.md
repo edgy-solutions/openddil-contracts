@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-Sequences (Op-Sq).
+From UAF 1.3 Operational-Sequences (Op-Sq).
 
 The two exchanges with a destination, in order, between performers. [Resources-Sequences](../../views/Rs-Sq.md) holds the same steps between workloads. Destinations: {{slot:destinations}}. Kinds: {{slot:kinds}}.
 

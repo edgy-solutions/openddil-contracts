@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-Taxonomy (Op-Tx).
+From UAF 1.3 Operational-Taxonomy (Op-Tx).
 
 The kinds of performer, and the concept in one picture: {{slot:mission-thread}}, among {{slot:coalition-nations}}.
 

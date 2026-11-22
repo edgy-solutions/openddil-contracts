@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Standards-Taxonomy (Sd-Tx).
+From UAF 1.3 Standards-Taxonomy (Sd-Tx).
 
 The standards the decision records align with, and how strongly. Alignment is by concept name only. Field names stay local to this architecture, and a binding is owed before any field is frozen. Editions: {{slot:standards-editions}}. Bindings: {{slot:attribute-bindings}}.
 

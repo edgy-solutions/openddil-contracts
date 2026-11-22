@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Sequences (Rs-Sq).
+From UAF 1.3 Resources-Sequences (Rs-Sq).
 
 The release and intake exchanges of [Operational-Sequences](../../views/Op-Sq.md), between workloads. The function numbers are those of [Resources-Processes](../../views/Rs-Pr.md). Every arrow into or out of a broker is a topic. The rendered topic names are in [Resources-Connectivity](../../views/Rs-Cn.md).
 

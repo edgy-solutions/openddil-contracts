@@ -31,7 +31,7 @@ Which declared artefact supplies which view's content, and which views have no s
 | Alignment declared tables | ADR-0009, 0043, 0044, 0046, 0050, 0051, 0052, 0053 and the CoT design | Sd-Tx | By hand |
 | Citations note | `decisions/CITATIONS-2026-09-08-standard-ontologies.md` | Sd-Tx | By hand |
 | Roadmap note | `decisions/ROADMAP-2026-10-29-isolation-increments.md` | St-Rm-P, St-Tx | By hand |
-| UAF 1.2 Appendix A | OMG formal/22-07-07 | [`APPENDIX-A.md`](APPENDIX-A.md), then `profiles.yaml` | Looked up 2026-11-02 |
+| UAF 1.3 Appendix A | OMG formal/25-10-05 | [`APPENDIX-A.md`](APPENDIX-A.md), then `profiles.yaml` | Looked up 2026-11-19 |
 
 ## The UAF grid
 

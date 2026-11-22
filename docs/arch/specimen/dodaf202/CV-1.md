@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Strategic-Processes (St-Pr).
+From UAF 1.3 Strategic-Processes (St-Pr).
 
 What this architecture is for, and the chain it exists to close. This is a positioning view. Nothing in it is built because of it, and [Strategic-Roadmap-Phasing](../../views/St-Rm-P.md) says what is.
 

@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-Constraints (Op-Ct).
+From UAF 1.3 Operational-Constraints (Op-Ct).
 
 The rules this architecture keeps. The first table holds rules about what the running system may do. The second and third hold rules about how present work is written, so that it does not harden something a later capability needs. Each restates its record's rule, and the Sources table cites the record.
 

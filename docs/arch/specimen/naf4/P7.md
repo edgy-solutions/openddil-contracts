@@ -2,7 +2,7 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Resources-Information (Rs-If).
+From UAF 1.3 Resources-Information (Rs-If).
 
 The information as it exists on the wire: proto contracts, ontology files, and the kinds, routes and destinations a deployment declares. Which workload writes and reads each topic is in [Resources-Connectivity](../../views/Rs-Cn.md).
 

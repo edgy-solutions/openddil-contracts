@@ -2,8 +2,8 @@
 
 built on OpenDDIL 0.1.161
 
-From UAF 1.2 Operational-Structure (Op-Sr).
-From UAF 1.2 Operational-Connectivity (Op-Cn).
+From UAF 1.3 Operational-Structure (Op-Sr).
+From UAF 1.3 Operational-Connectivity (Op-Cn).
 
 ## Operational-Structure (Op-Sr)
 
