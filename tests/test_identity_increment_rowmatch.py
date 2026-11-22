@@ -49,16 +49,20 @@ def before_tier():
         "asset_registry": table(["asset_id", "last_observed_at"], [
             {"asset_id": "A1", "last_observed_at": "2026-11-01T00:00:00Z"},
             {"asset_id": "A2", "last_observed_at": "2026-11-02T00:00:00Z"}]),
-        "egress_delivered_events": table(["event_id", "episode_id", "asset_id", "detected_at"], [
-            {"event_id": "ev1", "episode_id": "ep1", "asset_id": "A1", "detected_at": "2026-11-03T00:00:00Z"},
-            {"event_id": "ev2", "episode_id": "ep1", "asset_id": "A1", "detected_at": "2026-11-04T00:00:00Z"},
-            {"event_id": "ev3", "episode_id": "ep2", "asset_id": "A2", "detected_at": "2026-11-05T00:00:00Z"}]),
+        "egress_delivered_events": table(["event_id", "episode_id", "asset_id"], [
+            {"event_id": "ev1", "episode_id": "ep1", "asset_id": "A1"},
+            {"event_id": "ev2", "episode_id": "ep1", "asset_id": "A1"},
+            {"event_id": "ev3", "episode_id": "ep2", "asset_id": "A2"}]),
+        "failure_episodes": table(["episode_id", "detected_at", "asset_id"], [
+            {"episode_id": "ep1", "detected_at": "2026-11-04T00:00:00Z", "asset_id": "A1"},
+            {"episode_id": "ep1", "detected_at": "2026-11-03T00:00:00Z", "asset_id": "A1"}],
+            pk=["episode_id", "detected_at"]),
         "asset_cm_state": {"cols": ["asset_id", "discrepancies", "manual_discrepancies"], "pk": ["asset_id"], "rows": [
             {"asset_id": "A1", "discrepancies": [{"discrepancy_id": "d1"}], "manual_discrepancies": [{"discrepancy_id": "m1"}]},
-            {"asset_id": "A2", "discrepancies": [], "manual_discrepancies": []}]},
+            {"asset_id": "A2", "discrepancies": [{"discrepancy_id": "ep2", "detected_at": "2026-11-05T00:00:00Z"}], "manual_discrepancies": []}]},
         "asset_declaration": table(["asset_id", "serial", "uii"], [
             {"asset_id": "A1", "serial": "S1", "uii": "U1"},
-            {"asset_id": "A2", "serial": "S2", "uii": None}]),
+            {"asset_id": "A2", "serial": "S2", "uii": None}]),  # uii column: the exact-prediction case
         "asset_correlation": table(["asset_id", "serial"], [
             {"asset_id": "A1", "serial": "S1"}, {"asset_id": "A2", "serial": "S2"}],
             pk=["asset_id"]),
@@ -68,14 +72,14 @@ def before_tier():
 def after_tier():
     t = before_tier()
     t["asset_identity"] = table(["identity"], [{"identity": "i1"}, {"identity": "i2"}])
-    t["alias_scheme"] = table(["scheme"], [{"scheme": s} for s in ("asset", "serial", "identity", "uii")])
+    t["alias_scheme"] = table(["scheme"], [{"scheme": s} for s in ("asset_id", "serial", "identity", "uii")])
     t["asset_binding"] = table(["asset_id", "identity"], [
         {"asset_id": "A1", "identity": "i1"}, {"asset_id": "A2", "identity": "i2"}])
     t["asset_alias"] = table(["scheme", "value", "identity"], [
-        {"scheme": "asset", "value": "A1", "identity": "i1"},
+        {"scheme": "asset_id", "value": "A1", "identity": "i1"},
         {"scheme": "serial", "value": "S1", "identity": "i1"},
         {"scheme": "uii", "value": "U1", "identity": "i1"},
-        {"scheme": "asset", "value": "A2", "identity": "i2"},
+        {"scheme": "asset_id", "value": "A2", "identity": "i2"},
         {"scheme": "serial", "value": "S2", "identity": "i2"}], pk=["scheme", "value"])
     t["identity_equivalence"] = table(["merged", "survivor"], [])
     t["identity_conflict"] = table(["declaration", "asset_id", "identities"], [], pk=["declaration"])
@@ -133,7 +137,8 @@ class World:
             return "".join(json.dumps([str(r[c]) for c in cols]) + "\n" for r in tier[t]["rows"])
         if "jsonb_array_elements" in sql:
             col = re.search(r's\."(\w+)"\)', sql).group(1)
-            got = [[r["asset_id"], d.get("discrepancy_id") if isinstance(d, dict) else None]
+            got = [[r["asset_id"], d.get("discrepancy_id") if isinstance(d, dict) else None,
+                    d.get("detected_at") if isinstance(d, dict) else None]
                    for r in tier["asset_cm_state"]["rows"] for d in r[col]]
             return json.dumps(got) + "\n"
         if "HAVING count(DISTINCT" in sql:
@@ -203,8 +208,9 @@ def test_before_reads_every_id_set_and_counts(world):
     b = json.loads((world.out / "before.json").read_text())["tiers"]["tier-a"]
     assert sorted(b["asset_registry"]["rows"]) == ["A1", "A2"]
     assert b["egress_delivered_events"]["events"] == {"ev1": "A1", "ev2": "A1", "ev3": "A2"}
-    assert b["egress_delivered_events"]["episodes"]["ep1"] == {"asset_id": "A1", "detected_at": "2026-11-03T00:00:00Z"}
-    assert b["asset_cm_state"]["discrepancies"] == {"d1": "A1"}
+    assert b["egress_delivered_events"]["episodes"]["ep1"] == {
+        "asset_id": "A1", "detected_at": "2026-11-03T00:00:00Z", "detected_at_source": "failure_episodes"}
+    assert b["asset_cm_state"]["discrepancies"] == {"d1": "A1", "ep2": "A2"}
     assert b["asset_cm_state"]["manual_discrepancies"] == {"m1": "A1"}
     assert b["asset_declaration"]["count"] == 2 and len(b["asset_declaration"]["keys"]) == 2
     assert b["asset_correlation"]["count"] == 2
@@ -236,6 +242,36 @@ def test_prediction_hashes_before_json_and_names_serial_pairs(world):
     assert "A1 / A3" in (world.out / "prediction.md").read_text()
 
 
+def episodes_before(world):
+    assert go(world, "read", "before") == 0
+    b = json.loads((world.out / "before.json").read_text())["tiers"]["tier-a"]
+    return b["egress_delivered_events"]["episodes"]
+
+
+def test_era_time_from_failure_episodes_is_the_minimum(world):
+    e = episodes_before(world)["ep1"]
+    assert (e["detected_at"], e["detected_at_source"]) == ("2026-11-03T00:00:00Z", "failure_episodes")
+
+
+def test_era_time_from_a_discrepancy_element(world):
+    e = episodes_before(world)["ep2"]
+    assert (e["detected_at"], e["detected_at_source"]) == ("2026-11-05T00:00:00Z", "asset_cm_state.discrepancy")
+
+
+def test_era_time_from_neither_leaves_the_episode_unchecked(world):
+    t = world.tiers["tier-a"]
+    t["egress_delivered_events"]["rows"].append({"event_id": "ev9", "episode_id": "ep9", "asset_id": "A1"})
+    e = episodes_before(world)["ep9"]
+    assert e["detected_at"] is None and e["detected_at_source"] is None
+    assert go(world, "predict") == 0
+    world.tiers = {"tier-a": after_tier()}
+    world.tiers["tier-a"]["egress_delivered_events"]["rows"].append(
+        {"event_id": "ev9", "episode_id": "ep9", "asset_id": "A1"})
+    assert go(world, "read", "after", *CONSUMER) == 0
+    assert go(world, "compare") == 4
+    assert "1 episodes have no asset_id" in verdict(world)["unchecked"][0]
+
+
 def test_uii_count_is_not_readable_never_zero(world):
     world.tiers["tier-a"]["asset_declaration"]["cols"].remove("uii")
     for r in world.tiers["tier-a"]["asset_declaration"]["rows"]:
@@ -244,7 +280,7 @@ def test_uii_count_is_not_readable_never_zero(world):
     assert go(world, "predict") == 0
     pred = json.loads((world.out / "prediction.json").read_text())
     got = pred["declared_at_before_read"]["tier-a"]
-    assert got["uii_aliases"].startswith("not readable") and got["uii_aliases"] != 0
+    assert got["uii_aliases"].startswith("not readable from the store") and got["uii_aliases"] != 0
     assert got["serial_aliases"] == 2
 
 
@@ -299,7 +335,8 @@ def test_class_missing_id(world):
 
 def test_class_changed_asset_id(world):
     t = after_tier()
-    t["asset_cm_state"]["rows"][0]["discrepancies"] = []
+    ep2 = {"discrepancy_id": "ep2", "detected_at": "2026-11-05T00:00:00Z"}
+    t["asset_cm_state"]["rows"][0]["discrepancies"] = [ep2]
     t["asset_cm_state"]["rows"][1]["discrepancies"] = [{"discrepancy_id": "d1"}]
     assert flow(world, t) == 1
     assert first_diff_class(world) == "changed_asset_id"
@@ -389,15 +426,40 @@ def test_diffs_come_first_in_the_report(world):
     assert md.index("## missing_id") < md.index("## identity_without_binding") < md.index("## Unchecked")
 
 
-def test_uii_not_readable_after_is_unchecked(world):
-    bt, t = world.tiers["tier-a"], after_tier()
-    for x in (bt, t):
+def drop_uii(*tiers):
+    for x in tiers:
         x["asset_declaration"]["cols"].remove("uii")
         for r in x["asset_declaration"]["rows"]:
             del r["uii"]
+
+
+def test_no_uii_column_with_uii_alias_rows_matches_and_lists_them(world):
+    t = after_tier()
+    drop_uii(world.tiers["tier-a"], t)
+    assert flow(world, t) == 0
+    v = verdict(world)
+    assert v["unchecked"] == [] and v["diffs"] == {}
+    assert v["not_predicted"][0]["value"] == "U1"
+    assert "Not predicted" in (world.out / "compare.md").read_text()
+
+
+def test_uii_column_present_missing_uii_alias_is_a_diff(world):
+    t = after_tier()
     t["asset_alias"]["rows"] = [r for r in t["asset_alias"]["rows"] if r["scheme"] != "uii"]
-    assert flow(world, t) == 4
-    assert "uii count not readable" in verdict(world)["unchecked"][0]
+    assert flow(world, t) == 1
+    assert verdict(world)["diffs"]["alias_rows"][0]["alias"] == "uii"
+
+
+def test_asset_id_scheme_is_matched_by_name_and_unknown_schemes_are_listed(world):
+    t = after_tier()
+    for r in t["asset_alias"]["rows"]:
+        if r["value"] == "A1":
+            r["scheme"] = "other_scheme"
+    assert flow(world, t) == 1
+    d = verdict(world)["diffs"]["alias_rows"][0]
+    assert (d["asset_id"], d["alias"], d["rows"]) == ("A1", "asset_id", 0)
+    assert verdict(world)["unknown_scheme"][0]["scheme"] == "other_scheme"
+    assert "unknown scheme" in (world.out / "compare.md").read_text()
 
 
 # --------------------------------------------------------------------------

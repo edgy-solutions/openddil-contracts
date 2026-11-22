@@ -58,10 +58,12 @@ CONFLICT_TABLE = "identity_conflict"
 PROJECTOR_TABLES = ("asset_declaration", "asset_correlation")
 ERA_FN = "public.asset_id_era(text,timestamptz)"
 # Alias schemes the carried serial and uii are written under (design 1.1).
-SCHEME_OF = {"serial": "serial", "uii": "uii"}
-NOT_ASSET_ID_SCHEMES = ("serial", "uii", "identity")
+# The migration seeds the asset_id scheme under exactly this name.
+SCHEME_OF = {"asset_id": "asset_id", "serial": "serial", "uii": "uii"}
+KNOWN_SCHEMES = ("asset_id", "serial", "uii", "identity")
 ERA_CHUNK = 200
 
+INFO = ("not_predicted", "unknown_scheme")     # listed in compare.md; never a diff
 DIFF_ORDER = (
     "missing_id", "changed_asset_id", "projector_count_moved",
     "declared_without_binding", "identity_without_binding",
@@ -207,7 +209,7 @@ def read_egress(st: Store) -> dict:
     cols = table_columns(st, "egress_delivered_events")
     if cols is None:
         return absent()
-    have, missing = want(cols, ["event_id", "episode_id", "asset_id", "detected_at"])
+    have, missing = want(cols, ["event_id", "episode_id", "asset_id"])
     rows = select_rows(st, "egress_delivered_events", have) if have else []
     events, episodes = {}, {}
     for r in rows:
@@ -215,10 +217,8 @@ def read_egress(st: Store) -> dict:
             events[r["event_id"]] = r.get("asset_id")
         ep = r.get("episode_id")
         if ep is not None:
-            cur = episodes.setdefault(ep, {"asset_id": r.get("asset_id"), "detected_at": None})
-            d = r.get("detected_at")
-            if d is not None and (cur["detected_at"] is None or d < cur["detected_at"]):
-                cur["detected_at"] = d
+            episodes.setdefault(ep, {"asset_id": r.get("asset_id"), "detected_at": None,
+                                     "detected_at_source": None})
     return {"present": True, "missing_columns": missing, "events": events, "episodes": episodes}
 
 
@@ -226,7 +226,7 @@ def read_discrepancies(st: Store) -> dict:
     cols = table_columns(st, "asset_cm_state")
     if cols is None:
         return absent()
-    out = {"present": True, "missing_columns": [], "without_id": 0}
+    out = {"present": True, "missing_columns": [], "without_id": 0, "detected_at": {}}
     for col in ("discrepancies", "manual_discrepancies"):
         if col not in cols or "asset_id" not in cols:
             out["missing_columns"] += [c for c in (col, "asset_id") if c not in cols]
@@ -235,14 +235,51 @@ def read_discrepancies(st: Store) -> dict:
         c = ident(col)
         got = st.json(
             "SELECT coalesce(jsonb_agg(jsonb_build_array(s.asset_id, "
-            "CASE WHEN jsonb_typeof(d) = 'object' THEN d->>'discrepancy_id' END)), "
+            "CASE WHEN jsonb_typeof(d) = 'object' THEN d->>'discrepancy_id' END, "
+            "CASE WHEN jsonb_typeof(d) = 'object' THEN d->>'detected_at' END)), "
             "'[]'::jsonb)::text FROM " + ident("asset_cm_state") + " s, "
             f"jsonb_array_elements(CASE WHEN jsonb_typeof(s.{c}) = 'array' "
             f"THEN s.{c} ELSE '[]'::jsonb END) d") or []
-        out[col] = {did: aid for aid, did in got if did is not None}
-        out["without_id"] += sum(1 for _, did in got if did is None)
+        out[col] = {did: aid for aid, did, _ in got if did is not None}
+        out["without_id"] += sum(1 for _, did, _ in got if did is None)
+        for _, did, ts in got:
+            if did is not None and ts is not None:
+                out["detected_at"].setdefault(did, ts)
     out["missing_columns"] = sorted(set(out["missing_columns"]))
     return out
+
+
+def read_failure_episodes(st: Store) -> dict:
+    """min(detected_at) per episode_id from failure_episodes."""
+    cols = table_columns(st, "failure_episodes")
+    if cols is None:
+        return absent()
+    have, missing = want(cols, ["episode_id", "detected_at"])
+    times: dict[str, str] = {}
+    if len(have) == 2:
+        for r in select_rows(st, "failure_episodes", have):
+            d = r.get("detected_at")
+            if r.get("episode_id") is not None and d is not None:
+                if r["episode_id"] not in times or d < times[r["episode_id"]]:
+                    times[r["episode_id"]] = d
+    return {"present": True, "missing_columns": missing, "first_detected": times}
+
+
+def resolve_episode_times(out: dict) -> None:
+    """Each episode's first-observed time: failure_episodes first, else the
+    matching discrepancy element's detected_at, else none (unchecked)."""
+    eg = out["egress_delivered_events"]
+    if not eg.get("present"):
+        return
+    fe = out["failure_episodes"].get("first_detected", {})
+    cm = (out["asset_cm_state"].get("detected_at") or {}) if out["asset_cm_state"].get("present") else {}
+    for ep, d in eg["episodes"].items():
+        if ep in fe:
+            d["detected_at"], d["detected_at_source"] = fe[ep], "failure_episodes"
+        elif ep in cm:
+            d["detected_at"], d["detected_at_source"] = cm[ep], "asset_cm_state.discrepancy"
+        else:
+            d["detected_at"], d["detected_at_source"] = None, None
 
 
 def read_projector_table(st: Store, table: str) -> dict:
@@ -306,7 +343,9 @@ def read_era(st: Store, episodes: dict) -> dict:
 def read_tier(st: Store, phase: str, before_tier: dict | None) -> dict:
     out = {"asset_registry": read_registry(st),
            "egress_delivered_events": read_egress(st),
-           "asset_cm_state": read_discrepancies(st)}
+           "asset_cm_state": read_discrepancies(st),
+           "failure_episodes": read_failure_episodes(st)}
+    resolve_episode_times(out)
     for t in PROJECTOR_TABLES:
         out[t] = read_projector_table(st, t)
     if phase == "after":
@@ -474,7 +513,7 @@ def declared_counts(td: dict) -> dict:
         "serial_aliases": (sum(1 for r in rows if r.get("serial")) if "serial" in d["columns"]
                            else "not readable: asset_declaration has no serial column"),
         "uii_aliases": (sum(1 for r in rows if r.get("uii")) if "uii" in d["columns"]
-                        else "not readable: asset_declaration has no uii column"),
+                        else "not readable from the store: asset_declaration has no uii column"),
     }
 
 
@@ -533,7 +572,7 @@ def id_blocks(td: dict) -> dict:
 def classify(before: dict, after: dict, pred: dict) -> tuple[dict, list[str], list[dict]]:
     """Every difference, by class, the reasons the run is unchecked, and the
     predicted conflicts seen. Pure."""
-    c = {k: [] for k in DIFF_ORDER}
+    c = {k: [] for k in DIFF_ORDER + INFO}
     unchecked = []
     cons = after.get("consumer_position") or {"status": "unchecked", "reason": "not recorded"}
     if cons.get("status") != "checked":
@@ -572,7 +611,7 @@ def classify(before: dict, after: dict, pred: dict) -> tuple[dict, list[str], li
                     c["era_not_one"].append({"tier": tier, "episode_id": ep, "era": era["results"][ep]})
             if era["unreadable"]:
                 unchecked.append(f"{tier}: {len(era['unreadable'])} episodes have no asset_id or "
-                                 "detected_at at the before read, so asset_id_era was not called")
+                                 "first-observed time (failure_episodes or discrepancy element) at the before read, so asset_id_era was not called")
     return c, sorted(set(unchecked)), predicted_seen
 
 
@@ -596,8 +635,14 @@ def _identity_checks(tier, at, pair_assets, c, unchecked, predicted_seen) -> Non
                                               "declaration": r.get("declaration")})
     decl = at["asset_declaration"]
     declared = sorted({r["asset_id"] for r in decl.get("rows", []) if r.get("asset_id") is not None})
-    if decl.get("present") and "uii" not in decl["columns"]:
-        unchecked.append(f"{tier}: uii count not readable, asset_declaration has no uii column")
+    uii_predicted = bool(decl.get("present")) and "uii" in decl["columns"]
+    for r in rows("asset_alias"):
+        if r["scheme"] == "uii" and not uii_predicted:
+            c["not_predicted"].append({"tier": tier, "identity": r["identity"], "value": r["value"],
+                                       "why": "uii is not readable from the store"})
+        elif r["scheme"] not in KNOWN_SCHEMES:
+            c["unknown_scheme"].append({"tier": tier, "scheme": r["scheme"], "identity": r["identity"],
+                                        "value": r["value"]})
     alias_by = {}
     for r in rows("asset_alias"):
         alias_by.setdefault((r["identity"], r["value"]), []).append(r["scheme"])
@@ -615,13 +660,14 @@ def _identity_checks(tier, at, pair_assets, c, unchecked, predicted_seen) -> Non
         if ident_id not in identities:
             c["binding_identity_missing"].append({"tier": tier, "asset_id": a, "identity": ident_id})
         carried = {"asset_id": a}
-        for kind in SCHEME_OF:
+        for kind in ("serial", "uii"):
+            if kind == "uii" and not uii_predicted:
+                continue
             if declared_rows[a].get(kind):
                 carried[kind] = declared_rows[a][kind]
         for kind, value in sorted(carried.items()):
             schemes = alias_by.get((ident_id, value), [])
-            n = sum(1 for s in schemes if (s == SCHEME_OF[kind] if kind in SCHEME_OF
-                                           else s not in NOT_ASSET_ID_SCHEMES))
+            n = sum(1 for s in schemes if s == SCHEME_OF[kind])
             if n != 1:
                 c["alias_rows"].append({"tier": tier, "asset_id": a, "alias": kind,
                                         "value": value, "rows": n})
@@ -646,6 +692,7 @@ def step_compare(args) -> int:
     diffs = {k: c[k] for k in DIFF_ORDER if c[k]}
     verdict = "diff" if diffs else ("unchecked" if unchecked else "match")
     report = {"at": _now(), "verdict": verdict, "diffs": diffs, "unchecked": unchecked,
+              "not_predicted": c["not_predicted"], "unknown_scheme": c["unknown_scheme"],
               "predicted_conflicts_seen": predicted_conflicts}
     write_new(out, "compare.json", report)
     md = [f"# Verdict: {verdict}", ""]
@@ -654,6 +701,10 @@ def step_compare(args) -> int:
             md += [f"## {k} ({len(c[k])})", ""] + [f"- {compact(x)}" for x in c[k]] + [""]
     if unchecked:
         md += ["## Unchecked (this is not a pass)", ""] + [f"- {u}" for u in unchecked] + [""]
+    for k, title in (("not_predicted", "Not predicted (uii alias rows; not a diff)"),
+                     ("unknown_scheme", "Alias rows under an unknown scheme (not counted)")):
+        if c[k]:
+            md += [f"## {title} ({len(c[k])})", ""] + [f"- {compact(x)}" for x in c[k]] + [""]
     if predicted_conflicts:
         md += ["## Predicted conflicts seen", ""] + [f"- {compact(x)}" for x in predicted_conflicts] + [""]
     write_new(out, "compare.md", "\n".join(md) + "\n")
