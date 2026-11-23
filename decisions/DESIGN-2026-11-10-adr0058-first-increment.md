@@ -10,6 +10,11 @@ yet: what each tier's UI shows of work owned by iagent, and what it shows of the
 intake kind that names its release record. Ordered by the project owner on 2026-11-14, after iagent's architect's
 answers of that date. Those answers are an unchecked draft, so the kind's fields and versions are provisional until
 iagent's checked copy is placed and its completion contract (due 2026-11-27) is merged.
+**Amendment ACCEPTED, ruled by the project owner 2026-11-23 (proposed 2026-11-22; §3.2, §3.3, §9 3a checks 1 and 5,
+§10):** `GET /reports/tier` lists the episodes filed at the viewer's tier and at the tiers below it, each row naming
+its owning tier, under the existing label rule. "Below" is the tier's own children and their children: a region does not
+see another region's edges, and an edge does not see its region. Closed episodes go up to the region and the hub by
+the chart's path in §10.
 **Builds on:** ADR-0058 §3 (cortex owns task and approval shapes; OpenDDIL owns record, finding and indicator) and
 §6; ADR-0046 (decision 1: OpenDDIL holds no workflow state; decision 2 and §5.4: per-tier instances and owning-tier
 intake are the design; §6: delegation); ADR-0051 (§1 and its first slice: a closed episode is kept, and projected at the
@@ -32,8 +37,8 @@ Three slices. Each ships on its own, with its own checks (§9).
   ledger and the intake records. Severed states are named: "queued for send", "sent, awaiting reply".
 - **Closed episodes are projected** to a table at the tier, ADR-0051's `failure_episodes` (its first slice, item 2).
   The filer is read from the episode's sources. The egress ledger is unchanged: it stays a record of deliveries.
-- **A supervisor's reports at the tier:** every episode filed at the tier, scoped by the PEP's existing label rule for
-  that viewer.
+- **A supervisor's reports at the tier:** every episode filed at the tier and at the tiers below it, each naming its
+  owning tier, scoped by the PEP's existing label rule for that viewer (amended 2026-11-22, ruled 2026-11-23).
 - **The disposition on the asset's card** at the tier that reported it.
 - **The OpenDDIL sources of the maintainer's day:** my reports, and due and recommended items (advisory).
 - The states iagent owns (proposed, approved) are named "read in 3b" in this slice, never drawn as pending.
@@ -293,6 +298,14 @@ OpenDDIL's side to them.
 - **Closed episodes are projected** (ADR-0051's first slice, item 2): a `failure_episodes` table at the tier, keyed
   `(episode_id, detected_at)`, with `asset_id`, `component`, `fault_code`, `detected_at`, `cleared_at`, `cleared_by`,
   `resolution`, `sources` (with each `reported_by`), `baseline_id`, `mod_compliance` and the labels. Atlas migration.
+  - **The owning tier** (amended 2026-11-22, ruled 2026-11-23). The table carries `edge_id` and `region_id`, as every
+    per-asset read-model table does (ADR-0022 constraint 1). The projector writes them from the close record's own tier
+    block, explicitly, never from a column default (constraint 2). The tier that wrote the close is the episode's
+    owning tier.
+    - A close record without a tier block is refused, counted and named. It is never written with a default tier.
+    - A tier's table holds its own closes and the closes of the tiers below it, each row as its owning tier wrote it.
+      A parent never merges a child's row into its own (ADR-0042 §3, ADR-0040).
+    - A child's close records reach its region and the hub by the chart's path (§10), not designed here.
   - cm-service emits one record per close, on a topic of its own. The `asset-cm-state` wire shape does not change
     (finding 3).
   - The projector writes it idempotently on the key. A replay writes no second row.
@@ -329,10 +342,15 @@ OpenDDIL's side to them.
 
 - `GET /reports/mine` on the PEP. It reads the viewer's subject from the session and returns the timeline rows above.
   The filer's own subject is the only filter.
-- **`GET /reports/tier`, a supervisor's reports at the tier.** Every episode filed at the tier, open and closed, with
-  the same timeline. It is scoped by the PEP: the viewer's role must be supervisor (finding 8), and the PEP's existing
-  label rule for that viewer decides which episodes come back. Any other role gets `403` with the named state "reports
-  at this tier are for a supervisor". Nothing from another tier is listed.
+- **`GET /reports/tier`, a supervisor's reports at the tier and below** (amended 2026-11-22, ruled 2026-11-23). Every
+  episode filed at the viewer's tier or at a tier below it, open and closed, with the same timeline.
+  - "Below" is the children of this tier, and their children, as ADR-0022 constraint 3 reads a rollup. A region lists
+    its own episodes and its edges'. An edge lists its own.
+  - Each row names its owning tier, from the row's `edge_id` and `region_id`.
+  - It is scoped by the PEP: the viewer's role must be supervisor (finding 8), and the PEP's existing label rule for
+    that viewer decides which episodes come back. The rule applies to every row, whatever its owning tier.
+  - Any other role gets `403` with the named state "reports at this tier are for a supervisor".
+  - An episode from a sibling tier, or from a tier above the viewer's, is not listed.
 - The PEP reads store rows through shapes. One shape per tier on `failure_episodes` serves both routes, filtered in the
   PEP; the number of shapes does not grow with viewers.
 
@@ -426,6 +444,8 @@ Each is a test a named workflow runs. A slice merges on its own checks.
      other nation.
    - Red: a line without `detected_at_ns` is refused and counted, not written. A line whose asset's labels were never
      exported is refused, not loaded unlabelled.
+   - **The owning tier:** a close record's `edge_id` and `region_id` are written to its row as the record carries
+     them. Red: a close record without a tier block is refused and counted, not written with a default.
    - The published `asset-cm-state` payload is byte-equal to a golden payload taken before the change.
 2. **No task state, ledger unchanged.** With a store fake that raises on any write, `GET /reports/mine` and
    `GET /reports/tier` succeed.
@@ -445,11 +465,14 @@ Each is a test a named workflow runs. A slice merges on its own checks.
    - An episode with two sources lists for both filers.
    - A viewer in no episode's sources gets an empty list, with the state "no reports filed by you".
    - Two episodes sharing an id join their ledger rows by interval; a row that fits neither is listed as unmatched.
-5. **A supervisor's reports at the tier.**
+5. **A supervisor's reports at the tier and below** (amended 2026-11-22, ruled 2026-11-23).
    - A supervisor sees every episode at the tier that the PEP's label rule admits.
    - A planted episode with a label the supervisor lacks is absent.
    - An edge-operator gets `403` with the named state.
-   - An episode from another tier is absent.
+   - At a region, an episode filed at one of its edges is listed, and its row names that edge as its owning tier.
+   - A planted episode at one of its edges, with a label the supervisor lacks, is absent.
+   - An episode from a sibling tier (another region, or another region's edge) is absent.
+   - At an edge, an episode filed at its region is absent.
 6. **The case join uses `case_ref` only.** An action whose key starts with a case id, but whose kind declares no
    `case_ref`, is not joined.
 7. **The disposition.**
@@ -504,6 +527,9 @@ Each is a test a named workflow runs. A slice merges on its own checks.
   - 3b: `iagent.bffUrl`, `iagent.personToken.confirmed`, `iagent.sealed` and the cortex base per tier;
   - 3c: the egress, intake and assembler at every tier, each with its own route and `intake_records`;
   - 3c: the one-door test.
+  - 3a: the path that carries closed episodes up to the region and the hub, so that a parent's `failure_episodes`
+    holds its children's rows (ruled 2026-11-23; designed in openddil-helm's roll 43, under ADR-0042 custody). Until
+    it lands, a tier's list holds only its own episodes, and the pane names that.
 - **Operations:** the deployments' routes and credentials per tier, at a roll; setting the hold and the seal only on
   iagent's word for that tier.
 
