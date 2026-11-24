@@ -11,10 +11,13 @@ name: check-views
 # export is not committed anywhere. The tests, and a canary (a run that breaks a
 # copy of the record and proves quotes and floor can fail), run from the same kit.
 #
-# The `golden` job builds the same tree with this repository's own old tools and with
-# the pinned kit, and compares the two exports element by element. Every difference
-# must be named in docs/arch/golden-allow.txt, with a reason, or the job fails; so
-# does an allowance that matches nothing.
+# The `golden` job compares the architecture export built with the kit at the base's pin
+# with the export built with the kit at this change's pin, from the same tree. It runs only
+# when the pin moves: on a pull request it reads the base's copy of this file, on a push the
+# copy before the push, and when the two pins are equal it passes at once. Every difference
+# must be named in docs/arch/golden-allow.txt, with a reason, under a `# pins:` line for this
+# pair of commits. An allowance that matches nothing fails, and so does one written for
+# another pair.
 #
 # Am-If's table is built from ontology/, so an ontology change is a reason to
 # run too. The floor reads a render of the chart, so the chart changing is a reason to
@@ -54,8 +57,16 @@ env:
   # Same helm as openddil-helm's chart-checks.yml. Release tarball from get.helm.sh.
   HELM_VERSION: v3.16.2
   HELM_SHA256: 9318379b847e333460d33d291d4c088156299a26cd93d570a7f5d0c36e50b5bb
+  # The chart commit this CI reads, pinned so that a chart change cannot turn this repository red
+  # by itself. Bumping it refreshes the specimen: run docs/arch/tools/refresh_specimen.py against
+  # the new commit and commit the result in the same change. A new consumer group in the chart
+  # also needs its row in docs/arch/annotation-exceptions.yaml; test_check_annotations names it.
+  HELM_REF: f2c971c6293851520df042aaed54f5db104447bf
   CHART: repos/openddil-helm/openddil-demo
   BUNDLE: repos/openddil-customer-bundle-example
+  # The bundle commit this CI reads, pinned like the chart: the kit refuses values files that are not at the
+  # commit it is given, and names the commit on every page.
+  BUNDLE_REF: 63f2f43868675d986e23017f11521479b50e6338
   READINESS: repos/openddil-helm/scripts/RECORDING-READINESS.md
 
 jobs:
@@ -70,20 +81,20 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-helm
-          ref: master
+          ref: ${{ env.HELM_REF }}
           path: repos/openddil-helm
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
-          ref: master
+          ref: ${{ env.BUNDLE_REF }}
           path: repos/openddil-customer-bundle-example
 
       # The kit again, as a directory: the tests find it through ARCH_KIT, and the canary runs from it.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: edgy-solutions/arch-kit
-          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+          ref: 30d74ce99b42e99c65a2d0246617e5889a710c80 # v0.4.0
           path: arch-kit
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
@@ -103,6 +114,9 @@ jobs:
 
       # A skipped specimen test means a sibling was not found. In CI that is
       # not a pass.
+      # The log's last lines are often another test's stderr, written after
+      # the summary, so the step prints the summary, every failure in full,
+      # and every skip reason.
       - name: Tests
         run: |
           set +e
@@ -110,9 +124,13 @@ jobs:
             python -m unittest discover -s docs/arch/tools -p 'test_*.py' > "$RUNNER_TEMP/tests.log" 2>&1
           rc=$?
           set -e
-          tail -n 8 "$RUNNER_TEMP/tests.log"
-          if [ "$rc" != 0 ]; then exit "$rc"; fi
+          grep -E '^(Ran [0-9]+ tests|OK|FAILED)' "$RUNNER_TEMP/tests.log" || true
+          if [ "$rc" != 0 ]; then
+            sed -n '/^======================================================================$/,/^Ran [0-9]/p' "$RUNNER_TEMP/tests.log"
+            exit "$rc"
+          fi
           if grep -q 'skipped=' "$RUNNER_TEMP/tests.log"; then
+            grep -E 'SKIP|skipped' "$RUNNER_TEMP/tests.log" | sort -u
             echo "tests: some were skipped; in CI a skipped test is not a pass"
             exit 1
           fi
@@ -137,10 +155,12 @@ jobs:
       # Check the views, build and check the export, check it in a browser, check the decision
       # indexes, and upload the export (the portal declares hosting: ci-artifact).
       - name: Build and check with arch-kit
-        uses: edgy-solutions/arch-kit@2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
+        uses: edgy-solutions/arch-kit@30d74ce99b42e99c65a2d0246617e5889a710c80 # v0.4.0
         with:
           config: docs/arch/arch-kit.yaml
           chart: ${{ env.CHART }}
+          chart-ref: ${{ env.HELM_REF }}
+          bundle-ref: ${{ env.BUNDLE_REF }}
           release: openddil
           values: |
             ${{ env.BUNDLE }}/k8s/tier-node-values.yaml
@@ -149,8 +169,8 @@ jobs:
           relabel: ${{ runner.temp }}/relabel.txt
           barred: docs/arch/tools/barred-sample.txt
 
-  # The golden comparison. The old tools are the last tree that had this repository's own: db08b35 on main,
-  # the commit before the tools moved to the kit. It is pinned by full sha, not "the base of the branch".
+  # The golden comparison, pin to pin: the kit at the base's pin against the kit at this change's pin. The
+  # "Kit pins" step works the two out, and every later step is skipped when there is nothing to compare.
   golden:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
@@ -159,42 +179,78 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: db08b35a1f9475f63f2b0ad9b355268fe91e28e5
-          path: old-src
-          sparse-checkout: docs/arch/tools
+      # NEW is the pin in this file. OLD is the pin in the base's copy of it: the pull request's base on a
+      # pull_request, the commit before the push on a push. Scheduled, dispatched and unreadable-base runs, and
+      # runs where the pin did not move, have no comparison to make.
+      - name: Kit pins
+        id: pins
+        env:
+          EVENT: ${{ github.event_name }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+        run: |
+          skip() { echo "$1"; echo "compare=false" >> "$GITHUB_OUTPUT"; exit 0; }
+          case "$EVENT" in
+            pull_request) BASE=$PR_BASE ;;
+            push) BASE=$PUSH_BEFORE ;;
+            *) skip "golden: a $EVENT run has no base to compare with: nothing to compare" ;;
+          esac
+          case "$BASE" in
+            ''|*[!0-9a-f]*|0000000000000000000000000000000000000000) skip "golden: no readable base commit: nothing to compare" ;;
+          esac
+          NEW=$(python3 scripts/kit_pin.py .github/workflows/check-views.yml) || exit 1
+          git show "$BASE:.github/workflows/check-views.yml" > "$RUNNER_TEMP/base-check-views.yml" 2> /dev/null \
+            || skip "golden: the base's workflow file cannot be read: nothing to compare"
+          OLD=$(python3 scripts/kit_pin.py "$RUNNER_TEMP/base-check-views.yml") \
+            || skip "golden: the base's kit pin cannot be read: nothing to compare"
+          if [ "$OLD" = "$NEW" ]; then skip "kit pin unchanged at $NEW: nothing to compare"; fi
+          echo "kit pin moves: $OLD -> $NEW"
+          { echo "old=$OLD"; echo "new=$NEW"; echo "compare=true"; } >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.pins.outputs.compare == 'true'
         with:
           repository: edgy-solutions/openddil-helm
-          ref: master
+          ref: ${{ env.HELM_REF }}
           path: repos/openddil-helm
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.pins.outputs.compare == 'true'
         with:
           repository: edgy-solutions/openddil-customer-bundle-example
-          ref: master
+          ref: ${{ env.BUNDLE_REF }}
           path: repos/openddil-customer-bundle-example
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.pins.outputs.compare == 'true'
         with:
           repository: edgy-solutions/arch-kit
-          ref: 2ae4bf8de2e4818a9a186fb8cc0a5311b2ad0f7b # phase1 S6d
-          path: arch-kit
+          ref: ${{ steps.pins.outputs.old }}
+          path: kit-old
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.pins.outputs.compare == 'true'
+        with:
+          repository: edgy-solutions/arch-kit
+          ref: ${{ steps.pins.outputs.new }}
+          path: kit-new
 
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        if: steps.pins.outputs.compare == 'true'
         with:
           python-version: '3.12'
 
-      # The old tools need the same libraries the kit does.
-      - run: pip install ./arch-kit
+      # Both kits need the same libraries; a difference would show as a failure.
+      - run: pip install ./kit-new
+        if: steps.pins.outputs.compare == 'true'
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: steps.pins.outputs.compare == 'true'
         with:
           node-version: '22'
 
       - name: Install helm at its pinned version and check its hash
+        if: steps.pins.outputs.compare == 'true'
         run: |
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/helm.tar.gz" \
             "https://get.helm.sh/helm-$HELM_VERSION-linux-amd64.tar.gz"
@@ -204,6 +260,7 @@ jobs:
           echo "$RUNNER_TEMP/helm" >> "$GITHUB_PATH"
 
       - name: Relabel list
+        if: steps.pins.outputs.compare == 'true'
         env:
           RELABEL: ${{ secrets.ARCH_RELABEL }}
         run: |
@@ -211,7 +268,8 @@ jobs:
           else cp docs/arch/tools/relabel-sample.txt "$RUNNER_TEMP/relabel.txt"; echo "relabel: sample list only"; fi
 
       # Prints counts and element ids only. A failure names the element, never a value.
-      - name: Build with the old tools and with the kit, and compare
+      - name: Build with the kit at each pin, and compare
+        if: steps.pins.outputs.compare == 'true'
         env:
           PUPPETEER_EXECUTABLE_PATH: /usr/bin/google-chrome
           CHART: ${{ github.workspace }}/${{ env.CHART }}
@@ -220,4 +278,4 @@ jobs:
           RELABEL: ${{ runner.temp }}/relabel.txt
           BARRED: ${{ github.workspace }}/docs/arch/tools/barred-sample.txt
         run: |
-          scripts/golden.sh "$PWD" old-src/docs/arch/tools arch-kit "$RUNNER_TEMP/golden"
+          scripts/golden.sh "$PWD" kit-old kit-new "$RUNNER_TEMP/golden"

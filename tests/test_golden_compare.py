@@ -8,8 +8,19 @@ from pathlib import Path
 TOOL = Path(__file__).resolve().parent.parent / "scripts" / "golden_compare.py"
 
 
+P1 = "1" * 40
+P2 = "2" * 40
+
+
 def page(pid, body):
     return f'<section id="{pid}"><p>{body}</p></section>\n'
+
+
+def prov(kind, text):
+    return f'<p data-prov="{kind}">{text}</p>'
+
+
+PARTS = prov("chart-commit", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") + prov("bundle-commit", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa") + prov("kit", "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 
 
 def export(front="a", other="b", date="d1"):
@@ -18,14 +29,36 @@ def export(front="a", other="b", date="d1"):
 
 
 class Compare(unittest.TestCase):
-    def run_tool(self, old, new, allow):
+    def run_tool(self, old, new, allow, pins=None):
         d = Path(tempfile.mkdtemp())
         (d / "old.html").write_bytes(old)
         (d / "new.html").write_bytes(new)
         (d / "allow.txt").write_text(allow, encoding="utf-8")
         p = subprocess.run([sys.executable, str(TOOL), str(d / "old.html"), str(d / "new.html"),
-                            str(d / "allow.txt"), "--out", str(d / "out")], capture_output=True, text=True)
+                            str(d / "allow.txt"), "--out", str(d / "out")] + (["--pins", *pins] if pins else []),
+                           capture_output=True, text=True)
         return p.returncode, p.stdout, p.stderr
+
+    def test_no_allowance_needs_no_pins_line(self):
+        rc, out, err = self.run_tool(export(), export(), "", pins=(P1, P2))
+        self.assertEqual(rc, 0, err)
+
+    def test_allowances_with_the_matching_pins_line_pass(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"),
+                                     f"# pins: {P1} {P2}\nview-A: reworded on purpose\n", pins=(P1, P2))
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A", out)
+
+    def test_allowances_without_a_pins_line_fail(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"), "view-A: reworded\n", pins=(P1, P2))
+        self.assertEqual(rc, 1)
+        self.assertIn(f"golden_compare: the allowances are for no pins line, this comparison is {P1} {P2}", err)
+
+    def test_allowances_for_another_pair_fail(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"),
+                                     f"# pins: {P1} {P1}\nview-A: reworded\n", pins=(P1, P2))
+        self.assertEqual(rc, 1)
+        self.assertIn(f"golden_compare: the allowances are for {P1} {P1}, this comparison is {P1} {P2}", err)
 
     def test_identical_needs_no_allowance(self):
         rc, out, err = self.run_tool(export(), export(), "")
@@ -61,6 +94,126 @@ class Compare(unittest.TestCase):
         rc, out, err = self.run_tool(export(date="d1"), export(date="d2"), "")
         self.assertEqual(rc, 1)
         self.assertIn("prelude: differs", err)
+
+    def test_break_hints_cover_wbr(self):
+        rc, out, err = self.run_tool(export(other="abcdef"), export(other="abc<wbr>def"),
+                                     "view-A break-hints: long cells get hints\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A break-hints", out)
+
+    def test_break_hints_cover_header_width(self):
+        old = export(other='</p><table><th style="min-width:40ch">h</th></table><p>')
+        new = export(other='</p><table><th style="min-width:12ch">h</th></table><p>')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: narrower headers\n")
+        self.assertEqual(rc, 0, err)
+
+    def test_break_hints_do_not_cover_width_outside_a_header(self):
+        old = export(other='</p><table><td style="min-width:40ch">h</td></table><p>')
+        new = export(other='</p><table><td style="min-width:12ch">h</td></table><p>')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: narrower headers\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
+    def test_break_hints_do_not_cover_a_changed_word(self):
+        rc, out, err = self.run_tool(export(other="abcdef one"), export(other="abc<wbr>def two"),
+                                     "view-A break-hints: long cells get hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs outside break-hints", err)
+
+    def test_a_stale_break_hints_line_fails(self):
+        rc, out, err = self.run_tool(export(), export(), "view-A break-hints: no longer differs\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("matches nothing: view-A break-hints", err)
+
+    def test_both_kinds_on_the_front_page(self):
+        old = export(front='<p class="relabel" data-relabel>x</p>abcdef')
+        new = export(front='<p class="relabel" data-relabel>y</p>abc<wbr>def')
+        rc, out, err = self.run_tool(old, new, "front data-relabel: names the export\n"
+                                               "front break-hints: long cells get hints\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("front data-relabel", out)
+        self.assertIn("front break-hints", out)
+
+    def test_the_failure_hints_at_break_hints(self):
+        rc, out, err = self.run_tool(export(other="abcdef"), export(other="abc<wbr>def"), "")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs and is not in the allowlist (break-hints would cover it)", err)
+
+    def test_break_hints_cover_split_nowrap_spans(self):
+        old = export(other='<span class="nb">abc-def-ghi-jkl</span>')
+        new = export(other='<span class="nb">abc-</span><wbr><span class="nb">def-</span><wbr>'
+                           '<span class="nb">ghi-</span><wbr>jkl')
+        rc, out, err = self.run_tool(old, new, "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 0, err)
+        rc, out, err = self.run_tool(old, new, "")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs and is not in the allowlist (break-hints would cover it)", err)
+
+    def test_break_hints_do_not_cover_changed_span_text(self):
+        rc, out, err = self.run_tool(export(other='<span class="nb">a-b</span>'),
+                                     export(other='<span class="nb">a-c</span>'),
+                                     "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
+    def test_break_hints_do_not_unwrap_another_class(self):
+        rc, out, err = self.run_tool(export(other='<span class="x">ab</span>'), export(other="ab"),
+                                     "view-A break-hints: spans split around hints\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("differs outside break-hints", err)
+
+    def test_input_commits_cover_the_added_parts(self):
+        old = export(other="b")
+        new = export(other=PARTS + "b")
+        rc, out, err = self.run_tool(old, new, "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A input-commits  the kit records its inputs", out)
+
+    def test_input_commits_remove_several_bundle_commits(self):
+        extra = prov("bundle-commit", "b" * 40) + prov("bundle-commit", "c" * 40)
+        rc, out, err = self.run_tool(export(other="b"), export(other=PARTS + extra + "b"),
+                                     "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
+
+    def test_input_commits_do_not_cover_a_changed_word(self):
+        rc, out, err = self.run_tool(export(other="one"), export(other=PARTS + "two"),
+                                     "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("view-A: differs outside input-commits", err)
+
+    def test_star_input_commits_cover_two_pages(self):
+        rc, out, err = self.run_tool(export(front="a", other="b"),
+                                     export(front=PARTS + "a", other=PARTS + "b"),
+                                     "* input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   front input-commits  the kit", out)
+        self.assertIn("allowed:   view-A input-commits  the kit", out)
+
+    def test_star_input_commits_matching_nothing_fail(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"),
+                                     "view-A: reworded\n* input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 1)
+        self.assertIn("allowlist line matches nothing: * input-commits", err)
+
+    def test_a_bare_star_line_is_refused(self):
+        rc, out, err = self.run_tool(export(other="b"), export(other="c"), "# c\n*: everything\n")
+        self.assertNotEqual(rc, 0)
+        self.assertIn("allow.txt:2:", err)
+
+    def test_star_input_commits_with_a_page_break_hints_line(self):
+        rc, out, err = self.run_tool(export(other="abcdef"), export(other=PARTS + "abc<wbr>def"),
+                                     "* input-commits: the kit records its inputs\n"
+                                     "view-A break-hints: long cells get hints\n")
+        self.assertEqual(rc, 0, err)
+        self.assertIn("allowed:   view-A input-commits", out)
+        self.assertIn("allowed:   view-A break-hints", out)
+
+    def test_input_commits_cover_the_not_in_a_repository_text(self):
+        none = "none (not in a git repository)"
+        parts = prov("chart-commit", none) + prov("bundle-commit", none) + prov("kit", none)
+        rc, out, err = self.run_tool(export(other="b"), export(other=parts + "b"),
+                                     "view-A input-commits: the kit records its inputs\n")
+        self.assertEqual(rc, 0, err)
 
 
 if __name__ == "__main__":
