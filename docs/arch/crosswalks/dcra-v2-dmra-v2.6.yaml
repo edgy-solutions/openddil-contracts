@@ -1,0 +1,60 @@
+# Crosswalk: the NATO Data Centric Reference Architecture, Version 2, against the DoD Data Mesh Reference
+# Architecture, Version 2.6. It maps reference to reference, element to element, with no project in between.
+#
+# DRAFT, and outside the proposed alignment format. arch-kit's docs/design/alignment.md (§8) leaves a crosswalk
+# between two references to a later record type, so nothing renders or checks this file. The shape below is this
+# file's own. The two references are cited in ../alignment/dcra-v2.yaml. The DMRA ids, and the DCRA's ap10- and md-
+# ids, are that record's. The DCRA's ap9-, ap4- and ap14- ids are those of the DCRA element list proposed for
+# arch-kit. Element names are the references' own. Every note is this project's paraphrase. No passages, no figures.
+
+title: The DCRA v2 against the DoD DMRA v2.6
+from: dcra          # the reference key in ../alignment/dcra-v2.yaml
+to: dmra
+correspondence: "how much of the `from` element the `to` services cover: corresponds | partial | none"
+
+pairs:
+  # DCRA Appendix 9: roles
+  - {from: [ap9-pep], to: [dmra-05, dmra-06], correspondence: partial,
+     note: "Service 6 names enforcement points as what it feeds. There is no separate enforcement service."}
+  - {from: [ap9-pdp], to: [dmra-05], correspondence: partial,
+     note: "Access control is one service. Decision is not split from enforcement."}
+  - {from: [ap9-pip], to: [dmra-04, dmra-01], correspondence: partial,
+     note: "Attributes come from profiles and identifiers. No information point is named."}
+  - {from: [ap9-pap], to: [dmra-06], correspondence: corresponds,
+     note: "Named as a policy administration point."}
+  # DCRA Appendix 9: services
+  - {from: [ap9-crypto], to: [], correspondence: none,
+     note: "Not one of the 15 services."}
+  - {from: [ap9-authz, ap9-authn, ap9-certs, ap9-identity], to: [dmra-05], correspondence: partial,
+     note: "Identity verification only. There is no certificate service and no identity-lifecycle service."}
+  # DCRA Appendix 4: data-product characteristics (para 12) and catalogue metadata (para 9)
+  - {from: [ap4-self-describing], to: [dmra-04], correspondence: corresponds}
+  - {from: [ap4-domain-centric], to: [dmra-14], correspondence: partial,
+     note: "Domain context on the consumer's side only."}
+  - {from: [ap4-metadata-driven], to: [dmra-04, dmra-12], correspondence: partial,
+     note: "Marking is present, but no NATO label standard is cited."}
+  - {from: [ap4-interoperability], to: [dmra-02, dmra-14], correspondence: corresponds}
+  - {from: [ap4-machine-accessible], to: [dmra-07], correspondence: partial,
+     note: "API routing, not API openness."}
+  - {from: [ap4-lifecycle], to: [dmra-11], correspondence: corresponds}
+  - {from: [ap4-governance], to: [dmra-06, dmra-13], correspondence: partial}
+  - {from: [ap4-consumer], to: [dmra-08, dmra-14], correspondence: partial}
+  - {from: [md-dcat], to: [dmra-03], correspondence: partial,
+     note: "A federated catalogue. DCAT is not named."}
+  # DCRA Appendix 10: data quality management
+  - {from: [ap10-dqms], to: [dmra-13], correspondence: corresponds}
+  - {from: [ap10-poisoned], to: [dmra-03, dmra-11], correspondence: partial,
+     note: "Recall and notification exist. A flag-driven restricting proxy does not."}
+  # DCRA Appendix 14: planes
+  - {from: [ap14-infrastructure], to: [dmra-09], correspondence: partial,
+     note: "Messaging only. Storage and transport are outside the 15 services."}
+  - {from: [ap14-operational], to: [dmra-07, dmra-09], correspondence: partial}
+  - {from: [ap14-data-management], to: [dmra-03, dmra-08, dmra-11], correspondence: corresponds,
+     note: "Ingestion and disposition are implied only."}
+  - {from: [ap14-analytical], to: [], correspondence: none,
+     note: "Services 10 and 15 analyse the services themselves, not mission data."}
+
+# DMRA services that no pair above names.
+unmatched_to:
+  - {id: dmra-10, note: "Telemetry about the services themselves."}
+  - {id: dmra-15, note: "Telemetry about the services themselves."}
