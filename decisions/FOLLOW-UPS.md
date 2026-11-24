@@ -4,6 +4,73 @@
 Every row's authority is its home document; if they disagree, the home wins
 and this file is the thing that is wrong.
 
+## OPEN 2026-11-18 — inventory rows age out 24 h after their producer stops writing them (ADR-0044's prune, the part not built)
+
+**Required 2026-11-18.** The longest cut a tier must survive is **seven days for now**, declared per tier, to be
+replaced by a real number when requirements firm up. The lab deployments declare 24 h; that is their own declaration,
+not a design ceiling. This row is the prune; everything else that assumes a shorter cut is the next row.
+- **Built, but the home record says it is not.** ADR-0044's amendment says the prune predicate change is "not yet
+  made", and its index entry says "nothing built". The projector has carried the change since bf01d29 (2026-09-29,
+  "terminal-only prune"). For an asset-keyed table, `build_prune_sql` deletes a row only when it is older than
+  `asset_ttl_hours` **and** the asset's `operational_status` is destroyed, deactivated or removed. A quiet asset that
+  is still operational is no longer pruned for its age. This was read in the code at the projector's default branch,
+  and confirmed on 2026-11-18 against a running deployment's projector config.
+- **No table loses a cut edge's rows at +24 h.** Every asset-keyed table is gated, so silence does not prune it. The
+  running deployment's prune counter showed no upsert-table deletes over two days.
+- **Not built: one table stays on age alone.** `inventory_items` is keyed `<asset_id>:<layer_name>`, not by
+  `asset_id`, so the projector leaves it on the age-only predicate (`NON_ASSET_ID_KEYED_UPSERT_TABLES`).
+- **Where it runs: the root projectors only.** `asset_ttl_hours: 24` on `inventory_items` is in the projector
+  image's root config, which `projector-hq` runs, as does the projector of an edge that is not tier-managed (the
+  chart sets no `PROJECTOR_CONFIG` on either). The tier projectors' config, from the chart, sets no TTL on it, so a
+  tier never prunes it. At a root projector, an inventory row is deleted 24 to 25 h after its last write, because
+  the prune runs hourly (`PROJECTOR_PRUNE_INTERVAL_S`, default 3600).
+  `PROJECTOR_ASSET_TTL_HOURS`, if set, would change the age everywhere and give the tier projectors a TTL too.
+- **What triggers it: the inventory producer stops, not the asset or the link.** An inventory row's age is set by
+  the producer that writes it, not by the asset's own reports.
+  - When that producer sits on the hub side of a cut, an edge cut does not age the root's inventory rows out. The
+    tier stores have no TTL on the table, and a root-config edge does not carry inventory.
+  - It becomes a cut effect only in a deployment where a root projector's inventory arrives across the cut link.
+- **Why it stays required.** An age-only delete contradicts ADR-0044 rule 3, which makes only a terminal status
+  prunable. It also turns into a cut loss in the deployment just described.
+
+Home: `ADR-0044-lifecycle-two-columns-no-deletes.md`, Amendment (rule 3). Named by: the architecture order of
+2026-11-18.
+
+Close when:
+- `inventory_items` passes the terminal-status gate, either through an `asset_id` column or a join on its key's
+  asset part;
+- a test shows a quiet operational asset keeping its inventory rows past `asset_ttl_hours`;
+- ADR-0044's amendment and its index entry say `inventory_items` is gated too, naming the commit.
+
+## OPEN 2026-11-18 — what still assumes a cut shorter than seven days
+
+The longest cut a tier must survive is seven days for now, declared per tier (previous row). Each line below is a
+place that assumes less, or that has not been checked against seven days. Values were read in the chart at 0.1.161
+and in the projector's default branch, not on a running tier. The owner is a role, not a person.
+
+| # | What | Where, and the value today | Owner | State |
+|---|---|---|---|---|
+| 1 | The 24 h prune | No table loses a cut edge's rows at +24 h. Only `inventory_items` is pruned on age alone (`asset_ttl_hours: 24`), and only by the root projectors (`projector-hq`, and an edge that is not tier-managed); the tier projectors never prune it. A row ages out only when its inventory producer stops writing it for 24 h, so it is a cut effect only where a root projector's inventory crosses the cut link (previous row) | the projector's owner | **required** |
+| 2 | The edge buffer: retention of the topics the edge bridge carries | `retention.ms` 24 h on `raw-sensor-stream` (an edge with no tier node), `munition-tracks`, and, at a tier-managed edge, `asset-telemetry-windows` and `derived-sustainment`. While the bridge is cut, a record older than 24 h is deleted before it is forwarded. The compacted bridged topics keep each key's last value; the 30-day ones (`tactical-events`, `effector-events`) hold seven days | the chart's owner | open |
+| 3 | The tier uplink's topics at a tier node's broker | not read: whether a tier node's broker uses the same topic specs as an edge broker | the chart's owner | to read |
+| 4 | The region fan-in topic | 7 d by time and 2 GiB by size (`regionFanIn.retentionBytes`). If it sits behind a cut, seven days is zero margin, and 2 GiB is unchecked against seven days of a region's rate. Whether it sits behind a cut is not read | the chart's owner | to read |
+| 5 | The bridge's committed offsets | the chart sets no group offset retention, so the broker's default applies (not read). If the bridge's group has no member for the length of a cut and its offsets expire, the bridge restarts from wherever its reset policy says | the chart's owner | to read |
+| 6 | The hub's late-sample window | not built (observability slice). Prometheus' `out_of_order_time_window` defaults to 0 s; it has to accept samples seven days old | the observability slice | open, design |
+| 7 | The collector's buffer at a tier | not built. The WAL volume is declared per tier and sized for seven days of the tier's rate. The exporter's retry gives up after `max_elapsed_time` (default 5 min); whether a batch held on disk is dropped then is not read | the observability slice | open, design |
+| 8 | Replication slots | none found across tiers. Each tier's Electric has a logical slot on its own tier's Postgres, and `max_slot_wal_keep_size` is not set (no bound). Nothing found that a cut holds open | the chart's owner | checked, nothing found |
+| 9 | Session lifetime | `oidc.sessionTtlSeconds: 900` is the absolute ceiling on a session, and also sets the SSO idle and maximum in the realm import. A session open when a cut starts ends 15 minutes later; a new sign-in fails while cut, because the code exchange is a live call to the token endpoint | identity (edge sign-in) | open, waits on the realm question |
+| 10 | Token lifetimes | the realm import sets the SSO idle and maximum only, so the access and ID token lifetimes are the identity provider's defaults (not read). Renewal happens at the ID token's expiry; what it does when the token endpoint is unreachable is not read | identity (edge sign-in) | to read |
+
+Checked and not a cut assumption: the ingest's spool (64 Mi, 10,000 entries, emptyDir) covers an outage of the
+edge's own broker, not a cut; `link-heartbeat` keeps 1 h, and is liveness only; the raw ingress topics keep 24 h but
+are read at the edge by the edge's own mapper, not across the link.
+
+Home: this row, until the edge profile record and the observability design record are filed. Named by: the
+architecture order of 2026-11-18.
+
+Close when: each line is fixed, sized for seven days and declared per tier, or recorded as not a cut assumption, with
+its home named.
+
 ## OPEN 2026-11-03 — durable records that live only in Restate state are erased by every upgrade that wipes Restate (first seen: a launcher's Fire count)
 
 **Widened 2026-11-12 to a rule: no durable record lives only in Restate state.** A record that has to outlast an upgrade gets a home in the store, and Restate state holds at most a working copy of it. This row started with the launcher counts. The review of the ADR-0058 first-increment spec found a second case: **closed manual-discrepancy episodes** (ADR-0051, "the fault cleared and the record stayed"). They live only in `AssetCM` state (`am_state`, `closed_episodes`, on the edge tiers), with no topic, no table and no reader, so every roll that wipes Restate deletes the FRACAS record of every closed fault. The `failure_episodes` projection (its topic, the projector handler, the migration and a backfill) is ordered ahead of the rest of slice 3a. Until it lands, a lab roll that wipes Restate first exports the closed episodes from the state table to a file and reads that file back. The backfill loads those exports together with whatever is still held.
