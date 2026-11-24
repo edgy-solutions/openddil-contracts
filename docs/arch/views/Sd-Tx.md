@@ -35,7 +35,7 @@ This view is also the Standards-Profile: its StdV-1 export lists the same rows.
 | SKOS | Vocabularies, and equivalence with an owner | Concept aligned | ADR-0056 |
 | SD-22, MIL-STD-3018, IEC 62402 | Obsolescence, served by the where-used graph | Concept aligned | ADR-0056 |
 | DCAT, ODRL | Data products and their terms; owed | Declared intent | ADR-0056 |
-| DMRA 2.6 | A unique identifier as a core data service; the edition read is a draft | Concept aligned | ADR-0056 |
+| DMRA 2.6 | A unique identifier as a core data service; an earlier reading may have been of a different version | Concept aligned | ADR-0056 |
 | ISO 13374 | Reading of the condition-monitoring blocks; block names from a secondary source | A reading, not conformance | ADR-0038, ADR-0059 |
 | ISO 17359 | A condition-monitoring programme | Declared intent, abstract only | ADR-0059 |
 | ISO 13381-1 | Prognosis, remaining useful life, predictive horizon; the 2015 edition, withdrawn, and the 2025 edition unread | Concept aligned, terms read | ADR-0059 |

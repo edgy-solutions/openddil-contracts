@@ -70,7 +70,8 @@ catalog, not `asset_id` (ADR-0055 §6). Nothing maps one to the other today.
 
 - **Each thing has exactly one identity.** It is a UUID version 7 (RFC 9562), written as the IRI `urn:uuid:<uuid>`.
 - **"Thing" is any object, not only an asset.** That covers a physical asset, a component, a vocabulary term, a data
-  product and a BOM item. The scope comes from DMRA 2.6 as iagent's architect read it (§8).
+  product and a BOM item. The scope comes from DMRA 2.6, as another architect read it ("Standards, cited by
+  concept"). That reading may have been of a different version from the copy now held.
 - **A declaration binds before it mints (the project owner, 2026-11-07).**
   - **Most things already have an identity elsewhere.** A tank has a UII and a serial number in the maintenance system
     of record. A tier that minted a fresh identity on arrival would make OpenDDIL a second system of record for
@@ -290,7 +291,7 @@ Every standard below is cited by concept only.
 | EU 2013/488/EU, NATO C-M(2002)49 | Declared policies, as in ADR-0055 | As cited in ADR-0055 |
 | SD-22, MIL-STD-3018, IEC 62402 | Obsolescence, which the where-used graph serves | Concept only |
 | DCAT, ODRL | Data products and their terms, later | Concept only |
-| **DMRA 2.6** (CDAO, March 2024, **draft, watermarked**) | UID as core service 1 of 15: unique, persistent, never reused, machine-readable, "ascribed to any object", with a multi-generator form (p.13, Fig. 8). Each CCV term gets a UID (p.14). xBOMs translate serial numbers and part numbers (p.15) | **Not read by lane 02.** The reading and page citations are iagent's architect's. "Sequenced" is met by v7 if it means monotonic within one generator |
+| **DMRA 2.6** (CDAO, March 2024) | UID as core service 1 of 15: unique, persistent, never reused, machine-readable, "ascribed to any object", with a multi-generator form (p.13, Fig. 8). Each CCV term gets a UID (p.14). xBOMs translate serial numbers and part numbers (p.15) | **Read for the service list only.** The reading and page citations are another architect's. That reading may have been of a different version: the copy now held carries no draft marking, and its page numbers may differ. "Sequenced" is met by v7 if it means monotonic within one generator |
 
 ## Check
 
