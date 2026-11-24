@@ -15,12 +15,32 @@ age hourly all along. Both are corrected in place. The distinction §1 now draws
 is that **retention prunes by age, lifecycle changes status by event, and only a
 terminal status is prunable.**
 
-**Code change this amendment requires, not yet made:** `prune_loop`'s predicate
-must gain the terminal-status condition, so that `asset_ttl_hours` can only ever
-reap an asset whose `operational_status` is terminal, and never one that is
-merely quiet. Until that lands, §1 describes the intended system and not the
-running one — and the honest reading of the gap is that the pruner is still a
-lifecycle.
+**Code change this amendment requires: built, except for one table**
+(corrected 2026-11-18; this paragraph said "not yet made"). Since projector
+`bf01d29` (2026-09-29), `build_prune_sql` gates every asset-keyed prune on the
+asset's `operational_status` in `telemetry_latest_state` being terminal
+(`destroyed`, `deactivated`, `removed`). `asset_ttl_hours` now reaps only a
+terminal asset, never one that is merely quiet.
+
+**What remains: `inventory_items`.** It is keyed `<asset_id>:<layer_name>`, so
+it is still pruned on age alone (`NON_ASSET_ID_KEYED_UPSERT_TABLES` in the
+projector's `main.py`). Its `asset_ttl_hours: 24` is set in the projector
+image's root config, which `projector-hq` runs, as does the projector of an
+edge that is not tier-managed. The tier projectors' config sets no TTL on it.
+So at the root, an inventory row is deleted 24 to 25 hours after its last
+write. For that one table, the pruner is still a lifecycle. The project owner
+ruled on 2026-11-18 that removing it is required (FOLLOW-UPS).
+
+**What triggers it, and what does not.** An inventory row's age is set by the
+producer that writes it, not by the asset's own reports. So a row ages out when
+its inventory producer stops writing it, not when an asset goes quiet or an
+edge is cut. When that producer sits on the hub side of a cut, **no table loses
+a cut edge's rows at +24 h**: the tier stores set no TTL on the table, and an
+edge that runs the root config does not carry inventory. It becomes a cut loss only in a
+deployment where a root projector's inventory arrives across the cut link.
+This was read in the projector's code and confirmed on 2026-11-18 against a
+running deployment's config. The prune counter there showed no upsert-table
+deletes over two days.
 
 This ADR amends `DESIGN-2026-09-26-asset-lifecycle.md` (same day) on one
 point and keeps the rest: the design's `EVICTED` state is **withdrawn**, because
@@ -195,7 +215,7 @@ Rule 3 is what forbids it: silence is not a terminal status, so a quiet asset
 never becomes prunable by going on being quiet.
 
 **What this changes in the code as it stands.** `asset_ttl_hours: 24` on the
-per-asset upsert tables is currently a crude lifecycle wearing retention's
+per-asset upsert tables was a crude lifecycle wearing retention's
 clothes — its meaning is "silent for a day means gone". The mechanism stays; its
 predicate changes. Pruning an asset row requires a terminal
 `operational_status`, and `reporting_status` is never a prune input. An asset
