@@ -8,6 +8,9 @@ layered in that order, and the readiness doc beside the chart, into docs/arch/sp
 Usage:
     python docs/arch/tools/refresh_specimen.py
 
+Run it whenever the chart pin (HELM_REF in .github/workflows/check-views.yml) is bumped,
+against the pinned commit, and commit the result with the bump.
+
 Takes no arguments. Inputs come from the environment:
     OPENDDIL_REPOS   directory holding openddil-helm (default: the directory
                      that holds this repository)
