@@ -16,6 +16,9 @@ every tier, as decision 2 states.
 **Amended 2026-11-15:** each kind the intake admits declares the contract versions it accepts, and an undeclared
 version is refused with the version named. See
 [Amendment 2026-11-15](#amendment-2026-11-15-an-intake-kind-declares-the-contract-versions-it-accepts).
+**Proposed 2026-11-24, not yet ruled:** an action record's parts are objects with named fields, and its citations
+sit under one key, `work_order.task_refs`. See
+[Amendment 2026-11-24](#amendment-2026-11-24-an-actions-parts-are-objects-and-its-citations-sit-under-one-key).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
 `maintenance_actions` table and a pane that knew about it. **v2 makes OpenDDIL's side generic.** OpenDDIL code names no
@@ -444,3 +447,67 @@ on the day two versions share a shape.
 ### What does not change
 - §5's steps and their order. The version check is part of step 1, validation.
 - The hash skip, the provisional rule of 2026-10-05, the re-decision rule of 2026-11-10, and the gate.
+
+## Amendment 2026-11-24: an action's parts are objects, and its citations sit under one key
+
+**Proposed, not yet ruled.**
+
+### What happened
+The recording script for the fault-report demo beat expects three cells of the hub's released-records pane to be
+empty when an action arrives:
+- **Part and From**, because iagent's release step lists `work_order.parts` as strings, and the pane's column
+  pointers read named fields of an object;
+- **Cites**, because the release step carries its citations under a key that the pane's column doesn't read.
+
+iagent's SDK, at contract version 2, already types each part as an object and each citation as a `task_refs[]`
+entry. §3 names the same two fields. Neither OpenDDIL's kind nor this ADR says what is inside them, so a record of
+either shape is admitted, and the pane shows nothing for the one it doesn't read.
+
+On 2026-11-24 iagent's architect asked for one contract for both sides, written here: parts are objects with named
+fields, and citations sit under one named key. iagent changes its side to match.
+
+### The rule
+- **`work_order.parts[]` is a list of objects.** Each part has these fields:
+
+  | field | required | value |
+  |---|---|---|
+  | `item` | yes | the item the part is for, not blank |
+  | `part_ref` | yes | the part's reference, not blank |
+  | `quantity` | yes | an integer above 0 |
+  | `source_site` | no | the site the part comes from, or null before one is chosen |
+  | `icn` | no | the illustrated-parts figure the part is cited from, or null |
+  | `hotspot_id` | no | the part's hotspot in that figure, or null |
+  | `lead_time_days` | no | an integer, set together with `lead_time_source` or not at all |
+  | `lead_time_source` | no | the source of the lead time, from iagent's lead-time vocabulary |
+
+- **A part written as a bare string is refused** `schema_invalid` by a kind that declares version 2.
+- **Citations sit under `work_order.task_refs[]`, and under no other key.** Each entry has two fields:
+  - `graph_uri`, the manual node's identifier (required);
+  - `data_module_code`, shown to the reader and never used as the identifier (required).
+- **A part's figure is cited by its own `icn` and `hotspot_id`.** That's a field of the part, not a second
+  citation key.
+- **A pane column that shows citations reads `task_refs`.** A citation under any other key is kept and never acted
+  on, as amendment 2026-11-15 rules for unknown fields. It isn't shown.
+- **This is the shape of contract version 2.** It isn't a new version. A kind's version 2 declaration types both
+  fields as above, and the fields stay required, as amendment 2026-11-15 rules.
+
+### Who changes what
+- **iagent's release step** sends this shape.
+- **A deployment's action kind** types both fields in its version 2 schema (§3). Its pane's column pointers read them
+  (§5). Both are deployment configuration.
+- **OpenDDIL code doesn't change.** The intake validates against the kind's schema, and the pane reads pointers.
+
+### Why objects, and why one key
+- A part as a string can't say how many are needed or where they come from. The From column has nothing to read.
+- With two keys for citations, a pane that reads one key shows an empty cell for a record that uses the other. The
+  record looks uncited when it isn't.
+- `task_refs` is the name that §3 and iagent's SDK already use, so only the record's sender has to change.
+
+### The transition
+- A record with no contract version is still admitted and counted as `unversioned` (amendment 2026-11-15). It's
+  validated against the kind as declared at the time.
+- A record that declares version 2 and lists a part as a string is refused `schema_invalid`.
+
+### What does not change
+- §3's field list, §5's steps and their order, and the pane being a generic released-records pane.
+- Amendment 2026-11-15's version rule, and its rule that unknown fields are kept and never acted on.
