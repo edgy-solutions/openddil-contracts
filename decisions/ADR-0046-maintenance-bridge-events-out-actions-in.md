@@ -17,7 +17,7 @@ every tier, as decision 2 states.
 version is refused with the version named. See
 [Amendment 2026-11-15](#amendment-2026-11-15-an-intake-kind-declares-the-contract-versions-it-accepts).
 **Proposed 2026-11-24, not yet ruled:** an action record's parts are objects with named fields, and its citations
-sit under one key, `work_order.task_refs`. See
+sit under one key, `work_order.task_refs`. The version field is `contract_version`, an integer. See
 [Amendment 2026-11-24](#amendment-2026-11-24-an-actions-parts-are-objects-and-its-citations-sit-under-one-key).
 
 v1 described a maintenance bridge: two more egress gate instances, two system subjects named for maintenance, a
@@ -124,7 +124,7 @@ A **kind** is a JSON Schema document in the overlay, plus four declarations the 
 | `label` | the pointer to `{originator_nation, releasable_to}` (`/label`) |
 | `owning_tier` | the pointer to the tier that owns the subject (`/owning_tier`) |
 | `episode` | optional: the pointers whose tuple names one episode (`/asset_id`, `/fault/item`, `/fault/fault_code`) |
-| `versions` | inbound kinds: the pointer to the record's contract version, and the versions accepted, each with its schema (amendment 2026-11-15) |
+| `versions` | inbound kinds: the pointer to the record's contract version, and the versions accepted, each with its schema (amendment 2026-11-15; the field is `contract_version`, an integer, amendment 2026-11-24) |
 
 The code knows a kind only as a name, a schema and these pointers. This pass declares two:
 - **`MaintenanceFaultEvent`**, which keeps v1 §1's fields:
@@ -417,6 +417,8 @@ version 2 does not declare, and it does not require three fields that version 2 
 - **Each kind the intake admits declares the contract versions it accepts:** the pointer to the record's version,
   and, for each accepted version, its schema.
 - **A record carries its version.** iagent adds the field to the record, and the field's name is iagent's.
+  - *Named by amendment 2026-11-24 (proposed):* the field is `contract_version`, an integer. The kind's `versions`
+    declaration points at it.
 - **An undeclared version is refused.** The reason is `version_undeclared`, and the decision names the version that
   arrived. It is counted, and the record is stored with its decision, like any refusal (§5).
 - **Each declared version has its own schema.** The fields iagent's version 2 requires (`provenance`, `task_refs` and
@@ -435,6 +437,9 @@ version 2 does not declare, and it does not require three fields that version 2 
 - **The end is named.** From the iagent release that adds the field, a record with no version is refused, with the
   reason `version_missing`. The kind declares that release once iagent names it. Until then, the admission above
   stands.
+  - *Named by amendment 2026-11-24 (proposed):* the field ships in iagent's first release after 9 December 2026.
+    The switch to `version_missing` is a roll on OpenDDIL's side, predicted before it runs, after that release and
+    never before it.
 
 ### Why not "pin via the kind"
 A schema that happens to reject an old shape is not the same as knowing which version arrived. It also fails silently
@@ -490,6 +495,8 @@ fields, and citations sit under one named key. iagent changes its side to match.
   on, as amendment 2026-11-15 rules for unknown fields. It isn't shown.
 - **This is the shape of contract version 2.** It isn't a new version. A kind's version 2 declaration types both
   fields as above, and the fields stay required, as amendment 2026-11-15 rules.
+- **The version field is `contract_version`, an integer.** `contract_version: 2` means this shape. This names the
+  field that amendment 2026-11-15 left to iagent, and both amendments use that name and type.
 
 ### Who changes what
 - **iagent's release step** sends this shape.
@@ -504,9 +511,12 @@ fields, and citations sit under one named key. iagent changes its side to match.
 - `task_refs` is the name that §3 and iagent's SDK already use, so only the record's sender has to change.
 
 ### The transition
-- A record with no contract version is still admitted and counted as `unversioned` (amendment 2026-11-15). It's
-  validated against the kind as declared at the time.
-- A record that declares version 2 and lists a part as a string is refused `schema_invalid`.
+- **iagent ships `contract_version` in its first release after 9 December 2026.** Until then its action records
+  arrive with no `contract_version`. They are admitted and counted as `unversioned`, as amendment 2026-11-15 rules,
+  and validated against the kind as declared at the time.
+- **A record with `contract_version: 2` that lists a part as a string** is refused `schema_invalid`.
+- **The end of the unversioned admission** is amendment 2026-11-15's `version_missing` refusal. It's switched on by a
+  roll on OpenDDIL's side, predicted before it runs, after that iagent release and never before it.
 
 ### What does not change
 - §3's field list, §5's steps and their order, and the pane being a generic released-records pane.
