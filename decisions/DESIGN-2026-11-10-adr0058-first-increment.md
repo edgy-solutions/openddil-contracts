@@ -15,6 +15,10 @@ iagent's checked copy is placed and its completion contract (due 2026-11-27) is 
 its owning tier, under the existing label rule. "Below" is the tier's own children and their children: a region does not
 see another region's edges, and an edge does not see its region. Closed episodes go up to the region and the hub by
 the chart's path in §10.
+**Amendment PROPOSED 2026-11-26, for the project owner's ruling (§4, §9 3a check 7):** `/egress/cases` is scoped by
+the PEP's existing label rule, applied to two labels: the asset's, which decide whether its cases are listed at all,
+and the action row's, which decide whether a case's disposition is shown or withheld. The labels are stripped from the
+response. Ordered by the project owner on 2026-11-26. Until it is ruled, the text of 2026-11-23 holds.
 **Builds on:** ADR-0058 §3 (cortex owns task and approval shapes; OpenDDIL owns record, finding and indicator) and
 §6; ADR-0046 (decision 1: OpenDDIL holds no workflow state; decision 2 and §5.4: per-tier instances and owning-tier
 intake are the design; §6: delegation); ADR-0051 (§1 and its first slice: a closed episode is kept, and projected at the
@@ -366,6 +370,22 @@ OpenDDIL's side to them.
   disposition".
 - **At the edge it needs the route change (3c).** Until then, the action is admitted at the hub only (finding 6), and
   the edge's card names it: "disposition held at the hub".
+- **The label rule, by two labels** (amended 2026-11-26, proposed). Since 3a the route returns intake rows, and an
+  intake row is labelled (finding 5). Finding 4 read the route before that, when it returned only ledger rows. The
+  route is therefore scoped by the PEP's existing label rule for the viewer, as every read of a labelled record is
+  (ADR-0029 §1). The filter is the PEP's, and it carries the one decision for that viewer. The card does not repeat it
+  (ADR-0058 §2a).
+  - **The asset's labels decide the list.** They are read from the asset's record, as an episode's are (§3.2). A viewer
+    the rule does not admit to the asset gets an empty list. That response is the same as for an asset with no cases,
+    and nothing in it says whether the asset has cases. This covers the ledger fields too, such as the fault code and
+    the component: they are asset data.
+  - **The action row's labels decide the disposition.** They are the `originator_nation` and `releasable_to` of the
+    action's `intake_records` row. The latest action is chosen first, from all of the case's action rows. If the rule
+    does not admit it, the case draws "disposition withheld", with no option, stage, reason or time. It is never
+    "no disposition", and never an earlier action the viewer may see, drawn as if it were the latest.
+  - **Withheld dispositions are counted** in the response, as the egress pane counts its withholds (ADR-0058 §2a). A
+    withheld disposition is a declared absence, never an empty value.
+  - **The labels are stripped from the response.** They are read to filter, and are not returned.
 
 ## 5. The maintainer's day: four sources, each with its owner
 
@@ -480,6 +500,14 @@ Each is a test a named workflow runs. A slice merges on its own checks.
    - A refused one draws "refused" with its reason.
    - A case with no action draws nothing, and the absence is named.
    - At the edge, the card reads "disposition held at the hub".
+   - **The label rule** (amended 2026-11-26, proposed). The viewer holds a nation the planted rows do not admit.
+     - Red: a planted case on an asset whose labels the viewer lacks is absent. The response is the same as for an
+       asset with no cases.
+     - Red: a planted action whose labels the viewer lacks, on a case of an asset the viewer may see, makes that case
+       draw "disposition withheld". The withheld count is 1, and the action's option, stage, reason and time are
+       absent.
+     - Red: when that withheld action is the latest, an earlier action the viewer may see is not drawn in its place.
+     - No response carries `originator_nation` or `releasable_to`.
 8. **Shapes do not grow with viewers.** Twenty viewers on `GET /reports/mine` open no more shapes than one.
 
 ### 3b
