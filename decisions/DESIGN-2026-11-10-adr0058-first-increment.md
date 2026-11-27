@@ -20,6 +20,11 @@ the chart's path in §10.
 its cases are listed at all, and the action row's, which decide whether a case's disposition is shown or withheld. The
 labels are stripped from the response. The disposition is the latest action; if the viewer may not see it, the case
 draws "disposition withheld".
+**Amendment ACCEPTED, ruled by the project owner 2026-11-27 (proposed 2026-11-27; §3.3, §4, §9 3a checks 4 and
+7):** `GET /reports/mine` is scoped by the PEP's existing label rule as well as by the filer's subject. A filing the
+rule does not admit is counted, never listed: the response says how many of the viewer's reports are withheld. On both
+report routes, an action or completion row the rule does not admit draws "withheld" in its place. On `/egress/cases`,
+a withheld disposition is declared on its own case, and the response carries no separate count.
 **Builds on:** ADR-0058 §3 (cortex owns task and approval shapes; OpenDDIL owns record, finding and indicator) and
 §6; ADR-0046 (decision 1: OpenDDIL holds no workflow state; decision 2 and §5.4: per-tier instances and owning-tier
 intake are the design; §6: delegation); ADR-0051 (§1 and its first slice: a closed episode is kept, and projected at the
@@ -346,7 +351,23 @@ OpenDDIL's side to them.
 ### 3.3 The routes
 
 - `GET /reports/mine` on the PEP. It reads the viewer's subject from the session and returns the timeline rows above.
-  The filer's own subject is the only filter.
+  - ~~The filer's own subject is the only filter.~~ (amended 2026-11-27, accepted) Two filters apply. The filer's
+    subject selects the episodes, and the PEP's existing label rule for that viewer decides which of them come back,
+    as on `/reports/tier`. ADR-0029 §1 (accepted) gives a viewer's own filings no exemption.
+  - The case it covers: a filer whose nations narrow after filing, or whose episode's labels are restamped from the
+    asset's record (§3.2), no longer sees that asset. The episode's asset id, component and fault code are asset data.
+  - **A filing the rule does not admit is counted, never listed.** The response carries `withheld`, the number of the
+    viewer's own episodes the rule does not admit. No field of a withheld episode is returned, not even its time.
+  - The pane draws "N of your reports withheld". The empty state "no reports filed by you" is drawn only when the
+    viewer filed none; it is never drawn over withheld filings.
+  - The count is a declared absence (ADR-0058 §2a), as the egress pane counts its withholds. It counts only the
+    viewer's own acts. iagent's position that a withheld task draws no count (§2a's table) covers iagent's tasks,
+    not OpenDDIL's records.
+  - The project owner ruled this on 2026-11-27: the count stays. It counts only the viewer's own filings, which they
+    know they made. Without it, a report they filed would vanish with no explanation.
+- **The states inside a listed episode, on both routes** (amended 2026-11-27, accepted). An action row or a
+  completion row the rule does not admit draws "disposition withheld" or "work record withheld" in its place, with no
+  option, stage, reason or time. It is never drawn as "no disposition" or as "no source".
 - **`GET /reports/tier`, a supervisor's reports at the tier and below** (amended 2026-11-22, ruled 2026-11-23). Every
   episode filed at the viewer's tier or at a tier below it, open and closed, with the same timeline.
   - "Below" is the children of this tier, and their children, as ADR-0022 constraint 3 reads a rollup. A region lists
@@ -386,8 +407,11 @@ OpenDDIL's side to them.
     "no disposition", and never an earlier action the viewer may see, drawn as if it were the latest. The project
     owner ruled this on 2026-11-26: the disposition is the latest action, and if the viewer may not see it, the case
     draws "disposition withheld".
-  - **Withheld dispositions are counted** in the response, as the egress pane counts its withholds (ADR-0058 §2a). A
-    withheld disposition is a declared absence, never an empty value.
+  - ~~**Withheld dispositions are counted** in the response, as the egress pane counts its withholds (ADR-0058 §2a).~~
+    **Withheld dispositions are declared on their cases** (amended 2026-11-27, accepted). Each withheld case carries
+    the state "withheld", so the case itself names the absence, and the response needs no separate count. The PEP
+    records the number withheld in its decision log. A withheld disposition is a declared absence, never an empty
+    value.
   - **The labels are stripped from the response.** They are read to filter, and are not returned.
 
 ## 5. The maintainer's day: four sources, each with its owner
@@ -488,6 +512,13 @@ Each is a test a named workflow runs. A slice merges on its own checks.
    - An episode with two sources lists for both filers.
    - A viewer in no episode's sources gets an empty list, with the state "no reports filed by you".
    - Two episodes sharing an id join their ledger rows by interval; a row that fits neither is listed as unmatched.
+   - **The label rule** (amended 2026-11-27, accepted). The viewer holds a nation the planted rows do not admit.
+     - Red: an episode the viewer filed, whose labels the viewer lacks, is absent from the list, and `withheld` is 1.
+       No field of it appears anywhere in the response.
+     - Red: a viewer whose every filing is withheld gets "N of your reports withheld", not "no reports filed by you".
+     - Red: on a listed episode, an action row whose labels the viewer lacks draws "disposition withheld", and a
+       completion row whose labels the viewer lacks draws "work record withheld". Both carry no option, stage,
+       reason or time. The same holds on `GET /reports/tier`.
 5. **A supervisor's reports at the tier and below** (amended 2026-11-22, ruled 2026-11-23).
    - A supervisor sees every episode at the tier that the PEP's label rule admits.
    - A planted episode with a label the supervisor lacks is absent.
@@ -507,8 +538,8 @@ Each is a test a named workflow runs. A slice merges on its own checks.
      - Red: a planted case on an asset whose labels the viewer lacks is absent. The response is the same as for an
        asset with no cases.
      - Red: a planted action whose labels the viewer lacks, on a case of an asset the viewer may see, makes that case
-       draw "disposition withheld". The withheld count is 1, and the action's option, stage, reason and time are
-       absent.
+       draw "disposition withheld". ~~The withheld count is 1~~ Exactly one case draws it, the decision log records
+       one withheld (amended 2026-11-27, accepted), and the action's option, stage, reason and time are absent.
      - Red: when that withheld action is the latest, an earlier action the viewer may see is not drawn in its place.
      - No response carries `originator_nation` or `releasable_to`.
 8. **Shapes do not grow with viewers.** Twenty viewers on `GET /reports/mine` open no more shapes than one.
