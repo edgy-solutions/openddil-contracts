@@ -1066,6 +1066,10 @@ locally, enforces locally, and cannot log anybody new in.*
 - ADR-0031 — converged edge node; the co-located reasoning plane shares
   this ADR's policy engine rather than introducing a second authorization
   truth.
+- ADR-0050 — two named exceptions, ruled 2026-11-27, both for null-label
+  rows only: an unlabelled arrival is shown at its own edge to declare
+  roles (against §1), and counted as a single number per tier (against
+  the 2026-09-08 addendum). Labelled rows get no exception.
 
 
 ---

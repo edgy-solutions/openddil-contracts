@@ -49,7 +49,7 @@ flowchart LR
 |---|---|---|---|
 | A1.1, A1.2: structure then semantics, with no engine code per format | [ADR-0030](../../../decisions/ADR-0030-two-stage-configurable-ingress.md) | Accepted | Not stated |
 | A1.3: labels are stamped at ingress and carried, never re-derived | [ADR-0029](../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Not stated |
-| A2.1: declare or confirm; nothing is matched automatically | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| A2.1: declare or confirm; nothing is matched automatically | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Accepted | Status line |
 | A2.2: configuration data model | [ADR-0009](../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
 | A2.3: effectors and in-flight munitions are tracks, never assets | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md), [ADR-0049](../../../decisions/ADR-0049-in-flight-munitions-tracked-by-munition-id.md) | Accepted | Not stated |
 | A3.1: orthogonal state axes; absence is not a factor | [ADR-0026](../../../decisions/ADR-0026-operational-state-orthogonal-axis-model.md) | Accepted | Not stated |

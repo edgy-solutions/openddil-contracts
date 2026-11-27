@@ -52,7 +52,7 @@ The capabilities are anticipated and not committed. These constraints are what i
 | R2 | [ADR-0029](../../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Not stated |
 | R3 | [Interface contracts](../../../../decisions/DESIGN-2026-09-06-interface-contracts.md) | Design note | Nothing built |
 | R4, and C1 to C7 | [ADR-0038](../../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
-| R5 | [ADR-0050](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| R5 | [ADR-0050](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Accepted | Design only |
 | R6 | [ADR-0013](../../../../decisions/ADR-0013-physical-quantity-consistency.md) | Accepted | Not stated |
 | R7 | [ADR-0017](../../../../decisions/ADR-0017-ui-mock-components-self-identify.md) | Accepted | Not stated |
 | H1 to H5 | [ADR-0033](../../../../decisions/ADR-0033-recursive-tier-hierarchy-framework-invariant.md) | Accepted | Pending |

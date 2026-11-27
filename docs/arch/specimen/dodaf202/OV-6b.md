@@ -71,4 +71,4 @@ The match only offers a candidate. A person ends all three states.
 | Two columns, each with its timestamp | [ADR-0044](../../../../decisions/ADR-0044-lifecycle-two-columns-no-deletes.md) | Proposed | Built, unit-tested |
 | Posture states and transitions (amendment) | [ADR-0044](../../../../decisions/ADR-0044-lifecycle-two-columns-no-deletes.md) | Proposed | Not stated |
 | Orthogonal axes under the operational state | [ADR-0026](../../../../decisions/ADR-0026-operational-state-orthogonal-axis-model.md) | Accepted | Not stated |
-| The three arrival states; nothing is matched automatically | [ADR-0050](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| The three arrival states; nothing is matched automatically | [ADR-0050](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Accepted | Design only |

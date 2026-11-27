@@ -61,7 +61,7 @@ The findings come first: each accepted or proposed record that no view cites, wi
 | ADR-0047 | Accepted | Op-If, Rs-Sr |
 | ADR-0048 | Accepted | Op-If, Op-Pr, Sd-Tx |
 | ADR-0049 | Accepted | Op-If, Op-Pr |
-| ADR-0050 | Proposed | Op-Cn, Op-Ct, Op-If, Op-Pr, Op-St, Sd-Tx, St-Rm-P, St-Tx |
+| ADR-0050 | Accepted | Op-Cn, Op-Ct, Op-If, Op-Pr, Op-St, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0051 | Accepted | Am-If, Op-If, Rs-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0052 | Accepted | Op-Pr, Rs-Tr, Sc-Pr, Sd-Tx, St-Rm-P, St-Tx |
 | ADR-0053 | Accepted | Op-Pr, Rs-Pr, Sc-Pr, Sd-Tx, St-Rm-P, St-Tx |

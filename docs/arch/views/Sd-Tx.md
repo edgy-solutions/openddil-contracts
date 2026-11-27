@@ -70,5 +70,5 @@ Editions the citations note could not verify: the JC3IEDM edition, the date of G
 | The ISO 13374 reading | [ADR-0038](../../../decisions/ADR-0038-anticipated-capability-envelope.md) | Accepted | Not stated |
 | The condition-monitoring, built-in test, usage and network-state rows | [ADR-0059](../../../decisions/ADR-0059-condition-monitoring-bit-and-usage-alignment.md) | Proposed | Status line |
 | The observability rows | [ADR-0060](../../../decisions/ADR-0060-observability-collector-per-tier-one-trace-opaque-ids.md) | Proposed | Status line |
-| Arrival alignment | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| Arrival alignment | [ADR-0050](../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Accepted | Status line |
 | Munition signal alignment | [ADR-0048](../../../decisions/ADR-0048-effector-tracking-from-fire-and-detonation.md) | Accepted | Not stated |
