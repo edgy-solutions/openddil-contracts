@@ -2,7 +2,12 @@
 
 ## Status
 
-**PROPOSED — 2026-10-15.** Extends ADR-0029 §3 (labels propagate, never default) with a second label source: a
+**ACCEPTED as amended — ruled by the project owner 2026-11-27** (proposed 2026-10-15). Design only. See
+[the amendment of 2026-11-27](#amendment-2026-11-27-ruled-unlabelled-arrivals-who-sees-them-and-the-count). It
+names two exceptions to ADR-0029, both for null-label rows only: they are shown at their own edge to declare roles,
+and they are counted as a single number per tier.
+
+**Proposed 2026-10-15.** Extends ADR-0029 §3 (labels propagate, never default) with a second label source: a
 declaration record in the owning tier's store. Uses ADR-0047 (the observed id is opaque; serial correlation is the
 mapper's concern) and ADR-0044 (lifecycle columns unchanged). Adds a fielding record to Contract B
 (DESIGN-2026-09-06 §2), read side.
@@ -133,6 +138,8 @@ permanent (ADR-0029).
   `assigned_at`), last seen, resolved variant or `UNKNOWN`, and position.
   - The PEP serves these rows from a dedicated route, only to declare roles.
   - The route returns these columns only. The withheld set stays withheld from every other read.
+  - (amended 2026-11-27, ruled) These are the null-label rows, at their own edge. An undeclared entity that
+    carries labels is listed only where the viewer's nations admit it. See the amendment, items 1 and 2.
 - **Expected rows.** The panel also lists expected-unobserved rows: serial, variant, unit, due-by and overdue. They are
   filtered by the viewer's nations, because a fielding record carries its owning nation.
 - **One action per row:**
@@ -157,6 +164,8 @@ permanent (ADR-0029).
 
 The HQ fleet summary shows **undeclared N · expected M** per edge.
 - **N** is a count of null-label rows by edge. It names no ids, the same shape as the egress pane's withheld count.
+  (amended 2026-11-27, ruled) It is a single number per tier, never broken down by any attribute. Labelled
+  undeclared rows are not in it. See the amendment, item 3.
 - **M** is the open fielding rows for that edge.
 
 ## Alignment declared (ADR-0038 C1 intake)
@@ -241,6 +250,51 @@ in ADR-0055 Findings 3.
 
 **Not established.** The site declaration has no schema yet. No deployment has loaded one. Nothing here was run.
 
+## Amendment 2026-11-27 (ruled): unlabelled arrivals, who sees them, and the count
+
+**Ruled by the project owner, 2026-11-27.** With it, this record is accepted as amended.
+
+**Why.** ADR-0029 §1 (accepted) has every UI view read an already-filtered stream. The PEP's rule hides a null-label
+row from everyone. An observed-undeclared entity is a null-label row until someone declares it, and since the
+2026-11-06 amendment no default labels it. A row nobody may see can't be declared, and declaring it is the only way it
+gets labels. So §3's panel and §5's count each need an exception to the accepted record, and each is named here. Read
+at `openddil-demo` `01b5ae4`, the arrivals routes also served undeclared rows that do carry labels (labelled by a site
+declaration), with no label clause, and counted them in N. Item 1 closes that.
+
+1. **An undeclared entity that carries labels follows the label rule.** It is listed in the panel, and counted, only
+   where the viewer's nations admit it, like any labelled row. This is no exception. Only null-label rows are
+   exceptions (items 2 and 3).
+2. **A null-label row is shown only at its own edge, only to declare roles.** This is the first named exception to
+   ADR-0029 §1.
+   - The roles are those in `arrivals.declareRoles` (§2, "Roles"), at the edge that observed the entity.
+   - The route returns only §3's columns: id, first seen, last seen, resolved variant or `UNKNOWN`, position, and
+     candidate serials.
+   - A null-label row is never served at another tier, to another role, through a shape, or through egress.
+   - **Why:** the person who can declare the row is the person whose declaration gives it an audience.
+   - **The risk it leaves:** an entity that belongs to another nation, but whose lookup returned no answer, shows
+     unlabelled to a declarer of any nation at that edge. A first arrival during a store outage is one such case
+     (the 2026-11-04 amendment, item 2). The fixed columns bound what that declarer sees. The declaration names its
+     declarer, so a wrong one is a signed act, not a silent one.
+3. **The count at every tier is N, the null-label rows, as a single number per tier.** This is the second named
+   exception, to ADR-0029's addendum of 2026-09-08.
+   - **The limit:** N is one number per tier, never broken down by variant, type, position, time or any other
+     attribute, so it can't be used to work out what is there.
+   - N names no id and no nation.
+   - Labelled undeclared rows are not in N. They are counted under item 1, only where the viewer's nations admit them.
+   - It is open to any known subject at every tier, as §5 says.
+   - **Why:** the addendum's intersection is over the rows' effective audiences. A null-label row has no audience
+     yet, so N holds no one's data. "The unknowns are visible at every tier" (Consequences) is the operational point,
+     and one number is the least that delivers it.
+4. **Expected and overdue counts (M) stay filtered** by the fielding rows' labels, as §3 and §5 already say. The read
+   of `asset_correlation` that removes correlated serials is not filtered. It only removes serials from a list the
+   viewer may already see, so it reveals nothing the list did not.
+
+**What stays as it was.** Site declarations stay with the supervisor only (DESIGN-2026-11-06, O3, ruled
+2026-11-06). The declare roles for one asset, and §2's declaration record, are unchanged.
+
+**Not established.** Design only. The code read at `openddil-demo` `01b5ae4` does not yet do items 1 and 3. Nothing
+here was run.
+
 ## Consequences
 
 ### Positive
@@ -266,3 +320,4 @@ in ADR-0055 Findings 3.
 - 2026-10-15: §2 item 6 amended to declaration, then row, then default, then unlabelled. A default must never beat a person's declaration.
 - 2026-10-15: §2 item 4: cm-service reads the declaration on first-seen registration, so a declared baseline survives a state wipe. Reset: declarations are kept unless `clearExerciseDeclarations` is set.
 - 2026-11-06 (ruled): §2 item 6 step 3, the deployment default, replaced by a cited site declaration; load before amend. See the amendment.
+- 2026-11-27 (ruled): labelled undeclared rows follow the label rule; null-label rows are shown at their own edge to declare roles only; N is a single number per tier, never broken down. Accepted as amended. See the amendment.

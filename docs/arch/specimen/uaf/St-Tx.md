@@ -83,7 +83,7 @@ A capability here is something a deployment can be phased on and shown working. 
 | TacticalSustainmentCorrelation | [ADR-0039 §1](../../../../decisions/ADR-0039-bridging-tactical-and-sustainment-planes.md) | Positioning | Nothing built |
 | ConfigurationStatusAccounting | [ADR-0009 §decision](../../../../decisions/ADR-0009-configuration-management-data-model.md) | Accepted | Not stated |
 | ConfigurationStatusAccounting holds the configuration analyzer, not StateDetection or AdvisoryGeneration | [ADR-0059 §2](../../../../decisions/ADR-0059-condition-monitoring-bit-and-usage-alignment.md) | Proposed | Design only |
-| ArrivalDeclaration | [ADR-0050 §1](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Proposed | Not stated |
+| ArrivalDeclaration | [ADR-0050 §1](../../../../decisions/ADR-0050-asset-arrivals-declare-and-expect.md) | Accepted | Design only |
 | LabelledReadEnforcement | [ADR-0029 §1](../../../../decisions/ADR-0029-coalition-releasability-abac-enforcement.md) | Accepted | Built |
 | GatedRelease | [ADR-0043 §1](../../../../decisions/ADR-0043-egress-gate-one-predicate-two-subjects.md) | Proposed | Measured under compose |
 | GatedIntake | [ADR-0046 §5](../../../../decisions/ADR-0046-maintenance-bridge-events-out-actions-in.md) | Accepted | Not stated |
